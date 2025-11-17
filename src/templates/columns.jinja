@@ -137,20 +137,20 @@
                                         {% endif %}
                                     {% endfor %}
                                     {% if ns.has_low %}
-                                        <span class="badge bg-success">Low Correlation</span>
+                                        <span class="badge bg-success me-2">Low Correlation</span>
                                     {% endif %}
                                     {% if ns.has_moderate %}
-                                        <span class="badge bg-warning">Moderate Correlation</span>
+                                        <span class="badge bg-warning me-2">Moderate Correlation</span>
                                     {% endif %}
                                     {% if ns.has_high %}
-                                        <span class="badge bg-danger">High Correlation</span>
+                                        <span class="badge bg-danger me-2">High Correlation</span>
                                     {% endif %}
                                 {% endif %}
 
                                 <!-- TODO: Add missing badges - Skewness, Duplicates, Imbalance, Diff Sequence Length, Biological Naming, Diff Units -->
                                 {% if col.measurement_data %}
                                     {% if col.measurement_data.with_measurement %}
-                                        <span class="badge bg-warning">Mixed Values</span>
+                                        <span class="badge bg-warning me-2">Mixed Values</span>
                                     {% endif %}
                                 {% endif %}
                             </div>
