@@ -1,7 +1,6 @@
 # BioProfileKit
 [![Python: 3.13](https://img.shields.io/badge/Python-3.13-green.svg)](https://www.python.org/downloads/release/python-3130/) [![License: MIT](https://img.shields.io/badge/License-MIT-darkred.svg)](https://opensource.org/licenses/MIT) 
-[![GitHub Pages Status](https://img.shields.io/github/deployments/BioWarlock/BioProfileKit/gh-pages?label=github%20pages&style=for-the-badge&logo=github "GitHub Pages")](https://BioWarlock.github.io/BioProfileKit)
-
+[![pages-build-deployment](https://github.com/BioWarlock/BioProfileKit/actions/workflows/pages/pages-build-deployment/badge.svg?branch=main)](https://github.com/BioWarlock/BioProfileKit/actions/workflows/pages/pages-build-deployment)
 
 
 ## Overview
@@ -32,7 +31,7 @@ python setup.py build_ext --inplace
 ```
 
 ## Parameters
-Currently only supports .csv, .tsv and .json as input files
+Currently only supports .csv, .tsv, and .json as input files
 ```bash 
  bioprofilekit -i input.csv
  Options:
