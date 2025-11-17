@@ -40,6 +40,8 @@ Currently only supports .csv, .tsv and .json as input files
   -t,   --tax                  Enable taxonomy analysis
   -f,   --func [cog|go]        Choose between COG or GO analysis, if validation is needed
   -tc,  --target_column TEXT   Target column for further analysis
+  -k,   --kmer INTEGER         K-mer Size for sequence analysis. Default: 3
+  -n,   --top_n INTEGER        Top N entries analysis. Default: 20
   -h,   --help                 Show this message and exit.
 ```
 

@@ -394,7 +394,7 @@
                                 {% if col.sequence != 'None' and col.dna_rna_data %}
                                     <div class="row w-100 mt-4">
                                         <div class="col-12">
-                                            <h5>Top 20 Sequences Analysis</h5>
+                                            <h5>Top {{ top_n }} Sequences Analysis</h5>
 
                                             <!-- Tabs für verschiedene Ansichten -->
                                             <ul class="nav nav-tabs" id="sequenceTab{{ col.name | replace(' ', '') | capitalize }}" role="tablist">
@@ -560,7 +560,7 @@
                                 {% if col.sequence != 'None' and col.protein_data %}
                                     <div class="row w-100 mt-4">
                                         <div class="col-12">
-                                            <h5>Top 20 Protein Sequences Analysis</h5>
+                                            <h5>Top {{ top_n }} Protein Sequences Analysis</h5>
 
                                             <!-- Tabs für verschiedene Ansichten -->
                                             <ul class="nav nav-tabs" id="proteinTab{{ col.name | replace(' ', '') | capitalize }}" role="tablist">

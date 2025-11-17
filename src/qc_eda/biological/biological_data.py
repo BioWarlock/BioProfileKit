@@ -1,4 +1,5 @@
 import tempfile
+import warnings
 from collections import defaultdict, Counter
 from dataclasses import dataclass
 from itertools import chain
@@ -77,21 +78,22 @@ def biological_data_top_entries(seqs: pd.Series, top_k: int = 20) -> Tuple[np.nd
     return uniques, counts, min_len, max_len, lengths
 
 
-def dna_rna_columns(seqs: pd.Series, k: int = 3, top_n: int = 5) -> DNARNAColumns:
-    uniques, counts, min_len, max_len, lengths = biological_data_top_entries(seqs, 20)
+def dna_rna_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5) -> DNARNAColumns:
+    uniques, counts, min_len, max_len, lengths = biological_data_top_entries(seqs, top_n)
 
     gc_count = np.char.count(uniques, 'G') + np.char.count(uniques, 'C')
     gc_content = np.round(np.where(lengths > 0, gc_count / lengths * 100, 0.0), 2).tolist()
-
     nucleotide_count = [dict(Counter(seq)) for seq in uniques]
-    k_mers = [top_mere(seq, n=k, top=top_n) for seq in uniques]
+
+    k_mers = _kmer_check(k, top, uniques)
 
     if min_len == max_len:
         plot = make_logo(uniques,'color_classic')
     else:
-        flat_kmers = chain.from_iterable(kmers_seq for kmers_seq in k_mers if kmers_seq)
-        kmers, count = zip(*((kmer, np.int64(count)) for kmer, count in flat_kmers))
-        plot = plot_overview(kmers, count)
+        flat_kmers = chain.from_iterable(k_mers)
+        df_kmers = pd.DataFrame(flat_kmers, columns=['kmer', 'count'])
+        aggregated = df_kmers.groupby('kmer', as_index=False)['count'].sum()
+        plot = plot_overview(aggregated['kmer'].tolist(), aggregated['count'].tolist())
 
     return DNARNAColumns(
         sequence=uniques.tolist(),
@@ -102,6 +104,15 @@ def dna_rna_columns(seqs: pd.Series, k: int = 3, top_n: int = 5) -> DNARNAColumn
         k_mers=k_mers,
         plot=plot
     )
+
+def _kmer_check(k: int, top: int, uniques: np.ndarray) -> list:
+    check_length = any(len(i) <= k for i in uniques)
+    if not check_length:
+        k_mers = [top_mere(seq, n=k, top=top) for seq in uniques]
+    else:
+        warnings.warn("Warning: Sequence length is smaller than choosen k-Mer Size. Setting k-Mer Size to 3.")
+        k_mers = [top_mere(seq, n=3, top=top) for seq in uniques]
+    return k_mers
 
 
 def protein_descriptors(peptide: str) -> Dict[str, str | float | dict[str, float]]:
@@ -124,20 +135,22 @@ def protein_descriptors(peptide: str) -> Dict[str, str | float | dict[str, float
     return descriptors
 
 
-def protein_columns(seqs: pd.Series, k: int = 3, top_n: int = 5) -> PROTEINColumns:
-    uniques, counts, min_len, max_len, lengths = biological_data_top_entries(seqs, 20)
+def protein_columns(seqs: pd.Series,  k: int = 3, top_n: int = 20, top: int = 5) -> PROTEINColumns:
+    uniques, counts, min_len, max_len, lengths = biological_data_top_entries(seqs, top_n)
 
     aa_composition = [dict(Counter(seq)) for seq in uniques]
     descriptors = [protein_descriptors(seq) for seq in uniques]
 
-    k_mers = [top_mere(seq, n=k, top=top_n) for seq in uniques]
+    k_mers = _kmer_check(k, top, uniques)
     #ToDo Add Desclaimer
     if min_len == max_len:
         plot = make_logo(uniques, "color_chemistry")
     else:
-        flat_kmers = chain.from_iterable(kmers_seq for kmers_seq in k_mers if kmers_seq)
-        kmers, count = zip(*((kmer, np.int64(count)) for kmer, count in flat_kmers))
-        plot = plot_overview(kmers, count)
+        flat_kmers = chain.from_iterable(k_mers)
+        df_kmers = pd.DataFrame(flat_kmers, columns=['kmer', 'count'])
+        aggregated = df_kmers.groupby('kmer', as_index=False)['count'].sum()
+        plot = plot_overview(aggregated['kmer'].tolist(), aggregated['count'].tolist())
+
 
     return PROTEINColumns(
         sequence=uniques.tolist(),

@@ -29,7 +29,9 @@ env = Environment(loader=FileSystemLoader(str(TEMPLATE_DIR)), autoescape=True)
 @click.option('-t','--tax', is_flag=True,help='Enable taxonomy analysis')
 @click.option('-f', '--func', type=click.Choice(['cog','go']), help='Enable functional annotation analysis. Choose between cog or go')
 @click.option('-tc', '--target_column', type=str, help='Target column for Analysis')
-def cli(input: str, tax: bool = False, func: str = None, target_column: str = None):
+@click.option('-k', '--kmer', type=int, default=3, help="K-mer Size for sequence analysis")
+@click.option('-n', '--top_n', type=int, default=20, help="Top N entries analysis")
+def cli(input: str, tax: bool = False, func: str = None, target_column: str = None, kmer: int = None, top_n: int = None):
     input_path = Path(input)
     print(colored(f'Reading file {input_path.name}', 'green'))
 
@@ -58,11 +60,11 @@ def cli(input: str, tax: bool = False, func: str = None, target_column: str = No
             col_overview.top_10_items = list(col_overview.top_10.items())
         if col_overview.sequence == 'dna':
             print(colored(f'Analyzing DNA/RNA sequences in column: {col_overview.name}', 'cyan'))
-            bio_data = dna_rna_columns(df[col_overview.name])
+            bio_data = dna_rna_columns(df[col_overview.name], k=kmer, top_n=top_n)
             col_overview.dna_rna_data = bio_data
         elif col_overview.sequence == 'protein':
             print(colored(f'Analyzing protein sequences in column: {col_overview.name}', 'cyan'))
-            bio_data = protein_columns(df[col_overview.name])
+            bio_data = protein_columns(df[col_overview.name],  k=kmer, top_n=top_n)
             col_overview.protein_data = bio_data
         else:
             col_overview.dna_rna_data = None
@@ -104,7 +106,7 @@ def cli(input: str, tax: bool = False, func: str = None, target_column: str = No
         print(numeric_template.render(general=general, dups=duplicates_table), file=output)
 
     with open("renders/columns.html", "w",encoding="utf-8") as output:
-        print(columns.render(columns=column_overviews, overview=numeric_overviews, categorical=categorical_overviews), file=output)
+        print(columns.render(columns=column_overviews, overview=numeric_overviews, categorical=categorical_overviews, top_n=top_n), file=output)
 
     with open("renders/general_statistics.html", "w",encoding="utf-8") as output:
         print(stats.render(plots=plots), file=output)
