@@ -1,11 +1,18 @@
-prune **
-
-recursive-include src/static/**/*
-recursive-include src/templates/*.jinja
-graft src
-graft src/static
-graft src/templates
 
 include LICENSE README.md pyproject.toml setup.py
 
-global-exclude __pycache__ *.py[cod] .* dist
+recursive-include src *.pyx
+recursive-include src *.c
+
+#prune **
+
+#recursive-include src/static/**/*
+#recursive-include src/templates/*.jinja
+graft src
+#graft src/static
+#graft src/templates
+
+global-exclude __pycache__ *.py[cod] .* dist *.so .DS_Store
+
+prune dist
+prune build

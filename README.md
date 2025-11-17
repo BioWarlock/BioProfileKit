@@ -1,6 +1,6 @@
 # BioProfileKit
 [![Python: 3.13](https://img.shields.io/badge/Python-3.13-green.svg)](https://www.python.org/downloads/release/python-3130/) [![License: MIT](https://img.shields.io/badge/License-MIT-darkred.svg)](https://opensource.org/licenses/MIT) 
-[![GitHub Pages Status](https://img.shields.io/github/deployments/hansen-maria/BioProfileKit/gh-pages?label=github%20pages&style=for-the-badge&logo=github "GitHub Pages")](https://hansen-maria.github.io/BioProfileKit)
+[![GitHub Pages Status](https://img.shields.io/github/deployments/BioWarlock/BioProfileKit/gh-pages?label=github%20pages&style=for-the-badge&logo=github "GitHub Pages")](https://BioWarlock.github.io/BioProfileKit)
 
 
 
@@ -20,6 +20,11 @@ Example Results: [BioProfileKit Example](https://hansen-maria.github.io/BioProfi
 - **Interactive HTML Reports** - Provides portable, user-friendly reports with dynamic filtering and cross-linked visualizations for seamless data exploration
 
 ## Installation
+
+```bash
+make install
+```
+
 **Manual installation**
 ```bash
 pip install -e .
@@ -29,6 +34,7 @@ python setup.py build_ext --inplace
 ## Parameters
 Currently only supports .csv, .tsv and .json as input files
 ```bash 
+ bioprofilekit -i input.csv
  Options:
   -i,   --input PATH           Input file as .tsv, .csv or .json  [required]
   -t,   --tax                  Enable taxonomy analysis
