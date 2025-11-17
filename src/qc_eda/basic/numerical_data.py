@@ -64,7 +64,6 @@ class NumericColumns:
     skewness: float
     coefficient_of_variation: float
     mad: float
-    mode: float
     quantiles: ndarray
     memory: int
     value_counts: dict

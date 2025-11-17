@@ -126,16 +126,27 @@
                                     <span class="badge bg-primary me-2">Number</span>
                                 {% endif %}
                                 {% if col.correlation %}
+                                    {% set ns = namespace(has_low=false, has_moderate=false, has_high=false) %}
                                     {% for corr in col.correlation %}
                                         {% if corr.1 < 0.5 %}
-                                            <span class="badge bg-success">Low Correlation</span>
-                                        {% elif 0.5 <= corr.1 < 0.7 %}
-                                            <span class="badge bg-warning">Moderate Correlation</span>
+                                            {% set ns.has_low = true %}
+                                        {% elif corr.1 < 0.7 %}
+                                            {% set ns.has_moderate = true %}
                                         {% else %}
-                                            <span class="badge bg-danger">High Correlation</span>
+                                            {% set ns.has_high = true %}
                                         {% endif %}
                                     {% endfor %}
+                                    {% if ns.has_low %}
+                                        <span class="badge bg-success">Low Correlation</span>
+                                    {% endif %}
+                                    {% if ns.has_moderate %}
+                                        <span class="badge bg-warning">Moderate Correlation</span>
+                                    {% endif %}
+                                    {% if ns.has_high %}
+                                        <span class="badge bg-danger">High Correlation</span>
+                                    {% endif %}
                                 {% endif %}
+
                                 <!-- TODO: Add missing badges - Skewness, Duplicates, Imbalance, Diff Sequence Length, Biological Naming, Diff Units -->
                                 {% if col.measurement_data %}
                                     {% if col.measurement_data.with_measurement %}
