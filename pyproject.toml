@@ -16,8 +16,8 @@ authors = [
     {name = "Sonja Diedrich", email = "sonja.diedrich@computational.bio.uni-giessen.de"},
     {name = "Maria Hansen", email = "maria.hansen@computational.bio.uni-giessen.de"}
 ]
-license = "MIT"
-license-files = ["LICENSE"]
+#license = "MIT"
+#license-files = ["LICENSE"]
 requires-python = ">=3.13"
 keywords = ["bioinformatics", "data-analysis", "proteomics"]
 classifiers = [
