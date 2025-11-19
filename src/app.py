@@ -82,8 +82,8 @@ def cli(input: str, tax: bool = False, func: str = None, target_column: str = No
 
     print(colored(f'Analyse {len(df.select_dtypes(include="number").columns)} numeric columns ', 'blue'))
 
+    #ToDo: check cat_columns
     numeric_overviews = [numeric_columns(df, col) for col in df.select_dtypes(include='number').columns]
-
     cat_columns = [col for col in df.select_dtypes(include=['object', 'bool', 'int64', 'float64']).columns if
                    any(i.sequence == 'None' for i in column_overviews if i.name == col)]
     print(colored(f'Analyse {len(cat_columns)} object columns ', 'blue'))
