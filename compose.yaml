@@ -1,0 +1,10 @@
+services:
+  bioprofilekit:
+    image: bioprofilekit:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./testdata:/data
+    entrypoint: [ "bioprofilekit" ]
+    command: ["bioprofilekit", "-i", "data/winequality-white.csv"]
