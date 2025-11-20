@@ -1,10 +1,16 @@
-.PHONY: install clean reinstall help build-docker
+define help
 
+Supported targets: 'install' 'clean' 'reinstall' 'build-docker' 'docker-test'
+The 'install' target installs BioProfileKit build requirements into the current virutalenv.
+The 'clean' target undoes the effect of 'install'
+The 'reinstall' target runs the 'clean' and 'install' target
+The 'build-docker' target runs docker compose
+
+
+endef
+export help
 help:
-	@echo "BioProfileKit Commands:"
-	@echo " make install		- Install package locally"
-	@echo " make clean		    - Remove build files"
-	@echo " make reinstall     - clean and install"
+	@echo "$$help"
 
 install:
 	pip install -e .
@@ -23,3 +29,5 @@ build-docker:
 
 docker-test:
 	docker compose run bioprofilekit -i data/winequality-white.csv
+
+.PHONY: install clean reinstall help build-docker docker-test
