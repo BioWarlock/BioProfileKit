@@ -44,8 +44,8 @@ dependencies = [
     "goatools==1.5.2",
     "importlib_resources==6.5.2",
     "biopython==1.86",
-    "weblogo==3.7.12"
-
+    "weblogo==3.7.12",
+    "matplotlib==3.10.7"
 ]
 [project.urls]
 Homepage="https://github.com/BioWarlock/BioProfileKit/"
