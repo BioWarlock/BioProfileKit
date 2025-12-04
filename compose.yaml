@@ -1,6 +1,6 @@
 services:
   bioprofilekit:
-    image: bioprofilekit:latest
+    image: bioprofilekit-tool:latest
     build:
       context: .
       dockerfile: Dockerfile
