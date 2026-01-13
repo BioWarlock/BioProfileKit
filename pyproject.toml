@@ -45,7 +45,6 @@ dependencies = [
     "importlib_resources==6.5.2",
     "biopython==1.86",
     "weblogo==3.7.12"
-
 ]
 [project.urls]
 Homepage="https://github.com/BioWarlock/BioProfileKit/"
