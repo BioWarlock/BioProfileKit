@@ -1,4 +1,4 @@
-#! /usr/bin/env python3
+#!/usr/bin/env python3
 
 import shutil
 from pathlib import Path
@@ -14,7 +14,7 @@ from qc_eda.biological.functional_annotation import annotation_flags
 from qc_eda.biological.measurement_data import measurement_columns
 from qc_eda.biological.taxonomy import taxonomy_flags
 from utils.download_metadata import get_tax_ids
-from utils.file_reader import read_file
+from utils.file_reader import read_file, parse_parquet
 from qc_eda.basic.general import general_plots
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -34,10 +34,7 @@ env = Environment(loader=FileSystemLoader(str(TEMPLATE_DIR)), autoescape=True)
 def cli(input: str, tax: bool = False, func: str = None, target_column: str = None, kmer: int = None, top_n: int = None):
     input_path = Path(input)
     print(colored(f'Reading file {input_path.name}', 'green'))
-    input_path.ex
-    df = read_file(input_path)
-    #ToDo:
-    #df = read_file(input_path) if input_path.suffix is not 'parquet' else pd.parse_parquet(input_path)
+    df = read_file(input_path) if input_path.suffix is not '.parquet' else parse_parquet(input_path)
     general = overview(df, input_path.name)
     plots = general_plots(df, target_column)
 

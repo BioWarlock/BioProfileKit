@@ -1,4 +1,4 @@
-#! usr/bin/env Python3
+#!/usr/bin/env python3
 
 import pandas as pd
 import pathlib
@@ -49,6 +49,14 @@ def read_file(file: click.Path) -> pd.DataFrame | None:
 
     return None
 
-#ToDo Validate File
+
 def parse_parquet(file: click.Path) -> pd.DataFrame:
-    return pd.read_parquet(file.__str__())
+    df = pd.read_parquet(file.__str__(), engine="pyarrow")
+    if '' in df.columns or None in df.columns:
+        df = df.add_prefix("Unknown_")
+    if not all([isinstance(col, str) for col in df.columns]):
+        df.columns = df.columns.map(str)
+        df = df.add_prefix("Unknown_")
+    if df.index.name is not None and len(df.index.name) > 0:
+        df = df.reset_index()
+    return df
