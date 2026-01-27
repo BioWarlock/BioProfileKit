@@ -95,7 +95,7 @@ def cli(input: str, tax: bool = False, func: str = None, target_column: str = No
     output_path = Path(input_path.stem+"_renders")
     output_path.mkdir(parents=True, exist_ok=True)
 
-    shutil.copytree(str(STATIC_DIR), output_path._str+"/static/", dirs_exist_ok=True)
+    shutil.copytree(str(STATIC_DIR), output_path.as_posix()+"/static/", dirs_exist_ok=True)
 
     landing_template = env.get_template('LandingPage.jinja')
     numeric_template = env.get_template('numeric_overview.jinja')
@@ -103,14 +103,14 @@ def cli(input: str, tax: bool = False, func: str = None, target_column: str = No
     stats = env.get_template('general_statistics.jinja')
 
     print(colored('Writing report …', 'green'))
-    with open(output_path._str+"/index.html", 'w', encoding="utf-8") as output:
+    with open(output_path.as_posix()+"/index.html", 'w', encoding="utf-8") as output:
         print(landing_template.render(), file=output)
 
-    with open(output_path._str+"/numeric_data.html", "w",encoding="utf-8") as output:
+    with open(output_path.as_posix()+"/numeric_data.html", "w",encoding="utf-8") as output:
         print(numeric_template.render(general=general, dups=duplicates_table), file=output)
 
-    with open(output_path._str+"/columns.html", "w",encoding="utf-8") as output:
+    with open(output_path.as_posix()+"/columns.html", "w",encoding="utf-8") as output:
         print(columns.render(columns=column_overviews, overview=numeric_overviews, categorical=categorical_overviews, top_n=top_n), file=output)
 
-    with open(output_path._str+"/general_statistics.html", "w",encoding="utf-8") as output:
+    with open(output_path.as_posix()+"/general_statistics.html", "w",encoding="utf-8") as output:
         print(stats.render(plots=plots), file=output)
