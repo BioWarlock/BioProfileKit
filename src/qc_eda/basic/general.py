@@ -23,7 +23,11 @@ def general_plots(df: pd.DataFrame, target: str) -> GeneralPlots:
     )
 
 def correlation_heatmap(df: pd.DataFrame):
-    corr_matrix = df.select_dtypes(include=['float64', 'int64']).corr()
+    df_numeric = df.select_dtypes(include=['float64', 'int64']).dropna(axis=1, how='all')
+    if not df_numeric.empty:
+        std = df_numeric.std(ddof=0)
+        df_numeric = df_numeric.loc[:, std[std > 0].index]
+    corr_matrix = df_numeric.corr()
     corr_matrix = round(corr_matrix, 3)
     fig = px.imshow(corr_matrix, text_auto=True, labels=dict(color="Correlation"), color_continuous_scale="RdBu_r", aspect="auto", height=700)
     fig.update_layout(title="Correlation Heatmap")

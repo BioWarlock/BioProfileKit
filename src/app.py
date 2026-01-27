@@ -47,7 +47,6 @@ def cli(input: str, tax: bool = False, func: str = None, target_column: str = No
     print(colored(f'Analyse {len(df.columns)} columns', 'blue'))
 
     column_overviews = [column_overview(df, col) for col in df.columns]
-
     tax_df = None
     if tax:
         tax_df = get_tax_ids()
@@ -83,15 +82,20 @@ def cli(input: str, tax: bool = False, func: str = None, target_column: str = No
     print(colored(f'Analyse {len(df.select_dtypes(include="number").columns)} numeric columns ', 'blue'))
 
     #ToDo: check cat_columns
-    numeric_overviews = [numeric_columns(df, col) for col in df.select_dtypes(include='number').columns]
+    exclude_cols = list()
+    #numeric_overviews = [if df[col].isnull().all() numeric_columns(df, col) for col in df.select_dtypes(include='number').columns]
+    numeric_overviews = [numeric_columns(df, col) if not df[col].isnull().all() else exclude_cols.append(col) for col in
+                         df.select_dtypes(include="number").columns]
     cat_columns = [col for col in df.select_dtypes(include=['object', 'bool', 'int64', 'float64']).columns if
                    any(i.sequence == 'None' for i in column_overviews if i.name == col)]
     print(colored(f'Analyse {len(cat_columns)} object columns ', 'blue'))
-    categorical_overviews = [categorical_columns(df, col) for col in cat_columns]
+    print(exclude_cols)
+    categorical_overviews = [categorical_columns(df, col) if col not in exclude_cols else None for col in cat_columns]
 
-    Path("renders").mkdir(parents=True, exist_ok=True)
+    output_path = Path(input_path.stem+"_renders")
+    output_path.mkdir(parents=True, exist_ok=True)
 
-    shutil.copytree(str(STATIC_DIR), "renders/static/", dirs_exist_ok=True)
+    shutil.copytree(str(STATIC_DIR), output_path._str+"/static/", dirs_exist_ok=True)
 
     landing_template = env.get_template('LandingPage.jinja')
     numeric_template = env.get_template('numeric_overview.jinja')
@@ -99,14 +103,14 @@ def cli(input: str, tax: bool = False, func: str = None, target_column: str = No
     stats = env.get_template('general_statistics.jinja')
 
     print(colored('Writing report …', 'green'))
-    with open("renders/index.html", 'w', encoding="utf-8") as output:
+    with open(output_path._str+"/index.html", 'w', encoding="utf-8") as output:
         print(landing_template.render(), file=output)
 
-    with open("renders/numeric_data.html", "w",encoding="utf-8") as output:
+    with open(output_path._str+"/numeric_data.html", "w",encoding="utf-8") as output:
         print(numeric_template.render(general=general, dups=duplicates_table), file=output)
 
-    with open("renders/columns.html", "w",encoding="utf-8") as output:
+    with open(output_path._str+"/columns.html", "w",encoding="utf-8") as output:
         print(columns.render(columns=column_overviews, overview=numeric_overviews, categorical=categorical_overviews, top_n=top_n), file=output)
 
-    with open("renders/general_statistics.html", "w",encoding="utf-8") as output:
+    with open(output_path._str+"/general_statistics.html", "w",encoding="utf-8") as output:
         print(stats.render(plots=plots), file=output)

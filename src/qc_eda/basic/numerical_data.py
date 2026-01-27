@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -9,17 +8,6 @@ from scipy import stats
 
 from .sequence_enum import Sequence
 from .wrapper_utils import fast_check_sequence
-
-"""
-ToDo Numerical data:
-x quantiles 
-- cardinalities --> später
-x constant values
-- duplicated columns --> später
-x correlation
-x memory usage per column
-- distribution <-- skewness
-"""
 
 
 @dataclass
@@ -38,14 +26,14 @@ class NumericalData:
 @dataclass
 class ColumnOverview:
     name: str
-    number: int
-    unique: int
-    missing: int
-    missing_per: float
+    number: int | None
+    unique: int | None
+    missing: int | None
+    missing_per: float | None
     type: str
-    sequence: str
+    sequence: str | None
     describe_plot: str | None
-    constant: bool
+    constant: bool | None
     correlation: list[str] | None
     # taxonomy: bool
 
@@ -94,65 +82,106 @@ def overview(df: pd.DataFrame, file) -> NumericalData:
         rows=df.shape[0],
         cols=df.shape[1],
         nulls=sum(df.isnull().sum()),
-        nulls_percentage=round(sum(df.isnull().sum()) * 100 / df.size, 2),
+        nulls_percentage=100 if df.isnull().all().all() else round(sum(df.isnull().sum()) * 100 / df.size, 2),
         dup_row=int(df.duplicated().sum()),
         dup_col=int(df.columns.duplicated().sum()),
         memory=int(df.memory_usage(deep=True).sum()),
         alerts=0
     )
 
-
+#ToDo check for empty Column and return
 def column_overview(df: pd.DataFrame, col) -> ColumnOverview:
     return ColumnOverview(
         name=col,
         number=int(df[col].notnull().sum()),
         unique=df[col].nunique(),
         missing=int(df[col].isnull().sum()),
-        missing_per=round(float(df[col].isnull().sum() * 100 / df[col].size), 2),
+        missing_per=100 if df.isnull().all().all() else round(sum(df.isnull().sum()) * 100 / df.size, 2),
         type=str(df[col].dtype),
         sequence=check_sequence(df, col),
-        describe_plot=plot_overview(df[col]),
+        describe_plot=None if df.isnull().all().all() else plot_overview(df[col]),
         constant=True if (df[col].nunique() == 1) else False,
         correlation=get_correlation(df, col),
     )
 
-
+#
 def numeric_columns(df: pd.DataFrame, col) -> NumericColumns:
+    series = df[col].dropna()
+
+    if series.empty:
+        coefficient_of_variation = np.nan
+        quantiles = np.array([np.nan, np.nan, np.nan])
+        mode_value = np.nan
+        value_counts = {}
+        frequencies = {}
+        mad_value = np.nan
+        min_value = np.nan
+        max_value = np.nan
+        mean_value = np.nan
+        median_value = np.nan
+        std_value = np.nan
+        sum_value = np.nan
+        kurtosis_value = np.nan
+        skewness_value = np.nan
+    else:
+        mean_value = float(series.mean())
+        std_value = float(series.std())
+        coefficient_of_variation = np.nan if mean_value == 0 else float(std_value / abs(mean_value))
+        quantiles = np.array(series.quantile([0.25, 0.5, 0.75]).to_list(), dtype=float)
+        mode_series = series.mode()
+        mode_value = float(mode_series.iloc[0]) if not mode_series.empty else np.nan
+        value_counts = series.value_counts().head(20).to_dict()
+        frequencies = series.value_counts(normalize=True).head(20).to_dict()
+        mad_value = float(stats.median_abs_deviation(series, nan_policy='omit'))
+        min_value = float(series.min())
+        max_value = float(series.max())
+        median_value = float(series.median())
+        sum_value = float(series.sum())
+        kurtosis_value = float(series.kurtosis())
+        skewness_value = float(series.skew())
+
     return NumericColumns(
         name=col,
-        min=round(df[col].min(), 2),
-        max=round(df[col].max(), 2),
-        mean=round(df[col].mean(), 2),
-        median=round(df[col].median(), 2),
-        mode=round(df[col].mode().iloc[0], 2),
-        std=round(df[col].std(), 2),
-        sum=round(df[col].sum(), 2),
-        kurtosis=round(df[col].kurtosis(), 2),
-        skewness=round(df[col].skew(), 2),
-        mad=stats.median_abs_deviation(df[col], nan_policy='omit'),  # Ignore NaN values, set Warning
-        coefficient_of_variation=round(stats.variation(df[col], nan_policy='omit'), 2),
-        quantiles=stats.quantile(df[col], [0.25, 0.5, 0.75]),
+        min=round(min_value, 2) if np.isfinite(min_value) else np.nan,
+        max=round(max_value, 2) if np.isfinite(max_value) else np.nan,
+        mean=round(mean_value, 2) if np.isfinite(mean_value) else np.nan,
+        median=round(median_value, 2) if np.isfinite(median_value) else np.nan,
+        mode=round(mode_value, 2) if np.isfinite(mode_value) else np.nan,
+        std=round(std_value, 2) if np.isfinite(std_value) else np.nan,
+        sum=round(sum_value, 2) if np.isfinite(sum_value) else np.nan,
+        kurtosis=round(kurtosis_value, 2) if np.isfinite(kurtosis_value) else np.nan,
+        skewness=round(skewness_value, 2) if np.isfinite(skewness_value) else np.nan,
+        coefficient_of_variation=round(coefficient_of_variation, 2) if np.isfinite(coefficient_of_variation) else np.nan,
+        mad=mad_value if np.isfinite(mad_value) else np.nan,
+        quantiles=quantiles,
         memory=df[col].memory_usage(deep=True),
-        value_counts=df[col].value_counts().head(20).to_dict(),
-        frequencies=df[col].value_counts(normalize=True).head(20).to_dict()
-
+        value_counts=value_counts,
+        frequencies=frequencies
     )
 
 
 def categorical_columns(df: pd.DataFrame, col: str) -> CategoricalColumns:
     value_counts = df[col].value_counts()
-    n = len(df[col])
-    frequencies = value_counts / n
-
-    entropy = -(frequencies * np.log2(frequencies)).sum()
-    gini = 1 - (frequencies ** 2).sum()
-    simpson = 1 / (frequencies ** 2).sum()
+    n = int(df[col].notna().sum())
+    frequencies = value_counts / n if n > 0 else value_counts
+    if n > 0:
+        entropy = -(frequencies * np.log2(frequencies)).sum()
+        gini = 1 - (frequencies ** 2).sum()
+        simpson = 1 / (frequencies ** 2).sum()
+        cardinality_ratio = df[col].nunique() / n
+        mode_value = df[col].mode().iloc[0]
+    else:
+        entropy = np.nan
+        gini = np.nan
+        simpson = np.nan
+        cardinality_ratio = np.nan
+        mode_value = ""
     lengths = df[col].astype(str).str.len()
 
     return CategoricalColumns(
         name=col,
         unique_categories=df[col].nunique(),
-        mode=df[col].mode().iloc[0],
+        mode=mode_value,
         entropy=round(entropy, 2),
         frequencies=df[col].value_counts(normalize=True).head(20).to_dict(),
         gini=round(gini, 2),
@@ -161,13 +190,17 @@ def categorical_columns(df: pd.DataFrame, col: str) -> CategoricalColumns:
         max_category_length=lengths.max(),
         min_category_length=lengths.min(),
         memory=df[col].memory_usage(deep=True),
-        cardinality_ratio=round(df[col].nunique() / n, 3)
+        cardinality_ratio=round(cardinality_ratio, 3)
     )
 
 
 def get_correlation(df: pd.DataFrame, col) -> list | None:
-    ncols = df.select_dtypes(include='number').columns
+    ncols = df.select_dtypes(include='number').dropna(axis=1, how='all').columns
     if col in ncols:
+        std = df[ncols].std(ddof=0)
+        ncols = std[std > 0].index
+        if col not in ncols:
+            return None
         corr = df[ncols].corrwith(df[col], method='pearson')
         corr.drop(labels=col, inplace=True)
         corr = corr.drop(corr[corr < .3].index)
@@ -208,7 +241,7 @@ def check_sequence(df, col):
     if df[col].astype(str).str.len().eq(1).all():
         return "None"
     values = df[col].dropna().astype(str).tolist()
-    if all(len(x) > 1 for x in values):
+    if all(len(x) > 3 for x in values):
         if fast_check_sequence(values, Sequence.DNA.value):
             return "dna"
         elif fast_check_sequence(values, Sequence.RNA.value):

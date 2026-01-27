@@ -33,11 +33,11 @@ dependencies = [
     "click>=8.3.1",
     "Jinja2==3.1.6",
     "numpy==2.4.1",
-    "pandas==2.3.3",
-    "plotly==6.5.1",
+    "pandas==3.0.0",
+    "plotly==6.5.2",
     "scipy==1.17.0",
     "termcolor==3.3.0",
-    "pyarrow==22.0.0",
+    "pyarrow==23.0.0",
     "peptides==0.5.0",
     "iteration_utilities==0.13.0",
     "requests==2.32.5",
@@ -45,7 +45,6 @@ dependencies = [
     "importlib_resources==6.5.2",
     "biopython==1.86",
     "weblogo==3.7.12",
-    "matplotlib==3.10.8"
 ]
 [project.urls]
 Homepage="https://github.com/BioWarlock/BioProfileKit/"
