@@ -49,3 +49,6 @@ def read_file(file: click.Path) -> pd.DataFrame | None:
 
     return None
 
+#ToDo Validate File
+def parse_parquet(file: click.Path) -> pd.DataFrame:
+    return pd.read_parquet(file.__str__())
