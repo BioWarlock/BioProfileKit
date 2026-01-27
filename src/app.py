@@ -34,7 +34,7 @@ env = Environment(loader=FileSystemLoader(str(TEMPLATE_DIR)), autoescape=True)
 def cli(input: str, tax: bool = False, func: str = None, target_column: str = None, kmer: int = None, top_n: int = None):
     input_path = Path(input)
     print(colored(f'Reading file {input_path.name}', 'green'))
-    df = read_file(input_path) if input_path.suffix is not '.parquet' else parse_parquet(input_path)
+    df = read_file(input_path) if input_path.suffix != '.parquet' else parse_parquet(input_path)
     general = overview(df, input_path.name)
     plots = general_plots(df, target_column)
 
