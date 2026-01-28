@@ -52,11 +52,12 @@ def read_file(file: click.Path) -> pd.DataFrame | None:
 
 def parse_parquet(file: click.Path) -> pd.DataFrame:
     df = pd.read_parquet(file.__str__(), engine="pyarrow")
-    if '' in df.columns or None in df.columns:
-        df = df.add_prefix("Unknown_")
-    if not all([isinstance(col, str) for col in df.columns]):
-        df.columns = df.columns.map(str)
-        df = df.add_prefix("Unknown_")
+    if df.columns[0] == ""  or df.columns[0] is None:
+        df = df.set_index(df.columns[0])
     if df.index.name is not None and len(df.index.name) > 0:
         df = df.reset_index()
+    if not all([isinstance(col, str) for col in df.columns]):
+        df.columns = df.columns.map(str)
+    if '' in df.columns or None in df.columns:
+        df = df.rename({"": "Unknown", None: "Unknown_None"})
     return df
