@@ -31,7 +31,7 @@ def correlation_heatmap(df: pd.DataFrame):
     corr_matrix = round(corr_matrix, 3)
     fig = px.imshow(corr_matrix, text_auto=True, labels=dict(color="Correlation"), color_continuous_scale="RdBu_r", aspect="auto", height=700)
     fig.update_layout(title="Correlation Heatmap")
-    return fig.to_html(full_html=False, include_plotlyjs='cdn')
+    return fig.to_html(full_html=False, include_plotlyjs=False)
 
 
 def missing_matrix(df: pd.DataFrame):
@@ -48,7 +48,7 @@ def missing_matrix(df: pd.DataFrame):
     fig.update_layout(coloraxis_showscale=False)
 
 
-    return fig.to_html(full_html=False, include_plotlyjs='cdn')
+    return fig.to_html(full_html=False, include_plotlyjs=False)
 
 def missing_values_barchart(df: pd.DataFrame):
     missing_counts = df.isna().sum()
@@ -70,7 +70,7 @@ def missing_values_barchart(df: pd.DataFrame):
         gridcolor='lightgrey'
     )
 
-    return fig.to_html(full_html=False, include_plotlyjs='cdn')
+    return fig.to_html(full_html=False, include_plotlyjs=False)
 
 def balance_plot(df, target):
     fig = px.histogram(df, x=target, color_discrete_sequence=["#0F65A0"], text_auto=True)
@@ -93,7 +93,7 @@ def balance_plot(df, target):
         linecolor="black",
         gridcolor="lightgrey"
     )
-    return fig.to_html(full_html=False, include_plotlyjs='cdn')
+    return fig.to_html(full_html=False, include_plotlyjs=False)
 
 def boxplot(df: pd.DataFrame):
     df = df.select_dtypes(include=['float64', 'int64'])
@@ -109,7 +109,7 @@ def boxplot(df: pd.DataFrame):
         legend_title="Columns"
     )
 
-    return fig.to_html(full_html=False, include_plotlyjs='cdn')
+    return fig.to_html(full_html=False, include_plotlyjs=False)
 
 def scatter_matrix(df: pd.DataFrame):
     df = df.select_dtypes(include=['float64', 'int64'])
@@ -157,4 +157,4 @@ def scatter_matrix(df: pd.DataFrame):
         y=-0.08 if a.textangle == 0 and 'x' in str(a.xref) else a.y
     ))
 
-    return fig.to_html(full_html=False, include_plotlyjs='cdn')
+    return fig.to_html(full_html=False, include_plotlyjs=False)

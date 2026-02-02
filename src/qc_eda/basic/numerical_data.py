@@ -230,7 +230,7 @@ def plot_overview(col):
             linecolor='black',
             gridcolor='lightgrey'
         )
-        return fig.to_html(full_html=False, include_plotlyjs='cdn')
+        return fig.to_html(full_html=False, include_plotlyjs=False)
     return None
 
 

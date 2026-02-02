@@ -215,4 +215,4 @@ def plot_overview(kmer, count):
         gridcolor='lightgrey'
     )
     # fig.write_image("test.png")
-    return fig.to_html(full_html=False, include_plotlyjs='cdn')
+    return fig.to_html(full_html=False, include_plotlyjs=False)
