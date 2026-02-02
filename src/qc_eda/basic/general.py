@@ -103,6 +103,7 @@ def boxplot(df: pd.DataFrame):
         fig.add_trace(go.Box(y=df[col].values, name=df[col].name))
     fig.update_yaxes(type="log", title="Logarithmic",showticklabels=False)
     fig.update_layout(
+        xaxis=dict(rangeslider=dict(visible=True), type="linear"),
         title="Boxplot",
         xaxis_title="Columns",
         yaxis_title="Values",
