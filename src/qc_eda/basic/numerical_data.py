@@ -241,7 +241,7 @@ def check_sequence(df, col):
     if df[col].astype(str).str.len().eq(1).all():
         return "None"
     values = df[col].dropna().astype(str).tolist()
-    if all(len(x) > 3 for x in values):
+    if all(len(x) > 2 for x in values):
         if fast_check_sequence(values, Sequence.DNA.value):
             return "dna"
         elif fast_check_sequence(values, Sequence.RNA.value):

@@ -14,7 +14,6 @@ def read_file(file: click.Path) -> pd.DataFrame | None:
     with open(file, encoding="utf-8") as csv_file:
         csv_bytes = "".join(csv_file.readline() for _ in range(1000))
         dialect = csv.Sniffer().sniff(csv_bytes)
-        print("HEADER",csv.Sniffer().has_header(csv_bytes))
         header = csv.Sniffer().has_header(csv_bytes)
         csv_file.seek(0)
     if dialect.delimiter is not seperator:
