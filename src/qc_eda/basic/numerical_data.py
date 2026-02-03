@@ -96,10 +96,10 @@ def column_overview(df: pd.DataFrame, col) -> ColumnOverview:
         number=int(df[col].notnull().sum()),
         unique=df[col].nunique(),
         missing=int(df[col].isnull().sum()),
-        missing_per=100 if df.isnull().all().all() else round(sum(df.isnull().sum()) * 100 / df.size, 2),
+        missing_per=100 if df[col].isnull().all() else round(sum(df[col].isnull()) * 100 / df[col].size, 2),
         type=str(df[col].dtype),
         sequence=check_sequence(df, col),
-        describe_plot=None if df.isnull().all().all() else plot_overview(df[col]),
+        describe_plot=None if df[col].isnull().all() else plot_overview(df[col]),
         constant=True if (df[col].nunique() == 1) else False,
         correlation=get_correlation(df, col),
     )
@@ -237,7 +237,7 @@ def plot_overview(col):
 # ToDo: move to sequence_utils
 def check_sequence(df, col):
     if df[col].name in df.select_dtypes(include=['number', 'bool']).columns or infer_dtype(df[col]).__contains__('mixed'):
-        return "None"
+         return "None"
     if df[col].astype(str).str.len().eq(1).all():
         return "None"
     values = df[col].dropna().astype(str).tolist()

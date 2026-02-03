@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import numpy as np
 import pandas as pd
 import pathlib
 from functools import reduce
@@ -10,15 +10,20 @@ def read_file(file: click.Path) -> pd.DataFrame | None:
     file = pathlib.Path(file).absolute()
     ext = pathlib.Path(file.__str__()).suffix
 
-
+    seperator = _get_sep(file)
     with open(file, encoding="utf-8") as csv_file:
-        csv_bytes = "".join(csv_file.readline() for _ in range(10))
+        csv_bytes = "".join(csv_file.readline() for _ in range(1000))
         dialect = csv.Sniffer().sniff(csv_bytes)
+        print("HEADER",csv.Sniffer().has_header(csv_bytes))
         header = csv.Sniffer().has_header(csv_bytes)
         csv_file.seek(0)
-
-    head_col = 0 if header else None
-    idx_col = 0 if header else None
+    if dialect.delimiter is not seperator:
+        dialect.delimiter=seperator
+        head_col = 0
+        idx_col = None
+    else:
+        head_col = 0 if header else None
+        idx_col = 0 if header else None
 
     if not ext in (".csv", ".tsv", ".json"):
         raise ValueError(f'File {file} is not a .csv or .tsv file')
@@ -48,6 +53,17 @@ def read_file(file: click.Path) -> pd.DataFrame | None:
         return df
 
     return None
+
+def _get_sep(file:pathlib.Path, candidates=(',','\t', ';','|')) -> str:
+    with open(file,'r', encoding="utf-8") as f:
+        samples=[l for i, l in enumerate(f) if l.strip() and i < 10]
+
+    counts = np.array([[l.count(c) for c in candidates] for l in samples], dtype=np.uint16)
+    avg_counts = counts.mean(axis=0)
+    stdevs = counts.std(axis=0, ddof=1) if len(samples) > 1 else np.zeros(len(candidates))
+    stdevs[avg_counts < 1] = np.inf
+
+    return candidates[np.argmin(stdevs)]
 
 
 def parse_parquet(file: click.Path) -> pd.DataFrame:

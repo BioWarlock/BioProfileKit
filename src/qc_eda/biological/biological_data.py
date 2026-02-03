@@ -63,14 +63,17 @@ def top_mere(seq, n=3, top=5) -> List[Tuple[str, int]] | None:
 
 
 def biological_data_top_entries(seqs: pd.Series, top_k: int = 20) -> Tuple[np.ndarray, np.ndarray, int, int, np.ndarray]:
-    arr = np.char.upper(seqs.to_numpy(dtype=str))
-    uniq_tmp, counts_tmp = np.unique(arr, return_counts=True)
-    
+    seqs =seqs.str.upper()
+    vc = seqs.value_counts()
+    uniq_tmp, counts_tmp =vc.index.to_numpy(), vc.values
+
     top_k = min(top_k, len(uniq_tmp))
     top_idx = np.argsort(counts_tmp)[::-1][:top_k]
     
-    uniques = uniq_tmp[top_idx]
+    uniques = uniq_tmp[top_idx].astype(str)
+    print(uniques)
     counts = counts_tmp[top_idx]
+    print(counts)
 
     lengths = np.array([len(s) for s in uniques])
     min_len, max_len = lengths.min(), lengths.max()
@@ -88,6 +91,7 @@ def dna_rna_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5) 
     k_mers = _kmer_check(k, top, uniques)
 
     if min_len == max_len:
+        print(uniques)
         plot = make_logo(uniques,'color_classic')
     else:
         flat_kmers = chain.from_iterable(k_mers)
@@ -144,6 +148,7 @@ def protein_columns(seqs: pd.Series,  k: int = 3, top_n: int = 20, top: int = 5)
     k_mers = _kmer_check(k, top, uniques)
     #ToDo Add Desclaimer
     if min_len == max_len:
+        print(uniques)
         plot = make_logo(uniques, "color_chemistry")
     else:
         flat_kmers = chain.from_iterable(k_mers)
@@ -172,7 +177,9 @@ def protein_columns(seqs: pd.Series,  k: int = 3, top_n: int = 20, top: int = 5)
 
 
 def make_logo(seqs, color):
+    print(seqs)
     m = motifs.create(seqs)
+    print("MOTIF",m)
     with tempfile.NamedTemporaryFile(suffix='.svg', delete=False) as tmp_file:
         tmp_path = tmp_file.name
 

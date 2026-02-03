@@ -121,7 +121,11 @@
                                 {% endif %}
                                 {% if col.sequence != 'None' %}
                                     <span class="badge bg-success me-2">Sequence</span>
-                                {% elif col.type == 'object' %}
+                                {% elif col.type == 'str'%}
+                                    <span class="badge bg-dark me-2">Object</span>
+                                {% elif col.type == 'bool'%}
+                                    <span class="badge bg-dark me-2">Object</span>
+                                {% elif col.type == 'object'%}
                                     <span class="badge bg-dark me-2">Object</span>
                                 {% elif col.type == 'int64' or 'float64' %}
                                     <span class="badge bg-primary me-2">Number</span>
@@ -166,7 +170,7 @@
                                         <strong>Number of Values:</strong> {{ col.number }}<br>
                                         <strong>Number of Unique:</strong> {{ col.unique }}<br>
                                         <strong>Number of Missing:</strong> {{ col.missing }} ({{ col.missing_per }}%)<br>
-                                        {% if col.type != 'object' %}
+                                        {% if col.type != 'object' or 'str' %}
                                             <strong>Number type:</strong> {{ col.type }}<br>
                                         {% endif %}
                                         {% if col.sequence != 'None' %}
@@ -221,14 +225,14 @@
                                                         type="button" role="tab">Unit Statistics</button>
                                             </li>
                                         {% endif %}
-                                        {% if col.type not in ['object', 'bool'] and col.type in ['int64', 'float64'] %}
+                                        {% if col.type not in ['object', 'bool', 'str'] and col.type in ['int64', 'float64'] %}
                                             <li class="nav-item" role="presentation">
                                                 <button class="nav-link" id="number-stats-tab{{ col.name | replace(' ', '') | capitalize }}"
                                                         data-bs-toggle="tab" data-bs-target="#numberStats{{ col.name | replace(' ', '') | capitalize }}"
                                                         type="button" role="tab">General Overview</button>
                                             </li>
                                         {% endif %}
-                                        {% if col.type in ['object', 'bool'] and col.type not in ['int64', 'float64'] %}
+                                        {% if col.type in ['object', 'bool', 'str'] and col.type not in ['int64', 'float64'] %}
                                             <li class="nav-item" role="presentation">
                                                 <button class="nav-link" id="cat-stats-tab{{ col.name | replace(' ', '') | capitalize }}"
                                                         data-bs-toggle="tab" data-bs-target="#catStats{{ col.name | replace(' ', '') | capitalize }}"
@@ -318,7 +322,7 @@
                                             </div>
                                         {% endif %}
                                         <!-- General Overview for numeric columns -->
-                                        {% if col.type not in ['object', 'bool'] and col.type in ['int64', 'float64'] %}
+                                        {% if col.type not in ['object', 'bool', 'str'] and col.type in ['int64', 'float64'] %}
                                             <div class="tab-pane fade" id="numberStats{{ col.name | replace(' ', '') | capitalize }}" role="tabpanel">
                                                 <div class="table-responsive mt-3" style="max-height: 400px; overflow-y: auto;">
                                                     {% for ov in overview %}
@@ -359,7 +363,7 @@
                                             </div>
                                         {% endif %}
                                         <!-- Categorical Overview -->
-                                        {% if col.type in ['object', 'bool'] and col.type not in ['int64', 'float64'] %}
+                                        {% if col.type in ['object', 'bool', 'str'] and col.type not in ['int64', 'float64'] %}
                                             <div class="tab-pane fade" id="catStats{{ col.name | replace(' ', '') | capitalize }}" role="tabpanel">
                                                 {% for cat in categorical %}
                                                     {% if col.name == cat.name %}
