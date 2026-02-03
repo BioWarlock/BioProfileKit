@@ -89,7 +89,7 @@ def dna_rna_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5) 
     k_mers = _kmer_check(k, top, uniques)
 
     if min_len == max_len:
-        plot = make_logo(uniques,'color_classic')
+        plot = make_logo(uniques,'color_classic', seq_type="dna")
     else:
         flat_kmers = chain.from_iterable(k_mers)
         df_kmers = pd.DataFrame(flat_kmers, columns=['kmer', 'count'])
@@ -145,7 +145,7 @@ def protein_columns(seqs: pd.Series,  k: int = 3, top_n: int = 20, top: int = 5)
     k_mers = _kmer_check(k, top, uniques)
     #ToDo Add Desclaimer
     if min_len == max_len:
-        plot = make_logo(uniques, "color_chemistry")
+        plot = make_logo(uniques, "chemistry", seq_type="protein")
     else:
         flat_kmers = chain.from_iterable(k_mers)
         df_kmers = pd.DataFrame(flat_kmers, columns=['kmer', 'count'])
@@ -172,13 +172,16 @@ def protein_columns(seqs: pd.Series,  k: int = 3, top_n: int = 20, top: int = 5)
     )
 
 
-def make_logo(seqs, color):
-    m = motifs.create(seqs)
+def make_logo(seqs, color, seq_type):
+    if seq_type == "protein":
+        m = motifs.create(seqs, alphabet="ACDEFGHIKLMNPQRSTVWY")
+    else:
+        m = motifs.create(seqs, alphabet="ACGT")
     with tempfile.NamedTemporaryFile(suffix='.svg', delete=False) as tmp_file:
         tmp_path = tmp_file.name
 
     try:
-        m.weblogo(tmp_path, format="svg",color_scheme=color, logo_font="Calibri",logo_margin=3, fontsize=12)
+        m.weblogo(tmp_path, format="svg",sequence_type=seq_type, color=color,logo_font="Calibri",logo_margin=3, fontsize=12)
 
         with open(tmp_path, 'r', encoding='utf-8') as svg_file:
             svg_content = svg_file.read()

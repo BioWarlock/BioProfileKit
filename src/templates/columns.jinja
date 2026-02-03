@@ -112,7 +112,9 @@
                                 {% if col.unique == 1 %}
                                     <span class="badge bg-danger me-2">Constant</span>
                                 {% endif %}
-                                {% if col.missing_per > 15 %}
+                                {% if col.missing_per == 100 %}
+                                    <span class="badge bg-danger me-2">Empty Column</span>
+                                {% elif col.missing_per > 15 %}
                                     <span class="badge bg-danger me-2">Missing</span>
                                 {% elif 5 < col.missing_per < 15 %}
                                     <span class="badge bg-warning me-2">Missing</span>
@@ -211,7 +213,7 @@
                                     {% endif %}
                                 </div>
 
-                                {% if col.sequence == 'None' %}
+                                {% if col.sequence == 'None' and col.missing_per < 100 %}
                                     <ul class="nav nav-tabs" id="objectTab{{ col.name | replace(' ', '') | capitalize }}" role="tablist">
                                         <li class="nav-item" role="presentation">
                                             <button class="nav-link active" id="object-stats-tab{{ col.name | replace(' ', '') | capitalize }}"
@@ -393,10 +395,13 @@
                                             </div>
                                         {% endif %}
                                     </div>
+                                {% elif col.missing_per == 100 %}
+                                    <div class="alert alert-danger mt-3">
+                                        <strong>Note:</strong> This column is empty.
+                                    </div>
                                 {% endif %}
-
                                 <!-- Neue Sektion für Top 20 Sequenzen (nur bei Sequenzspalten) -->
-                                {% if col.sequence != 'None' and col.dna_rna_data %}
+                                {% if col.sequence != 'None' and col.dna_rna_data and col.missing_per < 100  %}
                                     <div class="row w-100 mt-4">
                                         <div class="col-12">
                                             <h5>Top {{ top_n }} Sequences Analysis</h5>
@@ -562,7 +567,7 @@
                                 {% endif %}
 
                                 <!-- Protein Sequenz Sektion -->
-                                {% if col.sequence != 'None' and col.protein_data %}
+                                {% if col.sequence != 'None' and col.protein_data and col.missing_per < 100 %}
                                     <div class="row w-100 mt-4">
                                         <div class="col-12">
                                             <h5>Top {{ top_n }} Protein Sequences Analysis</h5>
