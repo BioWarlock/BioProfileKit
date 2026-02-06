@@ -96,7 +96,7 @@ def balance_plot(df, target):
     return fig.to_html(full_html=False, include_plotlyjs=False)
 
 def boxplot(df: pd.DataFrame):
-    df = df.select_dtypes(include=['float64', 'int64'])
+    df = df.select_dtypes(include=['float64', 'int64']).dropna(axis=1, how='all')
     fig = go.Figure()
 
     for col in df:
@@ -113,7 +113,7 @@ def boxplot(df: pd.DataFrame):
     return fig.to_html(full_html=False, include_plotlyjs=False)
 
 def scatter_matrix(df: pd.DataFrame):
-    df = df.select_dtypes(include=['float64', 'int64'])
+    df =  df.select_dtypes(include=['float64', 'int64']).dropna(axis=1, how='all')
     fig = px.scatter_matrix(df, color_discrete_sequence=["#0F65A0"], height=750)
 
     fig.update_traces(
