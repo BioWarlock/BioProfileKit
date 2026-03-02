@@ -17,6 +17,10 @@ Example Results: [BioProfileKit Example](https://hansen-maria.github.io/BioProfi
 - **Biological Metadata Recognition** - Automatically identifies and verifies organism names, taxonomic identifiers, and biological annotations using controlled vocabularies from official databases
 - **Rich Visualizations** - Creates histograms and interactive charts to help quickly identify patterns
 - **Interactive HTML Reports** - Provides portable, user-friendly reports with dynamic filtering and cross-linked visualizations for seamless data exploration
+## WebApplication
+
+
+https://bioprofilekit.computational.bio/
 
 ## Installation
 
