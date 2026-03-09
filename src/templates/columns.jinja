@@ -97,9 +97,9 @@
                          style="display: {% if loop.index0 < items_per_page %}block{% else %}none{% endif %};">
                         <div class="card-header d-inline-flex gap-1 mb-2">
                             <button class="btn btn-cb-outline-primary" type="button" data-bs-toggle="collapse"
-                                    data-bs-target="#multiCollapse{{ col.name | replace(' ', '') | capitalize }}"
+                                    data-bs-target="#multiCollapse{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
                                     aria-expanded="false"
-                                    aria-controls="multiCollapse{{ col.name | replace(' ', '') | capitalize }}" style="min-width: 200px;">
+                                    aria-controls="multiCollapse{{ col.name | replace(' ', '') |  replace('.', '_') | replace('#', '') |capitalize }}" style="min-width: 200px;">
                                 {{ col.name.replace('_', ' ').title() }}
                             </button>
                             <div class="m-2 d-flex">
@@ -163,7 +163,7 @@
                             </div>
                         </div>
                         <div class="card-body collapse multi-collapse "
-                             id="multiCollapse{{ col.name | replace(' ', '') | capitalize }}">
+                             id="multiCollapse{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}">
                             <div class="card card-body d-flex justify-content-between align-items-start mb-2">
                                 <div class="row w-100">
                                     <!-- Linke Spalte: Textinfos -->
@@ -214,46 +214,46 @@
                                 </div>
 
                                 {% if col.sequence == 'None' and col.missing_per < 100 %}
-                                    <ul class="nav nav-tabs" id="objectTab{{ col.name | replace(' ', '') | capitalize }}" role="tablist">
+                                    <ul class="nav nav-tabs" id="objectTab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tablist">
                                         <li class="nav-item" role="presentation">
-                                            <button class="nav-link active" id="object-stats-tab{{ col.name | replace(' ', '') | capitalize }}"
-                                                    data-bs-toggle="tab" data-bs-target="#objectStats{{ col.name | replace(' ', '') | capitalize }}"
+                                            <button class="nav-link active" id="object-stats-tab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
+                                                    data-bs-toggle="tab" data-bs-target="#objectStats{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
                                                     type="button" role="tab">Top 20 Occurrences</button>
                                         </li>
                                         {% if col.measurement_data %}
                                             <li class="nav-item" role="presentation">
-                                                <button class="nav-link" id="unit-stats-tab{{ col.name | replace(' ', '') | capitalize }}"
-                                                        data-bs-toggle="tab" data-bs-target="#unitStats{{ col.name | replace(' ', '') | capitalize }}"
+                                                <button class="nav-link" id="unit-stats-tab{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
+                                                        data-bs-toggle="tab" data-bs-target="#unitStats{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
                                                         type="button" role="tab">Unit Statistics</button>
                                             </li>
                                         {% endif %}
                                         {% if col.type not in ['object', 'bool', 'str'] and col.type in ['int64', 'float64'] %}
                                             <li class="nav-item" role="presentation">
-                                                <button class="nav-link" id="number-stats-tab{{ col.name | replace(' ', '') | capitalize }}"
-                                                        data-bs-toggle="tab" data-bs-target="#numberStats{{ col.name | replace(' ', '') | capitalize }}"
+                                                <button class="nav-link" id="number-stats-tab{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
+                                                        data-bs-toggle="tab" data-bs-target="#numberStats{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
                                                         type="button" role="tab">General Overview</button>
                                             </li>
                                         {% endif %}
                                         {% if col.type in ['object', 'bool', 'str'] and col.type not in ['int64', 'float64'] %}
                                             <li class="nav-item" role="presentation">
-                                                <button class="nav-link" id="cat-stats-tab{{ col.name | replace(' ', '') | capitalize }}"
-                                                        data-bs-toggle="tab" data-bs-target="#catStats{{ col.name | replace(' ', '') | capitalize }}"
+                                                <button class="nav-link" id="cat-stats-tab{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
+                                                        data-bs-toggle="tab" data-bs-target="#catStats{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
                                                         type="button" role="tab">Categorical Statistics</button>
                                             </li>
                                         {% endif %}
 
                                         {% if col.taxonomy is defined and col.taxonomy is not none and col.taxonomy.is_taxonomy and col.taxonomy.taxonomy is not string %}
                                             <li class="nav-item" role="presentation">
-                                                <button class="nav-link" id="tax-stats-tab{{ col.name | replace(' ', '') | capitalize }}"
-                                                        data-bs-toggle="tab" data-bs-target="#taxStats{{ col.name | replace(' ', '') | capitalize }}"
+                                                <button class="nav-link" id="tax-stats-tab{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
+                                                        data-bs-toggle="tab" data-bs-target="#taxStats{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
                                                         type="button" role="tab">Invalid Taxonomy</button>
                                             </li>
                                         {% endif %}
                                     </ul>
 
-                                    <div class="tab-content" id="objectTabContent{{ col.name | replace(' ', '') | capitalize }}">
+                                    <div class="tab-content" id="objectTabContent{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}">
                                         <!-- Object Stats Tab -->
-                                        <div class="tab-pane fade show active" id="objectStats{{ col.name | replace(' ', '') | capitalize }}" role="tabpanel">
+                                        <div class="tab-pane fade show active" id="objectStats{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
                                             <div class="table-responsive mt-3" style="max-height: 400px; overflow-y: auto;">
                                                 <table class="table table-sm table-striped w-100" style="min-width: 600px;">
                                                     <thead class="sticky-top bg-light">
@@ -281,7 +281,7 @@
                                         </div>
                                         <!-- Unit Stats Tab -->
                                         {% if col.measurement_data %}
-                                            <div class="tab-pane fade" id="unitStats{{ col.name | replace(' ', '') | capitalize }}" role="tabpanel">
+                                            <div class="tab-pane fade" id="unitStats{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
                                                 <div class="table-responsive mt-3" style="max-height: 400px; overflow-y: auto;">
                                                     <table class="table table-sm table-striped w-100" style="min-width: 500px;">
                                                         <thead class="sticky-top bg-light">
@@ -304,7 +304,7 @@
                                         {% endif %}
                                         <!-- Taxonomy Tab -->
                                         {% if col.taxonomy is defined and col.taxonomy is not none and col.taxonomy.is_taxonomy and col.taxonomy.taxonomy is not string %}
-                                            <div class="tab-pane fade" id="taxStats{{ col.name | replace(' ', '') | capitalize }}" role="tabpanel">
+                                            <div class="tab-pane fade" id="taxStats{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
                                                 <div class="table-responsive mt-3" style="max-height: 400px; overflow-y: auto;">
                                                     <table class="table table-sm table-striped w-100" style="min-width: 500px;">
                                                         <thead class="sticky-top bg-light">
@@ -325,7 +325,7 @@
                                         {% endif %}
                                         <!-- General Overview for numeric columns -->
                                         {% if col.type not in ['object', 'bool', 'str'] and col.type in ['int64', 'float64'] %}
-                                            <div class="tab-pane fade" id="numberStats{{ col.name | replace(' ', '') | capitalize }}" role="tabpanel">
+                                            <div class="tab-pane fade" id="numberStats{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
                                                 <div class="table-responsive mt-3" style="max-height: 400px; overflow-y: auto;">
                                                     {% for ov in overview %}
                                                         {% if ov.name == col.name %}
@@ -366,7 +366,7 @@
                                         {% endif %}
                                         <!-- Categorical Overview -->
                                         {% if col.type in ['object', 'bool', 'str'] and col.type not in ['int64', 'float64'] %}
-                                            <div class="tab-pane fade" id="catStats{{ col.name | replace(' ', '') | capitalize }}" role="tabpanel">
+                                            <div class="tab-pane fade" id="catStats{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
                                                 {% for cat in categorical %}
                                                     {% if col.name == cat.name %}
                                                         <div class="table-responsive mt-3" style="max-height: 400px; overflow-x: auto; overflow-y: auto;">
@@ -407,27 +407,27 @@
                                             <h5>Top {{ top_n }} Sequences Analysis</h5>
 
                                             <!-- Tabs für verschiedene Ansichten -->
-                                            <ul class="nav nav-tabs" id="sequenceTab{{ col.name | replace(' ', '') | capitalize }}" role="tablist">
+                                            <ul class="nav nav-tabs" id="sequenceTab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tablist">
                                                 <li class="nav-item" role="presentation">
-                                                    <button class="nav-link active" id="sequences-tab{{ col.name | replace(' ', '') | capitalize }}"
-                                                            data-bs-toggle="tab" data-bs-target="#sequences{{ col.name | replace(' ', '') | capitalize }}"
+                                                    <button class="nav-link active" id="sequences-tab{{ col.name | replace(' ', '') |replace('.', '_') | replace('#', '') | capitalize }}"
+                                                            data-bs-toggle="tab" data-bs-target="#sequences{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
                                                             type="button" role="tab">Sequences</button>
                                                 </li>
                                                 <li class="nav-item" role="presentation">
-                                                    <button class="nav-link" id="stats-tab{{ col.name | replace(' ', '') | capitalize }}"
-                                                            data-bs-toggle="tab" data-bs-target="#stats{{ col.name | replace(' ', '') | capitalize }}"
+                                                    <button class="nav-link" id="stats-tab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
+                                                            data-bs-toggle="tab" data-bs-target="#stats{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
                                                             type="button" role="tab">Statistics</button>
                                                 </li>
                                                 <li class="nav-item" role="presentation">
-                                                    <button class="nav-link" id="kmers-tab{{ col.name | replace(' ', '') | capitalize }}"
-                                                            data-bs-toggle="tab" data-bs-target="#kmers{{ col.name | replace(' ', '') | capitalize }}"
+                                                    <button class="nav-link" id="kmers-tab{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
+                                                            data-bs-toggle="tab" data-bs-target="#kmers{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
                                                             type="button" role="tab">K-mers</button>
                                                 </li>
                                             </ul>
 
-                                            <div class="tab-content" id="sequenceTabContent{{ col.name | replace(' ', '') | capitalize }}">
+                                            <div class="tab-content" id="sequenceTabContent{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}">
                                                 <!-- Sequences Tab -->
-                                                <div class="tab-pane fade show active" id="sequences{{ col.name | replace(' ', '') | capitalize }}" role="tabpanel">
+                                                <div class="tab-pane fade show active" id="sequences{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
                                                     <div class="table-responsive mt-3" style="max-height: 400px; overflow-y: auto;">
                                                         <table class="table table-sm table-striped">
                                                             <thead class="sticky-top bg-light">
@@ -464,7 +464,7 @@
                                                 </div>
 
                                                 <!-- Statistics Tab -->
-                                                <div class="tab-pane fade" id="stats{{ col.name | replace(' ', '') | capitalize }}" role="tabpanel">
+                                                <div class="tab-pane fade" id="stats{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
                                                     <div class="row mt-3">
                                                         <div class="col-md-6">
                                                             <h6>Length Statistics</h6>
@@ -515,7 +515,7 @@
                                                 </div>
 
                                                 <!-- K-mers Tab -->
-                                                <div class="tab-pane fade" id="kmers{{ col.name | replace(' ', '') | capitalize }}" role="tabpanel">
+                                                <div class="tab-pane fade" id="kmers{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
                                                     {% if col.dna_rna_data.plot %}
                                                         <div class="row w-100">
                                                             <div class="plot-container mb-4" style="max-height: fit-content; overflow: scroll;">
@@ -525,20 +525,20 @@
                                                     {% endif %}
                                                     <div class="mt-3">
                                                         <h6>Most Common K-mers per Sequence</h6>
-                                                        <div class="accordion" id="kmerAccordion{{ col.name | replace(' ', '') | capitalize }}">
+                                                        <div class="accordion" id="kmerAccordion{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}">
                                                             {% for i in range(col.dna_rna_data.sequence|length) %}
                                                                 {% if col.dna_rna_data.k_mers[i] %}
                                                                     <div class="accordion-item">
                                                                         <h2 class="accordion-header">
                                                                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                                                                    data-bs-target="#kmer{{ col.name | replace(' ', '') | capitalize }}{{ i }}"
+                                                                                    data-bs-target="#kmer{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}{{ i }}"
                                                                                     aria-expanded="false">
                                                                                 <strong>#{{ i + 1 }}</strong> &nbsp;{{ col.dna_rna_data.sequence[i]|truncate(20, True, "...")}} ({{ col.dna_rna_data.length[i] }} bp)
                                                                             </button>
                                                                         </h2>
-                                                                        <div id="kmer{{ col.name | replace(' ', '') | capitalize }}{{ i }}"
+                                                                        <div id="kmer{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}{{ i }}"
                                                                              class="accordion-collapse collapse"
-                                                                             data-bs-parent="#kmerAccordion{{ col.name | replace(' ', '') | capitalize }}">
+                                                                             data-bs-parent="#kmerAccordion{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}">
                                                                             <div class="accordion-body">
                                                                                 <table class="table table-sm">
                                                                                     <thead>
@@ -573,37 +573,37 @@
                                             <h5>Top {{ top_n }} Protein Sequences Analysis</h5>
 
                                             <!-- Tabs für verschiedene Ansichten -->
-                                            <ul class="nav nav-tabs" id="proteinTab{{ col.name | replace(' ', '') | capitalize }}" role="tablist">
+                                            <ul class="nav nav-tabs" id="proteinTab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tablist">
                                                 <li class="nav-item" role="presentation">
-                                                    <button class="nav-link active" id="protein-sequences-tab{{ col.name | replace(' ', '') | capitalize }}"
-                                                            data-bs-toggle="tab" data-bs-target="#proteinSequences{{ col.name | replace(' ', '') | capitalize }}"
+                                                    <button class="nav-link active" id="protein-sequences-tab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
+                                                            data-bs-toggle="tab" data-bs-target="#proteinSequences{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
                                                             type="button" role="tab">Sequences</button>
                                                 </li>
                                                 <li class="nav-item" role="presentation">
-                                                    <button class="nav-link" id="protein-stats-tab{{ col.name | replace(' ', '') | capitalize }}"
-                                                            data-bs-toggle="tab" data-bs-target="#proteinStats{{ col.name | replace(' ', '') | capitalize }}"
+                                                    <button class="nav-link" id="protein-stats-tab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
+                                                            data-bs-toggle="tab" data-bs-target="#proteinStats{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
                                                             type="button" role="tab">Statistics</button>
                                                 </li>
                                                 <li class="nav-item" role="presentation">
-                                                    <button class="nav-link" id="protein-composition-tab{{ col.name | replace(' ', '') | capitalize }}"
-                                                            data-bs-toggle="tab" data-bs-target="#proteinComposition{{ col.name | replace(' ', '') | capitalize }}"
+                                                    <button class="nav-link" id="protein-composition-tab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
+                                                            data-bs-toggle="tab" data-bs-target="#proteinComposition{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
                                                             type="button" role="tab">Amino Acid Composition</button>
                                                 </li>
                                                 <li class="nav-item" role="presentation">
-                                                    <button class="nav-link" id="protein-properties-tab{{ col.name | replace(' ', '') | capitalize }}"
-                                                            data-bs-toggle="tab" data-bs-target="#proteinProperties{{ col.name | replace(' ', '') | capitalize }}"
+                                                    <button class="nav-link" id="protein-properties-tab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
+                                                            data-bs-toggle="tab" data-bs-target="#proteinProperties{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
                                                             type="button" role="tab">Protein Properties</button>
                                                 </li>
                                                 <li class="nav-item" role="presentation">
-                                                    <button class="nav-link" id="protein-kmers-tab{{ col.name | replace(' ', '') | capitalize }}"
-                                                            data-bs-toggle="tab" data-bs-target="#proteinKmers{{ col.name | replace(' ', '') | capitalize }}"
+                                                    <button class="nav-link" id="protein-kmers-tab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
+                                                            data-bs-toggle="tab" data-bs-target="#proteinKmers{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
                                                             type="button" role="tab">K-mers</button>
                                                 </li>
                                             </ul>
 
-                                            <div class="tab-content" id="proteinTabContent{{ col.name | replace(' ', '') | capitalize }}">
+                                            <div class="tab-content" id="proteinTabContent{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}">
                                                 <!-- Protein Sequences Tab -->
-                                                <div class="tab-pane fade show active" id="proteinSequences{{ col.name | replace(' ', '') | capitalize }}" role="tabpanel">
+                                                <div class="tab-pane fade show active" id="proteinSequences{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
                                                     <div class="table-responsive mt-3" style="max-height: 400px; overflow-y: auto;">
                                                         <table class="table table-sm table-striped">
                                                             <thead class="sticky-top bg-light">
@@ -667,7 +667,7 @@
                                                 </div>
 
                                                 <!-- Protein Statistics Tab -->
-                                                <div class="tab-pane fade" id="proteinStats{{ col.name | replace(' ', '') | capitalize }}" role="tabpanel">
+                                                <div class="tab-pane fade" id="proteinStats{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
                                                     <div class="row mt-3">
                                                         <div class="col-md-4">
                                                             <h6>Length Statistics</h6>
@@ -721,7 +721,7 @@
                                                 </div>
 
                                                 <!-- Amino Acid Composition Tab -->
-                                                <div class="tab-pane fade" id="proteinComposition{{ col.name | replace(' ', '') | capitalize }}" role="tabpanel">
+                                                <div class="tab-pane fade" id="proteinComposition{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
                                                     <div class="mt-3">
                                                         <h6>Amino Acid Composition (Aggregated from Top 20)</h6>
                                                         {% set all_amino_acids = {} %}
@@ -774,7 +774,7 @@
                                                 </div>
 
                                                 <!-- Protein Properties Tab -->
-                                                <div class="tab-pane fade" id="proteinProperties{{ col.name | replace(' ', '') | capitalize }}" role="tabpanel">
+                                                <div class="tab-pane fade" id="proteinProperties{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
                                                     <div class="table-responsive mt-3" style="max-height: 400px; overflow-y: auto;">
                                                         <table class="table table-sm table-striped">
                                                             <thead class="sticky-top bg-light">
@@ -849,7 +849,7 @@
                                                 </div>
 
                                                 <!-- K-mers Tab -->
-                                                <div class="tab-pane fade" id="proteinKmers{{ col.name | replace(' ', '') | capitalize }}" role="tabpanel">
+                                                <div class="tab-pane fade" id="proteinKmers{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
                                                     {% if col.protein_data.plot %}
                                                         <div class="row w-100">
                                                             <div class="plot-container mb-4" style="max-height: fit-content; overflow: scroll;">
@@ -859,20 +859,20 @@
                                                     {% endif %}
                                                     <div class="mt-3">
                                                         <h6>Most Common Peptide K-mers per Sequence</h6>
-                                                        <div class="accordion" id="proteinKmerAccordion{{ col.name | replace(' ', '') | capitalize }}">
+                                                        <div class="accordion" id="proteinKmerAccordion{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}">
                                                             {% for i in range(col.protein_data.sequence|length) %}
                                                                 {% if col.protein_data.k_mers[i] %}
                                                                     <div class="accordion-item">
                                                                         <h2 class="accordion-header">
                                                                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                                                                    data-bs-target="#proteinKmer{{ col.name | replace(' ', '') | capitalize }}{{ i }}"
+                                                                                    data-bs-target="#proteinKmer{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}{{ i }}"
                                                                                     aria-expanded="false">
                                                                                 <strong>#{{ i + 1 }}</strong> &nbsp; {{ col.protein_data.sequence[i]|truncate(20, True, "...") }} ({{ col.protein_data.length[i] }} AA)
                                                                             </button>
                                                                         </h2>
-                                                                        <div id="proteinKmer{{ col.name | replace(' ', '') | capitalize }}{{ i }}"
+                                                                        <div id="proteinKmer{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}{{ i }}"
                                                                              class="accordion-collapse collapse"
-                                                                             data-bs-parent="#proteinKmerAccordion{{ col.name | replace(' ', '') | capitalize }}">
+                                                                             data-bs-parent="#proteinKmerAccordion{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}">
                                                                             <div class="accordion-body">
                                                                                 <table class="table table-sm">
                                                                                     <thead>
