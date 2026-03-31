@@ -1,4 +1,7 @@
+import re
 from dataclasses import dataclass
+
+import math
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -7,8 +10,22 @@ from pandas.api.types import infer_dtype
 from scipy import stats
 
 from .sequence_enum import Sequence
-from .wrapper_utils import fast_check_sequence
+from .wrapper_utils import fast_check_sequence, char_entropy
 
+def _alphabet_from_pattern(pattern):
+    match = re.search(r'\[([^]]+)]', pattern.pattern)
+    return set(match.group(1).upper()) if match else set()
+
+# ToDo test if DNA and RNA Entropy is needed
+DNA_ALPHABET = _alphabet_from_pattern(Sequence.DNA.value)
+RNA_ALPHABET = _alphabet_from_pattern(Sequence.RNA.value)
+PROTEIN_ALPHABET = _alphabet_from_pattern(Sequence.PROTEIN.value)
+
+ENTROPY_THRESHOLDS = {
+    "dna": 0.5 * math.log2(len(DNA_ALPHABET)),
+    "rna": 0.5 * math.log2(len(RNA_ALPHABET)),
+    "protein": 0.5 * math.log2(len(PROTEIN_ALPHABET)),
+}
 
 @dataclass
 class NumericalData:
@@ -32,6 +49,7 @@ class ColumnOverview:
     missing_per: float | None
     type: str
     sequence: str | None
+    invalid_seqs: list[str] | None
     describe_plot: str | None
     constant: bool | None
     correlation: list[str] | None
@@ -91,6 +109,9 @@ def overview(df: pd.DataFrame, file) -> NumericalData:
 
 #ToDo check for empty Column and return
 def column_overview(df: pd.DataFrame, col) -> ColumnOverview:
+    seq_type, invalid = check_sequence(df, col)
+    if seq_type != "None":
+        print(f"Column: {col:10s} is of type: {seq_type:10s} with invalid sequences: {invalid}.")
     return ColumnOverview(
         name=col,
         number=int(df[col].notnull().sum()),
@@ -98,7 +119,8 @@ def column_overview(df: pd.DataFrame, col) -> ColumnOverview:
         missing=int(df[col].isnull().sum()),
         missing_per=100 if df[col].isnull().all() else round(sum(df[col].isnull()) * 100 / df[col].size, 2),
         type=str(df[col].dtype),
-        sequence=check_sequence(df, col),
+        sequence=seq_type,
+        invalid_seqs=invalid,
         describe_plot=None if df[col].isnull().all() else plot_overview(df[col]),
         constant=True if (df[col].nunique() == 1) else False,
         correlation=get_correlation(df, col),
@@ -235,20 +257,35 @@ def plot_overview(col):
 
 
 # ToDo: move to sequence_utils
-def check_sequence(df, col):
+def check_sequence(df, col, threshold=0.95):
     if df[col].name in df.select_dtypes(include=['number', 'bool']).columns or infer_dtype(df[col]).__contains__('mixed'):
-         return "None"
+         return "None", []
     if df[col].astype(str).str.len().eq(1).all():
-        return "None"
+        return "None", []
     values = df[col].dropna().astype(str).tolist()
+
+    #ToDo real cardinality
+    unique_count = len(set(values))
+    if unique_count < 10:
+        return "None", []
+
     if all(len(x) > 2 for x in values):
-        if fast_check_sequence(values, Sequence.DNA.value):
-            return "dna"
-        elif fast_check_sequence(values, Sequence.RNA.value):
-            return "rna"
-        elif fast_check_sequence(values, Sequence.PROTEIN.value):
-            return "protein"
-    return "None"
+        match, invalid = fast_check_sequence(values, Sequence.DNA.value, threshold)
+        if match:
+            return "dna", _get_invalid(values, invalid)
+        match, invalid = fast_check_sequence(values, Sequence.RNA.value, threshold)
+        if match:
+            return "rna", _get_invalid(values, invalid)
+        match, invalid = fast_check_sequence(values, Sequence.PROTEIN.value, threshold)
+        if match:
+            if not invalid or char_entropy(values, PROTEIN_ALPHABET) >= ENTROPY_THRESHOLDS["protein"]:
+                return "protein", _get_invalid(values, invalid)
+    return "None", []
+
+def _get_invalid(values, invalid_indices):
+    if not invalid_indices:
+        return []
+    return [values[i] for i in invalid_indices]
 
 
 """def rank_taxonomy(df, col):
