@@ -7,7 +7,7 @@ import csv
 import click
 
 def read_file(file: click.Path) -> pd.DataFrame | None:
-    file = pathlib.Path(file).absolute()
+    file = pathlib.Path(file.__str__()).absolute()
     ext = pathlib.Path(file.__str__()).suffix
 
     seperator = _get_sep(file)

@@ -34,8 +34,10 @@ class NumericalData:
     cols: int
     nulls: int
     nulls_percentage: float
+    empty_rows: int
     dup_row: int
     dup_col: int
+    ratio: float
     memory: float
     alerts: int
 
@@ -101,8 +103,10 @@ def overview(df: pd.DataFrame, file) -> NumericalData:
         cols=df.shape[1],
         nulls=sum(df.isnull().sum()),
         nulls_percentage=100 if df.isnull().all().all() else round(sum(df.isnull().sum()) * 100 / df.size, 2),
+        empty_rows=df.replace("", np.nan).isna().all(axis=1).sum(),
         dup_row=int(df.duplicated().sum()),
         dup_col=int(df.columns.duplicated().sum()),
+        ratio=round(df.shape[0] / df.shape[1], 3),
         memory=int(df.memory_usage(deep=True).sum()),
         alerts=0
     )
