@@ -134,13 +134,13 @@
                                 {% endif %}
                                 {% if col.correlation %}
                                     {% set ns = namespace(has_low=false, has_moderate=false, has_high=false) %}
-                                    {% for corr in col.correlation %}
-                                        {% if corr.1 < 0.5 %}
-                                            {% set ns.has_low = true %}
-                                        {% elif corr.1 < 0.7 %}
+                                      {% for corr in col.correlation %}
+                                        {% if corr.1 >= 0.7 or corr.1 <= -0.7 %}
+                                            {% set ns.has_high = true %}
+                                        {% elif corr.1 >= 0.5 or corr.1 <= -0.5 %}
                                             {% set ns.has_moderate = true %}
                                         {% else %}
-                                            {% set ns.has_high = true %}
+                                            {% set ns.has_low = true %}
                                         {% endif %}
                                     {% endfor %}
                                     {% if ns.has_low %}

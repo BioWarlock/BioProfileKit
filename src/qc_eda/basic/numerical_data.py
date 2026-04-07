@@ -229,7 +229,7 @@ def get_correlation(df: pd.DataFrame, col) -> list | None:
             return None
         corr = df[ncols].corrwith(df[col], method='pearson')
         corr.drop(labels=col, inplace=True)
-        corr = corr.drop(corr[corr < .3].index)
+        corr = corr[corr.abs() >= 0.3]
         if corr.empty:
             return None
         return list(zip(corr.index, corr))
