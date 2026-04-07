@@ -55,6 +55,7 @@ class ColumnOverview:
     describe_plot: str | None
     constant: bool | None
     correlation: list[str] | None
+    cardinality_dimension_ratio: float | None
     # taxonomy: bool
 
 
@@ -92,8 +93,8 @@ class CategoricalColumns:
     value_counts: dict
     max_category_length: int
     min_category_length: int
-    memory: int
     cardinality_ratio: float
+    memory: int
 
 
 def overview(df: pd.DataFrame, file) -> NumericalData:
@@ -128,6 +129,7 @@ def column_overview(df: pd.DataFrame, col) -> ColumnOverview:
         describe_plot=None if df[col].isnull().all() else plot_overview(df[col]),
         constant=True if (df[col].nunique() == 1) else False,
         correlation=get_correlation(df, col),
+        cardinality_dimension_ratio=round(df[col].nunique() / len(df), 3),
     )
 
 #
@@ -215,8 +217,8 @@ def categorical_columns(df: pd.DataFrame, col: str) -> CategoricalColumns:
         value_counts=df[col].value_counts().head(20).to_dict(),
         max_category_length=lengths.max(),
         min_category_length=lengths.min(),
-        memory=df[col].memory_usage(deep=True),
-        cardinality_ratio=round(cardinality_ratio, 3)
+        cardinality_ratio=round(cardinality_ratio, 3),
+        memory = df[col].memory_usage(deep=True),
     )
 
 

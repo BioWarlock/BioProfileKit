@@ -172,9 +172,11 @@
                                         <strong>Number of Values:</strong> {{ col.number }}<br>
                                         <strong>Number of Unique:</strong> {{ col.unique }}<br>
                                         <strong>Number of Missing:</strong> {{ col.missing }} ({{ col.missing_per }}%)<br>
+                                        <strong>Cardinality Dimension Ratio:</strong> {{ col.cardinality_dimension_ratio }}<br>
                                         {% if col.type != 'object' or 'str' %}
                                             <strong>Number type:</strong> {{ col.type }}<br>
                                         {% endif %}
+
                                         {% if col.sequence != 'None' %}
                                             <strong>Sequence type:</strong> {{ col.sequence }}<br>
                                         {% endif %}
