@@ -123,6 +123,8 @@
                                 {% endif %}
                                 {% if col.sequence != 'None' %}
                                     <span class="badge bg-success me-2">Sequence</span>
+                                {% elif col.measurement_data %}
+                                    <span class="badge me-2" style="background-color:#8F8F8F;">Unit</span>
                                 {% elif col.type == 'str'%}
                                     <span class="badge bg-dark me-2">Object</span>
                                 {% elif col.type == 'bool'%}

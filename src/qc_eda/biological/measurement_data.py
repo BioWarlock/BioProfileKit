@@ -24,7 +24,7 @@ def measurement_columns(column_overview: ColumnOverview, df: pd.DataFrame) -> UN
                 unit_counts=[{unit: 1}],
                 with_measurement=False
             )
-        if column_overview.type == 'object':
+        if column_overview.type == 'str':
             values = df[column_overview.name].dropna().unique().astype(str).tolist()
             if all(len(x) > 1 for x in values):
                 measurement_and_unit = match_units(values, MEASUREMENTS.UNIT_COLUMN.value)
