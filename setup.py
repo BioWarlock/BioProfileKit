@@ -9,12 +9,12 @@ def get_python_include_dir():
 
 extensions = [
     Extension(
-        "qc_eda.basic.wrapper_utils",
-        ["src/qc_eda/basic/wrapper_utils.pyx"],
+        "cython_wrapper.wrapper_utils",
+        ["src/cython_wrapper/wrapper_utils.pyx"],
     ),
     Extension(
-            "qc_eda.basic.taxonomy_validator",
-            ["src/qc_eda/basic/taxonomy_validator.pyx"],
+        "cython_wrapper.taxonomy_validator",
+        ["src/cython_wrapper/taxonomy_validator.pyx"],
     ),
 ]
 

@@ -1,10 +1,10 @@
 import tempfile
 import warnings
 from collections import defaultdict, Counter
-from dataclasses import dataclass
 from itertools import chain
 from pathlib import Path
 from typing import Tuple
+
 from Bio import motifs
 from weblogo import *
 import numpy as np
@@ -12,36 +12,14 @@ import pandas as pd
 import peptides
 import plotly.express as px
 import ssl
+
+from analysis.plot_utils import apply_standard_axes
+from models.sequence import DNARNAColumns, PROTEINColumns
+
 ssl._create_default_https_context = ssl._create_stdlib_context
 
-@dataclass
-class DNARNAColumns:
-    sequence: List[str]
-    gc_content: List[float]
-    length: List[int]
-    count: List[int]
-    nucleotide_count: List[Dict[str, int]]
-    k_mers: List[List[Tuple[str, int]]]
-    plot: str
 
-#ToDo: Add Composition over all
-@dataclass
-class PROTEINColumns:
-    sequence: List[str]
-    length: List[int]
-    count: List[int]
-    composition: List[Dict[str, int]]
-    frequency: List[float]
-    hydrophobicity: List[float]
-    charge: List[float]
-    molecular_weight: List[float]
-    isoelectric_point: List[float]
-    aliphatic_index: List[float]
-    boman: List[float]
-    aromaticity: List[float]
-    instability: List[float]
-    k_mers: List[List[Tuple[str, int]]]
-    plot: str
+# ToDo: Add Composition over all
 
 
 def count_nmer(sequence, n) -> defaultdict:
@@ -62,20 +40,21 @@ def top_mere(seq, n=3, top=5) -> List[Tuple[str, int]] | None:
     return sorted(counts.items(), key=lambda x: x[1], reverse=True)[:top]
 
 
-def biological_data_top_entries(seqs: pd.Series, top_k: int = 20) -> Tuple[np.ndarray, np.ndarray, int, int, np.ndarray]:
-    seqs =seqs.str.upper()
+def biological_data_top_entries(seqs: pd.Series, top_k: int = 20) -> Tuple[
+    np.ndarray, np.ndarray, int, int, np.ndarray]:
+    seqs = seqs.str.upper()
     vc = seqs.value_counts()
-    uniq_tmp, counts_tmp =vc.index.to_numpy(), vc.values
+    uniq_tmp, counts_tmp = vc.index.to_numpy(), vc.values
 
     top_k = min(top_k, len(uniq_tmp))
     top_idx = np.argsort(counts_tmp)[::-1][:top_k]
-    
+
     uniques = uniq_tmp[top_idx].astype(str)
     counts = counts_tmp[top_idx]
 
     lengths = np.array([len(s) for s in uniques])
     min_len, max_len = lengths.min(), lengths.max()
-    
+
     return uniques, counts, min_len, max_len, lengths
 
 
@@ -89,7 +68,7 @@ def dna_rna_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5) 
     k_mers = _kmer_check(k, top, uniques)
 
     if min_len == max_len:
-        plot = make_logo(uniques,'color_classic', seq_type="dna")
+        plot = make_logo(uniques, 'color_classic', seq_type="dna")
     else:
         flat_kmers = chain.from_iterable(k_mers)
         df_kmers = pd.DataFrame(flat_kmers, columns=['kmer', 'count'])
@@ -105,6 +84,7 @@ def dna_rna_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5) 
         k_mers=k_mers,
         plot=plot
     )
+
 
 def _kmer_check(k: int, top: int, uniques: np.ndarray) -> list:
     check_length = any(len(i) <= k for i in uniques)
@@ -136,14 +116,14 @@ def protein_descriptors(peptide: str) -> Dict[str, str | float | dict[str, float
     return descriptors
 
 
-def protein_columns(seqs: pd.Series,  k: int = 3, top_n: int = 20, top: int = 5) -> PROTEINColumns:
+def protein_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5) -> PROTEINColumns:
     uniques, counts, min_len, max_len, lengths = biological_data_top_entries(seqs, top_n)
 
     aa_composition = [dict(Counter(seq)) for seq in uniques]
     descriptors = [protein_descriptors(seq) for seq in uniques]
 
     k_mers = _kmer_check(k, top, uniques)
-    #ToDo Add Desclaimer
+    # ToDo Add Desclaimer
     if min_len == max_len:
         plot = make_logo(uniques, "chemistry", seq_type="protein")
     else:
@@ -151,7 +131,6 @@ def protein_columns(seqs: pd.Series,  k: int = 3, top_n: int = 20, top: int = 5)
         df_kmers = pd.DataFrame(flat_kmers, columns=['kmer', 'count'])
         aggregated = df_kmers.groupby('kmer', as_index=False)['count'].sum()
         plot = plot_overview(aggregated['kmer'].tolist(), aggregated['count'].tolist())
-
 
     return PROTEINColumns(
         sequence=uniques.tolist(),
@@ -181,7 +160,8 @@ def make_logo(seqs, color, seq_type):
         tmp_path = tmp_file.name
 
     try:
-        m.weblogo(tmp_path, format="svg",sequence_type=seq_type, color=color,logo_font="Calibri",logo_margin=3, fontsize=12)
+        m.weblogo(tmp_path, format="svg", sequence_type=seq_type, color=color, logo_font="Calibri", logo_margin=3,
+                  fontsize=12)
 
         with open(tmp_path, 'r', encoding='utf-8') as svg_file:
             svg_content = svg_file.read()
@@ -201,22 +181,6 @@ def make_logo(seqs, color, seq_type):
 def plot_overview(kmer, count):
     fig = px.bar(x=kmer, y=count, color_discrete_sequence=['#0F65A0'])
     fig.update_layout(bargap=0.2, plot_bgcolor='white', xaxis_title='K-mers',
-        yaxis_title='Count')
-    fig.update_xaxes(
-        mirror=True,
-        ticks='outside',
-        showline=True,
-        linecolor='black',
-        gridcolor='lightgrey',
-        tickangle=-45
-
-    )
-    fig.update_yaxes(
-        mirror=True,
-        ticks='outside',
-        showline=True,
-        linecolor='black',
-        gridcolor='lightgrey'
-    )
-    # fig.write_image("test.png")
+                      yaxis_title='Count')
+    apply_standard_axes(fig, tick_angle=-45)
     return fig.to_html(full_html=False, include_plotlyjs=False)

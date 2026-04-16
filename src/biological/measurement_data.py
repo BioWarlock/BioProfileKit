@@ -1,17 +1,11 @@
 import re
-from dataclasses import dataclass
-from typing import List, Dict
+from typing import List
 
 import pandas as pd
 
-from qc_eda.basic.numerical_data import ColumnOverview
-from ..basic.measurement_enum import MEASUREMENTS
-
-@dataclass
-class UNITColumns:
-    units: List[str]
-    unit_counts: List[Dict[str | None, int]]
-    with_measurement: bool
+from models.measurement import UNITColumns
+from models.overview import ColumnOverview
+from enums.measurement_enum import MEASUREMENTS
 
 
 def measurement_columns(column_overview: ColumnOverview, df: pd.DataFrame) -> UNITColumns | bool:

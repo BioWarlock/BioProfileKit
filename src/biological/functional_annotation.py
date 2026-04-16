@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 import pandas as pd
-from utils.download_metadata import get_clusters_of_orthologous_groups, get_gene_ontology
+from data_utils.remote_data import get_clusters_of_orthologous_groups, get_gene_ontology
 
 @dataclass
 class AnnotationFlags:
