@@ -3,36 +3,32 @@ import pandas as pd
 from pandas.api.types import infer_dtype
 
 
+def _split_numeric_string(series):
+    inferred = infer_dtype(series)
+
+    if 'mixed' in inferred:
+        is_numeric = series.apply(lambda x: isinstance(x, (int, float, complex)))
+        return series[is_numeric], series[~is_numeric]
+
+    if str(series.dtype) in ('str', 'string', 'object'):
+        numeric_mask = pd.to_numeric(series, errors='coerce').notna() & series.notna()
+        return series[numeric_mask], series[~numeric_mask]
+
+    return None, None
+
+
 def check_mixed_types(df, col):
     series = df[col].dropna()
     if series.empty:
         return None
 
-    inferred = infer_dtype(series)
-
-    if 'mixed' in inferred:
-        is_numeric = series.apply(lambda x: isinstance(x, (int, float, complex)))
-        numeric_count = is_numeric.sum()
-        string_count = len(series) - numeric_count
-        if numeric_count == 0 or string_count == 0:
-            return None
-        if numeric_count >= string_count:
-            return series[~is_numeric].astype(str).tolist()
-        else:
-            return series[is_numeric].astype(str).tolist()
-
-    if str(series.dtype) in ('str', 'string', 'object'):
-        numeric_mask = pd.to_numeric(series, errors='coerce').notna() & series.notna()
-        numeric_count = numeric_mask.sum()
-        string_count = len(series) - numeric_count
-        if numeric_count == 0 or string_count == 0:
-            return None
-        if numeric_count <= string_count:
-            return series[numeric_mask].tolist()
-        else:
-            return series[~numeric_mask].tolist()
-
-    return None
+    numeric_part, string_part = _split_numeric_string(series)
+    if numeric_part is None or len(numeric_part) == 0 or len(string_part) == 0:
+        return None
+    if len(numeric_part) >= len(string_part):
+        return string_part.astype(str).tolist()
+    else:
+        return numeric_part.astype(str).tolist()
 
 
 def check_suspect_values(df, col):
@@ -40,14 +36,12 @@ def check_suspect_values(df, col):
     if series.empty:
         return None
 
-    dtype_str = str(series.dtype)
-    if dtype_str in ('str', 'string', 'object'):
-        numeric_mask = pd.to_numeric(series, errors='coerce').notna() & series.notna()
-        numeric_count = numeric_mask.sum()
-        if numeric_count == 0:
+    if str(series.dtype) in ('str', 'string', 'object'):
+        numeric_part, _ = _split_numeric_string(series)
+        if numeric_part is None or len(numeric_part) == 0:
             return None
-        if numeric_count / len(series) < 0.15:
-            return series[numeric_mask].tolist()
+        if len(numeric_part) / len(series) < 0.15:
+            return numeric_part.tolist()
         return None
 
     if pd.api.types.is_numeric_dtype(series):
