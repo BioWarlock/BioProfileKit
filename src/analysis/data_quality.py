@@ -26,9 +26,9 @@ def check_mixed_types(df, col):
     if numeric_part is None or len(numeric_part) == 0 or len(string_part) == 0:
         return None
     if len(numeric_part) >= len(string_part):
-        return string_part.astype(str).tolist()
+        return "String", string_part
     else:
-        return numeric_part.astype(str).tolist()
+        return "Numeric", numeric_part
 
 
 def check_suspect_values(df, col):
@@ -41,14 +41,12 @@ def check_suspect_values(df, col):
         if numeric_part is None or len(numeric_part) == 0:
             return None
         if len(numeric_part) / len(series) < 0.15:
-            return numeric_part.tolist()
-        return None
+            return numeric_part
 
     if pd.api.types.is_numeric_dtype(series):
-        sentinels = {np.inf, -np.inf, np.nan, float('inf'), float('-inf'), float('nan')}
+        sentinels = {np.inf, -np.inf}
         found = [v for v in sentinels if v in series.values]
         if found:
-            return [str(v) for v in found]
-        return None
+            return pd.Series([str(v) for v in found])
 
     return None

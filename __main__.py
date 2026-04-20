@@ -2,7 +2,7 @@ from src.cli.app import cli
 
 if __name__ == '__main__':
     #cli(['--input', 'data/iedb_sub.tsv', '--tax', '-tc','bind_class'])
-    #cli(['-i', "data/Complete_nitrogenase.csv"])
+   # cli(['-i', "data/Complete_nitrogenase.csv"])
     #cli(['--input', 'data/upstream_sd.complete.tsv'])
     cli(['-i', "data/iedb_test.tsv"])
 #    cli(['-i', "data/proteinGroups.tsv"])

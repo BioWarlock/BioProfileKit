@@ -28,6 +28,12 @@ def column_overview(df: pd.DataFrame, col) -> ColumnOverview:
     seq_type, invalid = check_sequence(df, col)
     if seq_type != "None":
         print(f"Column: {col:10s} is of type: {seq_type:10s} with invalid sequences: {invalid}.")
+    mixed = check_mixed_types(df, col) if seq_type == "None" else None
+    if mixed is not None:
+        suspect = mixed[1]
+    else:
+        suspect = check_suspect_values(df, col)
+
     return ColumnOverview(
         name=col,
         number=int(df[col].notnull().sum()),
@@ -37,8 +43,8 @@ def column_overview(df: pd.DataFrame, col) -> ColumnOverview:
         type=str(df[col].dtype),
         sequence=seq_type,
         invalid_seqs=invalid,
-        mixed_types=check_mixed_types(df, col) if seq_type == "None" else None,
-        suspect_values=check_suspect_values(df, col) if seq_type == "None" else None,
+        mixed_types=mixed,
+        suspect_values=suspect,
         describe_plot=None if df[col].isnull().all() else plot_overview(df[col]),
         constant=(df[col].nunique() == 1),
         correlation=get_correlation(df, col),

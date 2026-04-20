@@ -12,10 +12,17 @@ def apply_standard_axes(fig, tick_angle=None):
 
 
 def plot_overview(col):
+    if col.dtype in ('str', 'string'):
+        truncated = col.apply(lambda x: str(x)[:20] + '…' if len(str(x)) > 20 else str(x))
     if col.dtype != 'object':
-        bins = None if col.nunique() < 10 else 10
-        fig = px.histogram(x=col, color_discrete_sequence=['#0F65A0'])
-        fig.update_layout(bargap=0.2, plot_bgcolor='white')
-        apply_standard_axes(fig)
+        bins = col.nunique() if col.nunique() < 20 else 20
+        if col.dtype in ('str', 'string'):
+            fig = px.histogram(x=truncated, color_discrete_sequence=['#0F65A0'])
+            apply_standard_axes(fig, tick_angle=-45)
+        else:
+            fig = px.histogram(x=col, color_discrete_sequence=['#0F65A0'], nbins=bins)
+            apply_standard_axes(fig)
+        fig.update_layout(bargap=0.4, plot_bgcolor='white', xaxis_title=col.name,yaxis_title='Count')
+        fig.layout.xaxis.automargin = True
         return fig.to_html(full_html=False, include_plotlyjs=False)
     return None

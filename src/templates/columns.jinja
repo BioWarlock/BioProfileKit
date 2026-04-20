@@ -162,9 +162,11 @@
                                         <span class="badge bg-warning me-2">Mixed Values</span>
                                     {% endif %}
                                 {% endif %}
-                                {% if col.suspect_values is not none %}
-                                    <span class="badge bg-warning me-2">Suspect Values</span>
+                                {% if col.suspect_values is not none and not (col.invalid_seqs and col.invalid_seqs|length > 0) %}
+                                    <span class="badge bg-warning me-2">Data Anomalies</span>
                                 {% endif %}
+                                {% if col.invalid_seqs and col.invalid_seqs|length > 0 %}
+                                    <span class="badge me-2" style="background-color: #f8d7da; color: #c6081a; border: 1px solid #c6081a;">Invalid Sequences</span>                                {% endif %}
                             </div>
                         </div>
                         <div class="card-body collapse multi-collapse "
@@ -183,7 +185,7 @@
                                             <strong>Number type:</strong> {{ col.type }}<br>
                                         {% endif %}
                                         {% if col.mixed_types is not none %}
-                                            <strong>Mixed Types:</strong> {{ col.mixed_types }}<br>
+                                            <strong>Mixed Types:</strong> {{ col.mixed_types[0] }}<br>
                                         {% endif %}
                                         {% if col.sequence != 'None' %}
                                             <strong>Sequence type:</strong> {{ col.sequence }}<br>
@@ -241,7 +243,7 @@
                                             <li class="nav-item" role="presentation">
                                                 <button class="nav-link" id="suspect-stats-tab{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
                                                         data-bs-toggle="tab" data-bs-target="#suspectStats{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
-                                                        type="button" role="tab">Suspect Values</button>
+                                                        type="button" role="tab">Data Anomalies</button>
                                             </li>
                                         {% endif %}
                                         {% if col.type not in ['object', 'bool', 'str'] and col.type in ['int64', 'float64'] %}
@@ -329,14 +331,14 @@
                                                         <table class="table table-sm table-striped w-100" style="min-width: 500px;">
                                                             <thead class="sticky-top bg-light">
                                                         <tr>
-                                                            <th>#</th>
+                                                            <th>Index</th>
                                                             <th>Value</th>
                                                         </tr>
                                                         </thead>
                                                         <tbody>
-                                                        {% for val in col.suspect_values %}
+                                                        {% for idx, val in col.suspect_values.items() %}
                                                             <tr>
-                                                                <td>{{ loop.index }}</td>
+                                                                <td>{{ idx }}</td>
                                                                 <td>{{ val }}</td>
                                                             </tr>
                                                         {% endfor %}
@@ -456,6 +458,13 @@
                                                             data-bs-toggle="tab" data-bs-target="#sequences{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
                                                             type="button" role="tab">Sequences</button>
                                                 </li>
+                                                {% if col.invalid_seqs and col.invalid_seqs|length > 0 %}
+                                                    <li class="nav-item" role="presentation">
+                                                        <button class="nav-link" id="invalid-seq-tab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
+                                                                data-bs-toggle="tab" data-bs-target="#invalidSeqs{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
+                                                                type="button" role="tab">Invalid Sequences</button>
+                                                    </li>
+                                                {% endif %}
                                                 <li class="nav-item" role="presentation">
                                                     <button class="nav-link" id="stats-tab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
                                                             data-bs-toggle="tab" data-bs-target="#stats{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
@@ -505,6 +514,39 @@
                                                         </table>
                                                     </div>
                                                 </div>
+                                                       <!-- Invalid Sequences Tab -->
+                                                {% if col.invalid_seqs and col.invalid_seqs|length > 0 %}
+                                                    <div class="tab-pane fade" id="invalidSeqs{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
+                                                        <div class="alert alert-warning mt-3">
+                                                            <strong>Note:</strong> {{ col.invalid_seqs|length }} invalid sequence(s) detected in <b>{{ col.sequence }}</b>b> column.
+                                                        </div>
+                                                        <div class="table-responsive mt-3" style="max-height: 400px; overflow-y: auto;">
+                                                            <table class="table table-sm table-striped w-100" style="min-width: 500px;">
+                                                                <thead class="sticky-top bg-light">
+                                                                <tr>
+                                                                    <th>#</th>
+                                                                    <th>Value</th>
+                                                                </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                {% for seq in col.invalid_seqs %}
+                                                                    <tr>
+                                                                        <td>{{ loop.index }}</td>
+                                                                        <td>
+                                                                            {% if seq|length > 50 %}
+                                                                                {{ seq[:25] }}<span class="text-muted">...</span>{{ seq[-25:] }}
+                                                                            {% else %}
+                                                                                {{ seq }}
+                                                                            {% endif %}
+
+                                                                        </td>
+                                                                    </tr>
+                                                                {% endfor %}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                {% endif %}
 
                                                 <!-- Statistics Tab -->
                                                 <div class="tab-pane fade" id="stats{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
@@ -622,6 +664,13 @@
                                                             data-bs-toggle="tab" data-bs-target="#proteinSequences{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
                                                             type="button" role="tab">Sequences</button>
                                                 </li>
+                                                {% if col.invalid_seqs and col.invalid_seqs|length > 0 %}
+                                                    <li class="nav-item" role="presentation">
+                                                        <button class="nav-link" id="invalid-seq-tab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
+                                                                data-bs-toggle="tab" data-bs-target="#invalidSeqs{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
+                                                                type="button" role="tab">Data Invalid Sequences</button>
+                                                    </li>
+                                                {% endif %}
                                                 <li class="nav-item" role="presentation">
                                                     <button class="nav-link" id="protein-stats-tab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
                                                             data-bs-toggle="tab" data-bs-target="#proteinStats{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
@@ -708,6 +757,38 @@
                                                         </table>
                                                     </div>
                                                 </div>
+                                                <!-- Invalid Sequences Tab -->
+                                                {% if col.invalid_seqs and col.invalid_seqs|length > 0 %}
+                                                    <div class="tab-pane fade" id="invalidSeqs{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
+                                                        <div class="alert alert-warning mt-3">
+                                                            <strong>Note:</strong> {{ col.invalid_seqs|length }} invalid sequence(s) detected in {{ col.sequence }} column.
+                                                        </div>
+                                                        <div class="table-responsive mt-3" style="max-height: 400px; overflow-y: auto;">
+                                                            <table class="table table-sm table-striped w-100" style="min-width: 500px;">
+                                                                <thead class="sticky-top bg-light">
+                                                                <tr>
+                                                                    <th>#</th>
+                                                                    <th>Value</th>
+                                                                </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                {% for seq in col.invalid_seqs %}
+                                                                    <tr>
+                                                                        <td>{{ loop.index }}</td>
+                                                                        <td>
+                                                                            {% if seq|length > 50 %}
+                                                                                {{ seq[:25] }}<span class="text-muted">...</span>{{ seq[-25:] }}
+                                                                            {% else %}
+                                                                                {{ seq }}
+                                                                            {% endif %}
+                                                                        </td>
+                                                                    </tr>
+                                                                {% endfor %}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                {% endif %}
 
                                                 <!-- Protein Statistics Tab -->
                                                 <div class="tab-pane fade" id="proteinStats{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
