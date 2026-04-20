@@ -17,7 +17,7 @@ def _split_numeric_string(series):
     return None, None
 
 
-def check_mixed_types(df, col):
+def check_mixed_types(df, col, suspect_threshold=0.125):
     series = df[col].dropna()
     if series.empty:
         return None
@@ -25,10 +25,21 @@ def check_mixed_types(df, col):
     numeric_part, string_part = _split_numeric_string(series)
     if numeric_part is None or len(numeric_part) == 0 or len(string_part) == 0:
         return None
+
+    minority_count = min(len(numeric_part), len(string_part))
+    minority_ratio = minority_count / len(series)
+    print(col, minority_ratio)
     if len(numeric_part) >= len(string_part):
-        return "String", string_part
+        majority_type = "Numeric"
+        minority = string_part
     else:
-        return "Numeric", numeric_part
+        majority_type = "String"
+        minority = numeric_part
+
+    if minority_ratio < suspect_threshold:
+        return majority_type, minority
+    else:
+        return majority_type, None
 
 
 def check_suspect_values(df, col):
