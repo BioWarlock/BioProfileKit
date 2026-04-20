@@ -10,8 +10,9 @@ def apply_standard_axes(fig, tick_angle=None):
     fig.update_yaxes(mirror=True, ticks='outside', showline=True,
                      linecolor='black', gridcolor='lightgrey')
 
-
+#ToDo: Check if we want to keep nan in count plot.
 def plot_overview(col):
+    col = col.dropna()
     if col.dtype in ('str', 'string'):
         truncated = col.apply(lambda x: str(x)[:20] + '…' if len(str(x)) > 20 else str(x))
     if col.dtype != 'object':
