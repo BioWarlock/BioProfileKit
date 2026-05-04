@@ -32,8 +32,8 @@ def measurement_columns(column_overview: ColumnOverview, df: pd.DataFrame) -> UN
 
 def match_units(entries: List[str], regex: re.Pattern) -> List[str]:
     units: List[str] = []
-    for entrie in entries:
-        measurement_and_unit = regex.fullmatch(entrie)
+    for entry in entries:
+        measurement_and_unit = regex.fullmatch(entry)
         if measurement_and_unit:
             units.append(measurement_and_unit.group(0))
     return units
