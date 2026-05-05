@@ -14,7 +14,7 @@
 
     <link rel="stylesheet" href="https://cdn.datatables.net/2.0.7/css/dataTables.bootstrap5.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/3.0.0/css/responsive.bootstrap5.min.css">
-    <script src="https://cdn.plot.ly/plotly-3.3.1.min.js" charset="utf-8"></script>
+    <script src="https://cdn.plot.ly/plotly-3.5.0.min.js" charset="utf-8"></script>
 </head>
 <body data-cb-theme="internal">
 <!-- Responsive navbar-->
@@ -976,8 +976,7 @@
                                                 <div class="tab-pane fade" id="proteinKmers{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
                                                     {% if col.protein_data.plot %}
                                                         <div class="row w-100">
-                                                            <div class="plot-container mb-4" style="max-height: fit-content; overflow: scroll;">
-                                                                {{ col.protein_data.plot | safe }}
+                                                            <div class="plot-container mb-4" style="max-height: fit-content; overflow: scroll;">{{ col.protein_data.plot | safe }}
                                                             </div>
                                                         </div>
                                                     {% endif %}
@@ -1072,7 +1071,6 @@
 <script src="https://cdn.datatables.net/2.3.1/js/dataTables.bootstrap5.min.js"></script>
 <script src="https://cdn.datatables.net/responsive/3.0.4/js/dataTables.responsive.min.js"></script>
 <script src="https://cdn.datatables.net/responsive/3.0.4/js/responsive.bootstrap5.min.js"></script>
-
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const itemsPerPage = {{ items_per_page }};

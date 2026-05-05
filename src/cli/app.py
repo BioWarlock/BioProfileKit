@@ -84,7 +84,7 @@ def cli(input: str, tax: bool = False, func: str = None,
         numeric_columns(df, col) if not df[col].isnull().all() else exclude_cols.append(col)
         for col in df.select_dtypes(include="number").columns
     ]
-
+    #Todo Identify numeric cat columnd
     cat_columns = [
         col for col in df.select_dtypes(include=['str', 'object', 'bool', 'int64', 'float64']).columns
         if any(i.sequence == 'None' for i in column_overviews if i.name == col)

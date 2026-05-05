@@ -65,6 +65,13 @@
                                         data-bs-toggle="tab" data-bs-target="#missingTab2Target"
                                         type="button" role="tab">Missing Value Barchart</button>
                             </li>
+                        {% if plots.missing_mechanisms %}
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="missingTab3btn"
+                                            data-bs-toggle="tab" data-bs-target="#missingTab3Target"
+                                            type="button" role="tab">Missing Mechanisms</button>
+                                </li>
+                        {% endif %}
                         </ul>
                         <div class="tab-content" id="objectTabContent">
                             <div class="tab-pane fade show active" id="missingTab1Target" role="tabpanel">
@@ -81,6 +88,59 @@
                                     </div>
                                 </div>
                             </div>
+                        <!--- ToDo: Add if needed and Littles Test is implemented -->
+                          {% if plots.missing_mechanisms %}
+                        <div class="tab-pane fade" id="missingTab3Target" role="tabpanel">
+                            <div class="w-100 mt-3 mb-5">
+
+                                <div class="table-responsive mb-4" style="max-height: 400px; overflow-y: auto;">
+                                    <table class="table table-sm table-striped w-100">
+                                        <thead class="sticky-top bg-light">
+                                        <tr>
+                                            <th>Column</th>
+                                            <th>Missing Count</th>
+                                            <th>Mechanism</th>
+                                            <th>p-Value</th>
+                                            <th>Test</th>
+                                            <th>Related Column</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        {% for col_name, info in plots.missing_mechanisms.items() %}
+                                            <tr>
+                                                <td>{{ col_name }}</td>
+                                                <td>{{ info.count }}</td>
+                                                <td>
+                                                    {% if info.mechanism == 'MAR' %}
+                                                        <span class="badge bg-warning">{{ info.mechanism }}</span>
+                                                    {% else %}
+                                                        <span class="badge bg-success">{{ info.mechanism }}</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ info.p_value }}</td>
+                                                <td>{{ info.test if info.test else '—' }}</td>
+                                                <td>{{ info.related_col if info.related_col else '—' }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="alert alert-light mt-3">
+                                    <div class="small text-muted">
+                                    <strong>MCAR:</strong> Missing Completely At Random — no pattern detected; safe to drop or impute simply.<br>
+                                        <strong>MAR:</strong> Missing At Random — missingness depends on other observed columns <i>(p &lt; 0.05)</i>.<br>
+                                    <hr>
+                                        <strong>Mann-Whitney U:</strong>Tests whether a numeric column has a different distribution when the target column is missing versus present. A significant result <i>(p &lt; 0.05)</i> suggests the missingness is related to that numeric column.<br>
+                                    <strong>Chi-Squared:</strong> Tests whether the missing patterns of two columns are statistically associated. A significant result suggests the columns tend to be missing together.
+                                    <hr>
+                                    These results are statistical estimates derived from hypothesis testing and should be interpreted cautiously.
+                                    MNAR (Missing Not At Random) cannot be detected from the observed data alone and may require domain knowledge.
+                                    A single significant test does not confirm a specific mechanism — consider the overall context of your dataset.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
                         </div>
                     </div>
                 </div>

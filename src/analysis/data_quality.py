@@ -28,7 +28,6 @@ def check_mixed_types(df, col, suspect_threshold=0.125):
 
     minority_count = min(len(numeric_part), len(string_part))
     minority_ratio = minority_count / len(series)
-    print(col, minority_ratio)
     if len(numeric_part) >= len(string_part):
         majority_type = "Numeric"
         minority = string_part
