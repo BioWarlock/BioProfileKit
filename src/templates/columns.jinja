@@ -156,7 +156,41 @@
                                     {% endif %}
                                 {% endif %}
 
-                                <!-- TODO: Add missing badges - Skewness, Duplicates, Imbalance, Diff Sequence Length, Biological Naming, Diff Units -->
+                                <!-- TODO: Add missing badges - Skewness, Duplicates, Diff Sequence Length, Biological Naming, Diff Units -->
+                                {# ── Categorical quality badges ── #}
+                                {% if col.type in ['object', 'bool', 'str'] %}
+                                    {% for cat in categorical %}{% if cat.name == col.name %}
+                                        {# Class Imbalance Ratio #}
+                                        {% if cat.cib_ratio is defined %}
+                                            {% if cat.cib_ratio > 10 %}
+                                                <span class="badge bg-danger me-2"
+                                                      title="Class Imbalance Ratio {{ cat.cib_ratio | round(1) }}x — most frequent category dominates strongly">
+                                                    Imbalanced ({{ cat.cib_ratio | round(1) }}×)
+                                                </span>
+                                            {% elif cat.cib_ratio > 3 %}
+                                                <span class="badge bg-warning text-dark me-2"
+                                                      title="Class Imbalance Ratio {{ cat.cib_ratio | round(1) }}x — notable frequency skew between categories">
+                                                    Imbalanced ({{ cat.cib_ratio | round(1) }}×)
+                                                </span>
+                                            {% endif %}
+                                        {% endif %}
+                                        {# Rare Categories #}
+                                        {% if cat.rare_categories is defined and cat.rare_categories > 0 %}
+                                            <span class="badge bg-secondary me-2"
+                                                  title="{{ cat.rare_categories }} category/categories with < 1% frequency — may cause issues in ML splits">
+                                                {{ cat.rare_categories }} Rare
+                                                {% if cat.rare_categories == 1 %}Category{% else %}Categories{% endif %}
+                                            </span>
+                                        {% endif %}
+                                        {# Near-Zero Variance — single category covers almost everything #}
+                                        {% if cat.top_1_coverage is defined and cat.top_1_coverage >= 0.95 %}
+                                            <span class="badge bg-danger me-2"
+                                                  title="Top category covers {{ (cat.top_1_coverage * 100) | round(1) }}% of values — near-zero variance">
+                                                NZV ({{ (cat.top_1_coverage * 100) | round(1) }}%)
+                                            </span>
+                                        {% endif %}
+                                    {% endif %}{% endfor %}
+                                {% endif %}
                                 {% if col.measurement_data %}
                                     {% if col.measurement_data.with_measurement %}
                                         <span class="badge bg-warning me-2">Mixed Values</span>
@@ -423,15 +457,118 @@
                                                                 </tr>
                                                                 </thead>
                                                                 <tbody>
+
+                                                                {# ── Distribution & Diversity ── #}
+                                                                <tr class="table-secondary">
+                                                                    <td colspan="2"><strong>Distribution &amp; Diversity</strong></td>
+                                                                </tr>
                                                                 <tr><td>Unique Categories</td><td>{{ cat.unique_categories }}</td></tr>
                                                                 <tr><td>Mode</td><td>{{ cat.mode }}</td></tr>
-                                                                <tr><td>Entropy</td><td>{{ cat.entropy }}</td></tr>
+                                                                <tr>
+                                                                    <td>Entropy</td>
+                                                                    <td>
+                                                                        {{ cat.entropy }}
+                                                                        {% if cat.entropy is not none and cat.entropy < 1.0 %}
+                                                                            <span class="badge bg-warning text-dark ms-2"
+                                                                                  title="Low entropy — distribution is highly concentrated">Low diversity</span>
+                                                                        {% endif %}
+                                                                    </td>
+                                                                </tr>
                                                                 <tr><td>Gini Coefficient</td><td>{{ cat.gini }}</td></tr>
                                                                 <tr><td>Simpson Diversity</td><td>{{ cat.simpson_diversity }}</td></tr>
+
+                                                                {# ── Imbalance & Rarity ── #}
+                                                                <tr class="table-secondary">
+                                                                    <td colspan="2"><strong>Imbalance &amp; Rarity</strong></td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td>
+                                                                        Class Imbalance Ratio
+                                                                        <small class="text-muted d-block" style="font-size:0.8em;">most common / least common</small>
+                                                                    </td>
+                                                                    <td>
+                                                                        {% if cat.cib_ratio is defined %}
+                                                                            {{ cat.cib_ratio | round(2) }}×
+                                                                            {% if cat.cib_ratio > 10 %}
+                                                                                <span class="badge bg-danger ms-2"
+                                                                                      title="Severe imbalance — consider oversampling or stratified splits">Severe</span>
+                                                                            {% elif cat.cib_ratio > 3 %}
+                                                                                <span class="badge bg-warning text-dark ms-2"
+                                                                                      title="Moderate imbalance">Moderate</span>
+                                                                            {% else %}
+                                                                                <span class="badge bg-success ms-2">Balanced</span>
+                                                                            {% endif %}
+                                                                        {% else %}—{% endif %}
+                                                                    </td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td>
+                                                                        Rare Categories
+                                                                        <small class="text-muted d-block" style="font-size:0.8em;">frequency &lt; 1%</small>
+                                                                    </td>
+                                                                    <td>
+                                                                        {% if cat.rare_categories is defined %}
+                                                                            {{ cat.rare_categories }}
+                                                                            {% if cat.rare_categories > 0 %}
+                                                                                <span class="badge bg-secondary ms-2"
+                                                                                      title="May cause unseen-category errors during train/test splits">
+                                                                                    Low support
+                                                                                </span>
+                                                                            {% endif %}
+                                                                        {% else %}—{% endif %}
+                                                                    </td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td>
+                                                                        Top-1 Coverage
+                                                                        <small class="text-muted d-block" style="font-size:0.8em;">near-zero variance indicator</small>
+                                                                    </td>
+                                                                    <td>
+                                                                        {% if cat.top_1_coverage is defined %}
+                                                                            {{ (cat.top_1_coverage * 100) | round(2) }}%
+                                                                            {% if cat.top_1_coverage >= 0.95 %}
+                                                                                <span class="badge bg-danger ms-2"
+                                                                                      title="Near-zero variance — column may be uninformative for ML">NZV</span>
+                                                                            {% endif %}
+                                                                        {% else %}—{% endif %}
+                                                                    </td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td>
+                                                                        Top-5 Coverage
+                                                                        <small class="text-muted d-block" style="font-size:0.8em;">share of the 5 most frequent categories</small>
+                                                                    </td>
+                                                                    <td>
+                                                                        {% if cat.top_5_coverage is defined %}
+                                                                            {{ (cat.top_5_coverage * 100) | round(2) }}%
+                                                                        {% else %}—{% endif %}
+                                                                    </td>
+                                                                </tr>
+
+                                                                {# ── Cardinality ── #}
+                                                                <tr class="table-secondary">
+                                                                    <td colspan="2"><strong>Cardinality</strong></td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td>
+                                                                        Effective Cardinality
+                                                                        <small class="text-muted d-block" style="font-size:0.8em;">unique / total (%)</small>
+                                                                    </td>
+                                                                    <td>
+                                                                        {% if cat.effective_cardinality is defined %}
+                                                                            {{ cat.effective_cardinality | round(2) }}%
+                                                                            {% if cat.effective_cardinality > 50 %}
+                                                                                <span class="badge bg-warning text-dark ms-2"
+                                                                                      title="High cardinality — encoding may be expensive">High</span>
+                                                                            {% endif %}
+                                                                        {% else %}—{% endif %}
+                                                                    </td>
+                                                                </tr>
+                                                                <tr><td>Cardinality Ratio</td><td>{{ cat.cardinality_ratio }}</td></tr>
                                                                 <tr><td>Min Category Length</td><td>{{ cat.min_category_length }}</td></tr>
                                                                 <tr><td>Max Category Length</td><td>{{ cat.max_category_length }}</td></tr>
-                                                                <tr><td>Cardinality Ratio</td><td>{{ cat.cardinality_ratio }}</td></tr>
                                                                 <tr><td>Memory</td><td>{{ cat.memory }}</td></tr>
+
                                                                 </tbody>
                                                             </table>
                                                         </div>
