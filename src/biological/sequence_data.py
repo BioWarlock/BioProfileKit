@@ -62,8 +62,15 @@ def biological_data_top_entries(seqs: pd.Series, top_k: int = 20) -> Tuple[
 def dna_rna_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5) -> DNARNAColumns:
     uniques, counts, min_len, max_len, lengths = biological_data_top_entries(seqs, top_n)
 
-    gc_count = np.char.count(uniques, 'G') + np.char.count(uniques, 'C')
-    gc_content = np.round(np.where(lengths > 0, gc_count / lengths * 100, 0.0), 2).tolist()
+    all_seqs = seqs.str.upper()
+    all_lengths = all_seqs.str.len()
+    total_bases = all_seqs.str.len().sum()
+    all_gc = all_seqs.str.count('[GC]')
+    gc_content = np.round(np.where(all_lengths > 0, all_gc / all_lengths * 100, 0.0), 2).tolist()
+
+    total_n = all_seqs.str.count('N').sum()
+    ambiguous_base_ratio = round(total_n / total_bases * 100, 2) if total_bases > 0 else 0.0
+    print(ambiguous_base_ratio)
     nucleotide_count = [dict(Counter(seq)) for seq in uniques]
 
     k_mers = _kmer_check(k, top, uniques)
@@ -78,12 +85,13 @@ def dna_rna_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5) 
 
     return DNARNAColumns(
         sequence=uniques.tolist(),
-        gc_content=gc_content,
-        length=lengths.tolist(),
         count=counts.tolist(),
+        length=lengths.tolist(),
+        gc_content=gc_content,
+        ambiguous_base_ratio=ambiguous_base_ratio,
         nucleotide_count=nucleotide_count,
         k_mers=k_mers,
-        plot=plot
+        plot=plot,
     )
 
 

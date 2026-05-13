@@ -4,10 +4,13 @@ from typing import List, Dict, Tuple
 
 @dataclass
 class DNARNAColumns:
+    # Per-sequence (Top-20)
     sequence: List[str]
-    gc_content: List[float]
-    length: List[int]
     count: List[int]
+    length: List[int]
+    # Column-wide metrics
+    gc_content: List[float]
+    ambiguous_base_ratio: float
     nucleotide_count: List[Dict[str, int]]
     k_mers: List[List[Tuple[str, int]]]
     plot: str
