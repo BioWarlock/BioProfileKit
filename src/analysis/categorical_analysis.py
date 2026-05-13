@@ -11,9 +11,7 @@ def categorical_columns(df: pd.DataFrame, col: str) -> CategoricalColumns:
     rare = np.sum(value_counts< len(df[col]) * 0.01)
     cib_ratio = value_counts.max()  / value_counts.min()
     top_coverage = df[col].value_counts(normalize=True).head(5).sum()
-    print(f"{col} -> Rare: {rare}, Top 5: {round(top_coverage * 100):.2f}, Imbalance Ratio: {cib_ratio:.2f}")
-    print((max(df[col].value_counts(normalize=True)))*100)
-    print(((df[col].nunique()/len(df[col]))*100))
+
     if n > 0:
         entropy = -(frequencies * np.log2(frequencies)).sum()
         gini = 1 - (frequencies ** 2).sum()

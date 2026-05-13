@@ -100,7 +100,7 @@ def _kmer_check(k: int, top: int, uniques: np.ndarray) -> list:
     if not check_length:
         k_mers = [top_mere(seq, n=k, top=top) for seq in uniques]
     else:
-        warnings.warn("Warning: Sequence length is smaller than choosen k-Mer Size. Setting k-Mer Size to 3.")
+        print("Warning: Sequence length is smaller than choosen k-Mer Size. Setting k-Mer Size to 3.")
         k_mers = [top_mere(seq, n=3, top=top) for seq in uniques]
     return k_mers
 

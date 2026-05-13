@@ -29,20 +29,20 @@ classifiers = [
 ]
 dependencies = [
     "cython==3.2.4",
-    "click>=8.3.1",
+    "click>=8.3.3",
     "Jinja2==3.1.6",
-    "numpy==2.4.2",
-    "pandas==3.0.1",
-    "plotly==6.5.2",
+    "numpy==2.4.4",
+    "pandas==3.0.3",
+    "plotly==6.7.0",
     "scipy==1.17.1",
     "termcolor==3.3.0",
-    "pyarrow==23.0.0",
+    "pyarrow==24.0.0",
     "peptides==0.5.0",
     "iteration_utilities==0.13.0",
-    "requests==2.32.5",
+    "requests==2.33.0",
     "goatools==1.5.2",
-    "importlib_resources==6.5.2",
-    "biopython==1.86",
+    "importlib_resources==7.1.0",
+    "biopython==1.87",
     "weblogo==3.9.0",
 ]
 [project.urls]
