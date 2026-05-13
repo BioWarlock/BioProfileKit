@@ -33,13 +33,14 @@ def column_overview(df: pd.DataFrame, col) -> ColumnOverview:
         suspect = mixed[1]
     else:
         suspect = check_suspect_values(df, col)
-
+    missing_percentage = 100 if df[col].isnull().all() else round(sum(df[col].isnull()) * 100 / df[col].size, 2)
     return ColumnOverview(
         name=col,
         number=int(df[col].notnull().sum()),
         unique=df[col].nunique(),
         missing=int(df[col].isnull().sum()),
-        missing_per=100 if df[col].isnull().all() else round(sum(df[col].isnull()) * 100 / df[col].size, 2),
+        missing_per=missing_percentage,
+        density=(100 - missing_percentage),
         type=str(df[col].dtype),
         sequence=seq_type,
         invalid_seqs=invalid,

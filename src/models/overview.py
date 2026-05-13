@@ -23,6 +23,7 @@ class ColumnOverview:
     unique: int | None
     missing: int | None
     missing_per: float | None
+    density: float | None
     type: str
     sequence: str | None
     invalid_seqs: list[str] | None

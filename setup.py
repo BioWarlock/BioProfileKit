@@ -1,5 +1,5 @@
 import sysconfig
-
+import numpy as np
 from Cython.Build import cythonize
 from setuptools import setup, Extension, find_packages
 
@@ -16,6 +16,9 @@ extensions = [
         "cython_wrapper.taxonomy_validator",
         ["src/cython_wrapper/taxonomy_validator.pyx"],
     ),
+    Extension("cython_wrapper.medcouple_fast",
+              ["src/cython_wrapper/medcouple_fast.pyx"],
+              include_dirs=[np.get_include()])
 ]
 
 setup(

@@ -18,6 +18,9 @@ class NumericColumns:
     coefficient_of_variation: float
     mad: float
     quantiles: ndarray
+    infinity: float
+    negative_count: float
+    zero_count: float
     memory: int
     value_counts: dict
     frequencies: dict

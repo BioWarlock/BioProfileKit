@@ -4,6 +4,7 @@ from collections import defaultdict, Counter
 from itertools import chain
 from pathlib import Path
 from typing import Tuple
+from urllib.error import URLError, HTTPError
 
 from Bio import motifs
 from weblogo import *
@@ -124,9 +125,10 @@ def protein_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5) 
 
     k_mers = _kmer_check(k, top, uniques)
     # ToDo Add Desclaimer
+    plot = None
     if min_len == max_len:
         plot = make_logo(uniques, "chemistry", seq_type="protein")
-    else:
+    if plot is None:
         flat_kmers = chain.from_iterable(k_mers)
         df_kmers = pd.DataFrame(flat_kmers, columns=['kmer', 'count'])
         aggregated = df_kmers.groupby('kmer', as_index=False)['count'].sum()
@@ -172,6 +174,9 @@ def make_logo(seqs, color, seq_type):
                 )
 
         return svg_content
+    except (HTTPError, URLError, OSError) as e:
+        print(f"WebLogo Connection Error: {e}")
+        return None
 
     finally:
         if Path(tmp_path).is_file():
