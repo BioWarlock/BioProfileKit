@@ -284,3 +284,6 @@ Temporary Items
 
 src/renders/
 /data/
+*_renders/
+*.zip
+renders/
