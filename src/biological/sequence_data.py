@@ -1,5 +1,4 @@
 import tempfile
-import warnings
 from collections import defaultdict, Counter
 from itertools import chain
 from pathlib import Path
@@ -14,8 +13,10 @@ import peptides
 import plotly.express as px
 import ssl
 
+from analysis.outlier_detection import detect_outliers
 from analysis.plot_utils import apply_standard_axes
-from models.sequence import DNARNAColumns, PROTEINColumns
+from biological.plot_utils import length_distribution, gc_distribution, ambiguous_distribution, at_gc_skewness
+from models.sequence import DNARNAColumns, PROTEINColumns, SequenceMetricSummary
 
 ssl._create_default_https_context = ssl._create_stdlib_context
 
@@ -60,20 +61,92 @@ def biological_data_top_entries(seqs: pd.Series, top_k: int = 20) -> Tuple[
 
 
 def dna_rna_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5) -> DNARNAColumns:
+    #Over Top N
     uniques, counts, min_len, max_len, lengths = biological_data_top_entries(seqs, top_n)
-
-    all_seqs = seqs.str.upper()
-    all_lengths = all_seqs.str.len()
-    total_bases = all_seqs.str.len().sum()
-    all_gc = all_seqs.str.count('[GC]')
-    gc_content = np.round(np.where(all_lengths > 0, all_gc / all_lengths * 100, 0.0), 2).tolist()
-
-    total_n = all_seqs.str.count('N').sum()
-    ambiguous_base_ratio = round(total_n / total_bases * 100, 2) if total_bases > 0 else 0.0
-    print(ambiguous_base_ratio)
-    nucleotide_count = [dict(Counter(seq)) for seq in uniques]
-
+    nucleotide_count = [dict(Counter(s)) for s in uniques]
     k_mers = _kmer_check(k, top, uniques)
+
+    #Over all sequences
+    all_overview = pd.DataFrame(seqs, columns=['sequence'])
+    all_overview['sequence'] = seqs.str.upper()
+    all_overview["lengths"] = all_overview['sequence'].str.len()
+
+    A = all_overview['sequence'].str.count('A')
+    T = all_overview['sequence'].str.count('T')
+    G = all_overview['sequence'].str.count('G')
+    C = all_overview['sequence'].str.count('C')
+    all_overview['GC_skew'] = (G - C) / (G + C)
+    all_overview['AT_skew'] = (A - T) / (A + T)
+
+    all_overview["GC_count"] = all_overview['sequence'].str.count('[GC]')
+    all_overview["gc_content"] = np.round(np.where(all_overview["lengths"] > 0, all_overview["GC_count"] / all_overview["lengths"] * 100, 0.0), 2)
+
+    all_overview["N"] = all_overview['sequence'].str.count('N')
+    all_overview["ambiguous_base_ratio"] = np.round(np.where(all_overview["lengths"] > 0, all_overview["N"] / all_overview["lengths"] * 100, 0.0), 2)
+
+    all_overview["codon_complete"] = all_overview["lengths"] % 3
+    all_overview["codon_pct"] = np.where(all_overview["lengths"] > 0, (all_overview["lengths"] - all_overview["codon_complete"]) / all_overview["lengths"] * 100,0.0)
+    codon_completeness = SequenceMetricSummary(
+        min=round(float(np.nanmin(all_overview["codon_pct"] )), 2),
+        max=round(float(np.nanmax(all_overview["codon_pct"] )), 2),
+        mean=round(float(np.nanmean(all_overview["codon_pct"] )), 2),
+    )
+
+    gc_content = SequenceMetricSummary(
+        min=round(float(all_overview["gc_content"].min()), 2),
+        max=round(float(all_overview["gc_content"].max()), 2),
+        mean=round(float(all_overview["gc_content"].mean()), 2),
+    )
+
+    ambiguous_base_ratio = SequenceMetricSummary(
+        min=round(float(all_overview["ambiguous_base_ratio"].min()), 2),
+        max=round(float(all_overview["ambiguous_base_ratio"].max()), 2),
+        mean=round(float(all_overview["ambiguous_base_ratio"].mean()), 2),
+    )
+
+    length_stats = SequenceMetricSummary(
+        min=round(float(all_overview["lengths"].min()), 2),
+        max=round(float(all_overview["lengths"].max()), 2),
+        mean=round(float(all_overview["lengths"].mean()), 2),
+    )
+
+    gc_skew = SequenceMetricSummary(
+        min=round(float(all_overview["GC_skew"].min()), 4),
+        max=round(float(all_overview["GC_skew"].max()), 4),
+        mean=round(float(all_overview["GC_skew"].mean()), 4),
+    )
+
+    at_skew = SequenceMetricSummary(
+        min=round(float(all_overview["AT_skew"].min()), 4),
+        max=round(float(all_overview["AT_skew"].max()), 4),
+        mean=round(float(all_overview["AT_skew"].mean()), 4),
+    )
+
+    cpg_oe, tpa_oe = _dinucleotide_oe(all_overview)
+
+    all_overview["entropy"] = all_overview["sequence"].apply(_normalized_shanon_entropy)
+
+    low_complexity = SequenceMetricSummary(
+        min=round(float(all_overview["entropy"].min()), 2),
+        max=round(float(all_overview["entropy"].max()), 2),
+        mean=round(float(all_overview["entropy"].mean()), 2),
+    )
+
+    reverse_complement_ratio, reverse_complement_list = _reverse_complement_duplicates(all_overview['sequence'])
+    at_gc_plot = at_gc_skewness(all_overview)
+    gc_dist_plot = gc_distribution(all_overview)
+
+    affected_sequences = (all_overview["N"] > 0).sum()
+    ambiguous_dist_plot = None
+    if affected_sequences > 0:
+        ambiguous_dist_plot = ambiguous_distribution(all_overview)
+
+    length_dist_plot = None
+    if all_overview["lengths"].nunique() > 1:
+        length_dist_plot = length_distribution(all_overview)
+
+    length_outliers = detect_outliers(all_overview["lengths"].to_numpy(dtype=np.double))
+
 
     if min_len == max_len:
         plot = make_logo(uniques, 'color_classic', seq_type="dna")
@@ -89,11 +162,24 @@ def dna_rna_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5) 
         length=lengths.tolist(),
         gc_content=gc_content,
         ambiguous_base_ratio=ambiguous_base_ratio,
+        length_stats=length_stats,
+        length_outliers=length_outliers,
+        codon_completeness=codon_completeness,
+        gc_skew=gc_skew,
+        at_skew=at_skew,
+        cpg_observed_expected=cpg_oe,
+        tpa_observed_expected=tpa_oe,
+        low_complexity=low_complexity,
+        reverse_complement_ratio=reverse_complement_ratio,
+        reverse_complement_list=reverse_complement_list,
         nucleotide_count=nucleotide_count,
         k_mers=k_mers,
         plot=plot,
+        gc_distribution=gc_dist_plot,
+        length_distribution=length_dist_plot,
+        ambiguous_distribution=ambiguous_dist_plot,
+        at_gc_skewness=at_gc_plot,
     )
-
 
 def _kmer_check(k: int, top: int, uniques: np.ndarray) -> list:
     check_length = any(len(i) <= k for i in uniques)
@@ -104,6 +190,53 @@ def _kmer_check(k: int, top: int, uniques: np.ndarray) -> list:
         k_mers = [top_mere(seq, n=3, top=top) for seq in uniques]
     return k_mers
 
+def _reverse_complement_duplicates(all_seqs: pd.Series) -> Tuple[float,set]:
+    complement = str.maketrans('ACGT', 'TGCA')
+    seq_set = set(all_seqs)
+    canonical = {min(seq, seq.translate(complement)[::-1]) for seq in seq_set}
+    redundant_seqs = seq_set - canonical
+    redundant = len(seq_set) - len(canonical)
+    return (round(redundant / len(seq_set) * 100, 2) if len(seq_set) > 0 else 0.0), redundant_seqs
+
+def _normalized_shanon_entropy(seq: str) -> np.float64:
+    if len(seq) == 0:
+        return np.float64(0.0)
+    counts = np.array(list(Counter(seq).values()))
+    max_entropy = np.log2(min(len(seq), len(counts))) # ToDo or 4?
+    if max_entropy == 0:
+        return np.float64(0.0)
+    return np.round(entropy(counts, base=2) / max_entropy * 100, 2).astype(np.float64)
+
+def _dinucleotide_oe(df: pd.DataFrame) -> Tuple[SequenceMetricSummary, SequenceMetricSummary]:
+    seqs = df["sequence"]
+    lengths = df["lengths"]
+
+    a_freq = seqs.str.count('A') / lengths
+    t_freq = seqs.str.count('T') / lengths
+    g_freq = seqs.str.count('G') / lengths
+    c_freq = seqs.str.count('C') / lengths
+
+    tpa_obs = seqs.str.count('TA') / (lengths - 1)
+    tpa_exp = t_freq  * a_freq
+    tpa_oe = np.where(tpa_exp > 0 , tpa_obs/tpa_exp, 0.0)
+
+    cpg_obs = seqs.str.count('CG') / (lengths - 1)
+    cpg_exp = g_freq * c_freq
+    cpg_oe = np.where(cpg_exp > 0 , cpg_obs/cpg_exp, 0.0)
+
+    #ToDo check if wie only use values above 0.0
+    return (
+        SequenceMetricSummary(
+            min=round(float(np.nanmin(cpg_oe)), 4),
+            max=round(float(np.nanmax(cpg_oe)), 4),
+            mean=round(float(np.nanmean(cpg_oe)), 4),
+        ),
+        SequenceMetricSummary(
+            min=round(float(np.nanmin(tpa_oe)), 4),
+            max=round(float(np.nanmax(tpa_oe)), 4),
+            mean=round(float(np.nanmean(tpa_oe)), 4),
+        ),
+    )
 
 def protein_descriptors(peptide: str) -> Dict[str, str | float | dict[str, float]]:
     descriptors: Dict[str, str | float | dict[str, float]] = {}
