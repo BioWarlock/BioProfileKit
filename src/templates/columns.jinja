@@ -708,7 +708,14 @@
                                                                     </td>
                                                                     <td>{{ col.dna_rna_data.count[i] }}</td>
                                                                     <td>{{ col.dna_rna_data.length[i] }}</td>
-                                                                    <td>—</td>
+                                                                    <td>
+                                                                        {% set nuc = col.dna_rna_data.nucleotide_count[i] if col.dna_rna_data.nucleotide_count|length > i else {} %}
+                                                                        {% set gc_total = nuc.get('G', 0) + nuc.get('C', 0) %}
+                                                                        {% set nuc_total = nuc.values()|sum %}
+                                                                        {% if nuc_total > 0 %}
+                                                                            {{ (gc_total / nuc_total * 100) | round(1) }}%
+                                                                        {% else %}—{% endif %}
+                                                                    </td>
                                                                     <td>
                                                                         {% if n_count > 0 %}
                                                                             <span class="badge bg-warning text-dark">{{ n_count }}</span>
