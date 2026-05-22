@@ -1,6 +1,9 @@
 from dataclasses import dataclass
+from typing import Optional
 
 from numpy import ndarray
+
+from .outliers import Outliers
 
 
 @dataclass
@@ -24,3 +27,4 @@ class NumericColumns:
     memory: int
     value_counts: dict
     frequencies: dict
+    outliers: Optional[Outliers]

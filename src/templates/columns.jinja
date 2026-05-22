@@ -699,12 +699,12 @@
                                                         </div>
                                                         <div class="col-md-6">
                                                             <h6>GC Content Statistics</h6>
-                                                            {% set gc_contents = col.dna_rna_data.gc_content %}
-                                                            <table class="table table-sm">
-                                                                <tr><td>Min GC:</td><td>{{ "%.1f"|format(gc_contents|min) }}%</td></tr>
-                                                                <tr><td>Max GC:</td><td>{{ "%.1f"|format(gc_contents|max) }}%</td></tr>
-                                                                <tr><td>Mean GC:</td><td>{{ "%.1f"|format((gc_contents|sum) / (gc_contents|length)) }}%</td></tr>
-                                                            </table>
+                                                                {% set gc = col.dna_rna_data.gc_content %}
+                                                                <table class="table table-sm">
+                                                                    <tr><td>Min GC:</td><td>{{ "%.1f"|format(gc.min) }}%</td></tr>
+                                                                    <tr><td>Max GC:</td><td>{{ "%.1f"|format(gc.max) }}%</td></tr>
+                                                                    <tr><td>Mean GC:</td><td>{{ "%.1f"|format(gc.mean) }}%</td></tr>
+                                                                </table>
                                                         </div>
                                                     </div>
 
