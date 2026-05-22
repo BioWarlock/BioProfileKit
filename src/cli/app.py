@@ -60,10 +60,10 @@ def cli(input: str, tax: bool = False, func: str = None,
         # Biologische Sequenz-Analyse
         if col_ov.sequence == 'dna':
             print(colored(f'Analyzing DNA/RNA sequences in column: {col_ov.name}', 'cyan'))
-            col_ov.dna_rna_data = dna_rna_columns(df[col_ov.name], k=kmer, top_n=top_n)
+            col_ov.dna_rna_data = dna_rna_columns(df[col_ov.name], k=kmer, top_n=top_n, invalid=col_ov.invalid_seqs)
         elif col_ov.sequence == 'protein':
             print(colored(f'Analyzing protein sequences in column: {col_ov.name}', 'cyan'))
-            col_ov.protein_data = protein_columns(df[col_ov.name], k=kmer, top_n=top_n)
+            col_ov.protein_data = protein_columns(df[col_ov.name], k=kmer, top_n=top_n,  invalid=col_ov.invalid_seqs)
         else:
             col_ov.dna_rna_data = None
             col_ov.protein_data = None

@@ -60,7 +60,9 @@ def biological_data_top_entries(seqs: pd.Series, top_k: int = 20) -> Tuple[
     return uniques, counts, min_len, max_len, lengths
 
 
-def dna_rna_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5) -> DNARNAColumns:
+def dna_rna_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5, invalid: list=None) -> DNARNAColumns:
+    if invalid:
+        seqs = seqs[~seqs.isin(invalid)]
     #Over Top N
     uniques, counts, min_len, max_len, lengths = biological_data_top_entries(seqs, top_n)
     nucleotide_count = [dict(Counter(s)) for s in uniques]
@@ -257,15 +259,58 @@ def protein_descriptors(peptide: str) -> Dict[str, str | float | dict[str, float
     descriptors["aroma"] = sum([peptide.count(aa) for aa in ('F', 'W', 'Y')]) / len(peptide)
     return descriptors
 
-
-def protein_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5) -> PROTEINColumns:
+#ToDo Add Desclaimer; Removing invalid from list
+def protein_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5, invalid: list=None) -> PROTEINColumns:
+    # Top-N
+    if invalid:
+        seqs = seqs[~seqs.isin(invalid)]
     uniques, counts, min_len, max_len, lengths = biological_data_top_entries(seqs, top_n)
-
     aa_composition = [dict(Counter(seq)) for seq in uniques]
     descriptors = [protein_descriptors(seq) for seq in uniques]
-
     k_mers = _kmer_check(k, top, uniques)
-    # ToDo Add Desclaimer
+
+    # Column-wide
+    all_overview = pd.DataFrame(seqs, columns=['sequence'])
+    all_overview['sequence'] = seqs.str.upper()
+    all_overview['lengths'] = all_overview['sequence'].str.len()
+
+    all_overview['ambiguous'] = all_overview['sequence'].str.count('[XJU]')
+    all_overview['ambiguous_ratio'] = np.round(np.where(all_overview['lengths'] > 0, all_overview['ambiguous'] / all_overview['lengths'] * 100, 0.0), 2)
+
+    all_overview['stop_codon'] = all_overview['sequence'].str.count(r'\*')
+    all_overview['entropy'] = all_overview['sequence'].apply(_normalized_shanon_entropy)
+
+    ambiguous_residue_ratio = SequenceMetricSummary(
+        min=round(float(all_overview['ambiguous_ratio'].min()), 2),
+        max=round(float(all_overview['ambiguous_ratio'].max()), 2),
+        mean=round(float(all_overview['ambiguous_ratio'].mean()), 2),
+    )
+
+    length_stats = SequenceMetricSummary(
+        min=round(float(all_overview['lengths'].min()), 2),
+        max=round(float(all_overview['lengths'].max()), 2),
+        mean=round(float(all_overview['lengths'].mean()), 2),
+    )
+
+    length_outliers = detect_outliers(all_overview['lengths'].to_numpy(dtype=np.double))
+
+    stop_codon_ratio = round((all_overview['stop_codon'] > 0).sum() / len(all_overview) * 100, 2)
+
+    low_complexity = SequenceMetricSummary(
+        min=round(float(all_overview['entropy'].min()), 2),
+        max=round(float(all_overview['entropy'].max()), 2),
+        mean=round(float(all_overview['entropy'].mean()), 2),
+    )
+
+    length_dist_plot = None
+    if all_overview['lengths'].nunique() > 1:
+        length_dist_plot = length_distribution(all_overview, unit="residues")
+
+    affected = (all_overview['ambiguous'] > 0).sum()
+    ambiguous_dist_plot = None
+    if affected > 0:
+        ambiguous_dist_plot = ambiguous_distribution(all_overview, col='ambiguous', label='X/J/U')
+
     plot = None
     if min_len == max_len:
         plot = make_logo(uniques, "chemistry", seq_type="protein")
@@ -277,8 +322,8 @@ def protein_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5) 
 
     return PROTEINColumns(
         sequence=uniques.tolist(),
-        length=lengths.tolist(),
         count=counts.tolist(),
+        length=lengths.tolist(),
         composition=aa_composition,
         frequency=[descriptor['freq'] for descriptor in descriptors],
         hydrophobicity=[descriptor['hp'] for descriptor in descriptors],
@@ -289,10 +334,16 @@ def protein_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5) 
         boman=[descriptor['boman'] for descriptor in descriptors],
         aromaticity=[descriptor['aroma'] for descriptor in descriptors],
         instability=[descriptor['iidx'] for descriptor in descriptors],
+        ambiguous_residue_ratio=ambiguous_residue_ratio,
+        length_stats=length_stats,
+        length_outliers=length_outliers,
+        stop_codon_ratio=stop_codon_ratio,
+        low_complexity=low_complexity,
         k_mers=k_mers,
-        plot=plot
+        plot=plot,
+        length_distribution=length_dist_plot,
+        ambiguous_distribution=ambiguous_dist_plot,
     )
-
 
 def make_logo(seqs, color, seq_type):
     if seq_type == "protein":

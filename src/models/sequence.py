@@ -58,5 +58,15 @@ class PROTEINColumns:
     boman: List[float]
     aromaticity: List[float]
     instability: List[float]
+
+    # Column-wide metrics
+    ambiguous_residue_ratio: SequenceMetricSummary
+    length_stats: SequenceMetricSummary
+    length_outliers: Optional[Outliers]
+    stop_codon_ratio: float
+    low_complexity: SequenceMetricSummary
+
     k_mers: List[List[Tuple[str, int]]]
     plot: str
+    length_distribution: Optional[str]
+    ambiguous_distribution: Optional[str]

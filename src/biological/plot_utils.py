@@ -3,13 +3,13 @@ from plotly import express as px, graph_objs as go, graph_objects as go
 from plotly.subplots import make_subplots
 
 
-def length_distribution(all_overview: DataFrame):
+def length_distribution(all_overview: DataFrame, unit: str = "bp"):
     bins = 300 if all_overview.shape[0] > 10000 else all_overview.shape[0]
     fig = px.histogram(
         all_overview,
         x="lengths",
         title="Sequence Length Distribution Across All Sequences",
-        labels={"lengths": "Sequence Length (bp)"},
+        labels={"lengths": f"Sequence Length ({unit})"},
         color_discrete_sequence=['#0F65A0'],
         nbins=bins
     )
@@ -20,7 +20,7 @@ def length_distribution(all_overview: DataFrame):
     )
     fig.update_layout(
         template="plotly_white",
-        xaxis_title="Sequence Length (Base Pairs)",
+        xaxis_title=f"Sequence Length ({unit})",
         yaxis_title="Sequence Count",
         bargap=0.5
     )
@@ -57,21 +57,21 @@ def gc_distribution(all_overview: DataFrame):
 
     return fig.to_html(full_html=False, include_plotlyjs=False)
 
-def ambiguous_distribution(all_overview: DataFrame):
+def ambiguous_distribution(all_overview: DataFrame, col: str = "N", label: str = "N-Count"):
     fig = go.Figure()
 
     fig.add_trace(go.Scattergl(
         x=all_overview.index,
-        y=all_overview['N'],  # .sort_values(ascending=False),
+        y=all_overview[col],  # .sort_values(ascending=False),
         mode='lines',
         line=dict(color='#994564', width=0.85),
-        name="N-Count"
+        name=label
     ))
 
     fig.update_layout(
-        title="Complete Distribution Curve of N-Counts Across All Sequences",
+        title=f"Complete Distribution Curve of {label}s Across All Sequences",
         xaxis_title="Sequence Index (Chronological Order)",
-        yaxis_title="Number of 'N's in Sequence",
+        yaxis_title=f"Number of '{label}' in Sequence",
         template="plotly_white",
         yaxis=dict(rangemode="tozero")
     )
