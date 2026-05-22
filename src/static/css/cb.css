@@ -200,3 +200,19 @@ ul.pagination li.page-item .page-link.ellipsis {
 .nav-tabs .nav-item.show .nav-link {
     color: #932263;
 }
+
+/*
+ * .table-secondary section header rows
+ */
+.table-secondary {
+    --bs-table-color: #932263;
+    --bs-table-bg: #ffffff;
+    --bs-table-border-color: #dee2e6;
+}
+
+.table > :not(caption) > .table-secondary > * {
+    background-color: #ffffff !important;
+    box-shadow: none !important;
+    color: #932263 !important;
+    padding-top: 1rem !important;
+}

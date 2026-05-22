@@ -157,6 +157,46 @@
                                 {% endif %}
 
                                 <!-- TODO: Add missing badges - Skewness, Duplicates, Diff Sequence Length, Biological Naming, Diff Units -->
+                                {# ── DNA/RNA quality badges ── #}
+                                {% if col.sequence != 'None' and col.dna_rna_data %}
+                                    {# Ambiguous Bases (N) #}
+                                    {% if col.dna_rna_data.ambiguous_base_ratio is defined and col.dna_rna_data.ambiguous_base_ratio.mean > 0 %}
+                                        {% set amb_mean = col.dna_rna_data.ambiguous_base_ratio.mean %}
+                                        {% if amb_mean >= 5 %}
+                                            <span class="badge bg-danger me-2"
+                                                  title="Mean {{ amb_mean }}% ambiguous bases (N) — may indicate poor sequencing quality">
+                                                Ambiguous Bases ({{ amb_mean }}%)
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark me-2"
+                                                  title="Mean {{ amb_mean }}% ambiguous bases (N) detected">
+                                                Ambiguous Bases ({{ amb_mean }}%)
+                                            </span>
+                                        {% endif %}
+                                    {% endif %}
+                                    {# Reverse Complement Duplicates #}
+                                    {% if col.dna_rna_data.reverse_complement_ratio is defined and col.dna_rna_data.reverse_complement_ratio > 0 %}
+                                        {% set rc_pct = col.dna_rna_data.reverse_complement_ratio %}
+                                        {% if rc_pct >= 10 %}
+                                            <span class="badge bg-danger me-2"
+                                                  title="{{ rc_pct }}% of sequences have a reverse-complement duplicate — possible library preparation artefact">
+                                                RC Duplicates ({{ rc_pct }}%)
+                                            </span>
+                                        {% elif rc_pct >= 1 %}
+                                            <span class="badge bg-warning text-dark me-2"
+                                                  title="{{ rc_pct }}% of sequences have a reverse-complement duplicate">
+                                                RC Duplicates ({{ rc_pct }}%)
+                                            </span>
+                                        {% endif %}
+                                    {% endif %}
+                                    {# Low Complexity #}
+                                    {% if col.dna_rna_data.low_complexity is defined and col.dna_rna_data.low_complexity.mean < 50 %}
+                                        <span class="badge bg-warning text-dark me-2"
+                                              title="Mean Shannon entropy {{ col.dna_rna_data.low_complexity.mean }}% — possible poly-A tails or repetitive regions">
+                                            Low Complexity
+                                        </span>
+                                    {% endif %}
+                                {% endif %}
                                 {# ── Categorical quality badges ── #}
                                 {% if col.type in ['object', 'bool', 'str'] %}
                                     {% for cat in categorical %}{% if cat.name == col.name %}
@@ -586,14 +626,20 @@
                                 {% if col.sequence != 'None' and col.dna_rna_data and col.missing_per < 100  %}
                                     <div class="row w-100 mt-4">
                                         <div class="col-12">
-                                            <h5>Top {{ top_n }} Sequences Analysis</h5>
+                                            <h5>Sequence Analysis
+                                                <small class="text-muted fw-normal ms-1" style="font-size: 0.75em;">
+                                                    — Statistics: all sequences &nbsp;|&nbsp; Sequences, Distributions, K-mers: Top {{ top_n }}
+                                                </small>
+                                            </h5>
 
-                                            <!-- Tabs für verschiedene Ansichten -->
                                             <ul class="nav nav-tabs" id="sequenceTab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tablist">
                                                 <li class="nav-item" role="presentation">
                                                     <button class="nav-link active" id="sequences-tab{{ col.name | replace(' ', '') |replace('.', '_') | replace('#', '') | capitalize }}"
                                                             data-bs-toggle="tab" data-bs-target="#sequences{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
-                                                            type="button" role="tab">Sequences</button>
+                                                            type="button" role="tab">
+                                                        Sequences
+                                                        <span class="badge bg-secondary ms-1" style="font-size:0.7em;" title="Based on the {{ top_n }} most frequent sequences">Top {{ top_n }}</span>
+                                                    </button>
                                                 </li>
                                                 {% if col.invalid_seqs and col.invalid_seqs|length > 0 %}
                                                     <li class="nav-item" role="presentation">
@@ -605,17 +651,32 @@
                                                 <li class="nav-item" role="presentation">
                                                     <button class="nav-link" id="stats-tab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
                                                             data-bs-toggle="tab" data-bs-target="#stats{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
-                                                            type="button" role="tab">Statistics</button>
+                                                            type="button" role="tab">
+                                                        Statistics
+                                                        <span class="badge bg-success ms-1" style="font-size:0.7em;" title="Computed over all sequences in this column">All</span>
+                                                    </button>
+                                                </li>
+                                                <li class="nav-item" role="presentation">
+                                                    <button class="nav-link" id="distributions-tab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
+                                                            data-bs-toggle="tab" data-bs-target="#distributions{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
+                                                            type="button" role="tab">
+                                                        Distributions
+                                                        <span class="badge bg-success ms-1" style="font-size:0.7em;" title="Computed over all sequences in this column">All</span>
+                                                    </button>
                                                 </li>
                                                 <li class="nav-item" role="presentation">
                                                     <button class="nav-link" id="kmers-tab{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
                                                             data-bs-toggle="tab" data-bs-target="#kmers{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
-                                                            type="button" role="tab">K-mers</button>
+                                                            type="button" role="tab">
+                                                        K-mers
+                                                        <span class="badge bg-secondary ms-1" style="font-size:0.7em;" title="Based on the {{ top_n }} most frequent sequences">Top {{ top_n }}</span>
+                                                    </button>
                                                 </li>
                                             </ul>
 
                                             <div class="tab-content" id="sequenceTabContent{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}">
-                                                <!-- Sequences Tab -->
+
+                                                <!-- ── Sequences Tab ── -->
                                                 <div class="tab-pane fade show active" id="sequences{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
                                                     <div class="table-responsive mt-3" style="max-height: 400px; overflow-y: auto;">
                                                         <table class="table table-sm table-striped">
@@ -624,46 +685,54 @@
                                                                 <th>Rank</th>
                                                                 <th>Sequence</th>
                                                                 <th>Count</th>
-                                                                <th>Length</th>
-                                                                <th>GC Content (%)</th>
+                                                                <th>Length (bp)</th>
+                                                                <th>GC (%)</th>
+                                                                <th>N-Count</th>
                                                             </tr>
                                                             </thead>
                                                             <tbody>
                                                             {% for i in range(col.dna_rna_data.sequence|length) %}
-                                                                <tr>
+                                                                {% set nuc = col.dna_rna_data.nucleotide_count[i] if col.dna_rna_data.nucleotide_count|length > i else {} %}
+                                                                {% set n_count = nuc.get('N', 0) %}
+                                                                <tr {% if n_count > 0 %}class="table-warning"{% endif %}>
                                                                     <td>{{ i + 1 }}</td>
                                                                     <td>
-                                                                <span class="font-monospace text-break" style="font-size: 0.85em;">
-                                                                    {% set seq = col.dna_rna_data.sequence[i] %}
-                                                                    {% if seq|length > 50 %}
-                                                                        {{ seq[:25] }}<span class="text-muted">...</span>{{ seq[-25:] }}
-                                                                    {% else %}
-                                                                        {{ seq }}
-                                                                    {% endif %}
-                                                                </span>
+                                                                        <span class="font-monospace text-break" style="font-size: 0.85em;">
+                                                                            {% set seq = col.dna_rna_data.sequence[i] %}
+                                                                            {% if seq|length > 50 %}
+                                                                                {{ seq[:25] }}<span class="text-muted">...</span>{{ seq[-25:] }}
+                                                                            {% else %}
+                                                                                {{ seq }}
+                                                                            {% endif %}
+                                                                        </span>
                                                                     </td>
                                                                     <td>{{ col.dna_rna_data.count[i] }}</td>
                                                                     <td>{{ col.dna_rna_data.length[i] }}</td>
-                                                                    <td>{{ col.dna_rna_data.gc_content[i] }}</td>
+                                                                    <td>—</td>
+                                                                    <td>
+                                                                        {% if n_count > 0 %}
+                                                                            <span class="badge bg-warning text-dark">{{ n_count }}</span>
+                                                                        {% else %}
+                                                                            <span class="text-muted">0</span>
+                                                                        {% endif %}
+                                                                    </td>
                                                                 </tr>
                                                             {% endfor %}
                                                             </tbody>
                                                         </table>
                                                     </div>
                                                 </div>
-                                                       <!-- Invalid Sequences Tab -->
+
+                                                <!-- ── Invalid Sequences Tab ── -->
                                                 {% if col.invalid_seqs and col.invalid_seqs|length > 0 %}
                                                     <div class="tab-pane fade" id="invalidSeqs{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
                                                         <div class="alert alert-warning mt-3">
-                                                            <strong>Note:</strong> {{ col.invalid_seqs|length }} invalid sequence(s) detected in <b>{{ col.sequence }}</b>b> column.
+                                                            <strong>Note:</strong> {{ col.invalid_seqs|length }} invalid sequence(s) detected in <b>{{ col.sequence }}</b> column.
                                                         </div>
                                                         <div class="table-responsive mt-3" style="max-height: 400px; overflow-y: auto;">
                                                             <table class="table table-sm table-striped w-100" style="min-width: 500px;">
                                                                 <thead class="sticky-top bg-light">
-                                                                <tr>
-                                                                    <th>#</th>
-                                                                    <th>Value</th>
-                                                                </tr>
+                                                                <tr><th>#</th><th>Value</th></tr>
                                                                 </thead>
                                                                 <tbody>
                                                                 {% for seq in col.invalid_seqs %}
@@ -675,7 +744,6 @@
                                                                             {% else %}
                                                                                 {{ seq }}
                                                                             {% endif %}
-
                                                                         </td>
                                                                     </tr>
                                                                 {% endfor %}
@@ -685,58 +753,306 @@
                                                     </div>
                                                 {% endif %}
 
-                                                <!-- Statistics Tab -->
+                                                <!-- ── Statistics Tab ── -->
                                                 <div class="tab-pane fade" id="stats{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
-                                                    <div class="row mt-3">
-                                                        <div class="col-md-6">
-                                                            <h6>Length Statistics</h6>
-                                                            {% set lengths = col.dna_rna_data.length %}
-                                                            <table class="table table-sm">
-                                                                <tr><td>Min Length:</td><td>{{ lengths|min }}</td></tr>
-                                                                <tr><td>Max Length:</td><td>{{ lengths|max }}</td></tr>
-                                                                <tr><td>Mean Length:</td><td>{{ "%.1f"|format((lengths|sum) / (lengths|length)) }}</td></tr>
-                                                            </table>
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            <h6>GC Content Statistics</h6>
-                                                                {% set gc = col.dna_rna_data.gc_content %}
-                                                                <table class="table table-sm">
-                                                                    <tr><td>Min GC:</td><td>{{ "%.1f"|format(gc.min) }}%</td></tr>
-                                                                    <tr><td>Max GC:</td><td>{{ "%.1f"|format(gc.max) }}%</td></tr>
-                                                                    <tr><td>Mean GC:</td><td>{{ "%.1f"|format(gc.mean) }}%</td></tr>
-                                                                </table>
-                                                        </div>
-                                                    </div>
+                                                    {% set d = col.dna_rna_data %}
+                                                    <div class="table-responsive mt-3">
+                                                        <table class="table table-sm table-striped w-100">
+                                                            <thead>
+                                                            <tr>
+                                                                <th style="width:40%">Metric</th>
+                                                                <th style="width:20%">Min</th>
+                                                                <th style="width:20%">Mean</th>
+                                                                <th style="width:20%">Max</th>
+                                                            </tr>
+                                                            </thead>
+                                                            <tbody>
 
-                                                    <div class="row">
-                                                        <div class="col-12">
-                                                            <h6>Nucleotide Composition (Aggregated from Top 20)</h6>
+                                                            {# ── Length ── #}
+                                                            <tr class="table-secondary">
+                                                                <td colspan="4"><strong>Sequence Length</strong></td>
+                                                            </tr>
+                                                            {% if d.length_stats is defined %}
+                                                            <tr>
+                                                                <td>Length (bp)</td>
+                                                                <td>{{ d.length_stats.min }}</td>
+                                                                <td>{{ d.length_stats.mean }}</td>
+                                                                <td>{{ d.length_stats.max }}</td>
+                                                            </tr>
+                                                            {% endif %}
+                                                            {% if d.length_outliers is defined and d.length_outliers %}
+                                                            <tr>
+                                                                <td colspan="4">
+                                                                    <small class="text-muted">
+                                                                        <strong>Length Outliers (Adj. Boxplot):</strong>
+                                                                        {{ d.length_outliers.n_lower_iqr }} below {{ d.length_outliers.lower_bound }} bp &nbsp;|&nbsp;
+                                                                        {{ d.length_outliers.n_upper_iqr }} above {{ d.length_outliers.upper_bound }} bp &nbsp;|&nbsp;
+                                                                        Medcouple: {{ d.length_outliers.medcouple }}
+                                                                    </small>
+                                                                </td>
+                                                            </tr>
+                                                            {% endif %}
+
+                                                            {# ── GC Content ── #}
+                                                            <tr class="table-secondary">
+                                                                <td colspan="4"><strong>GC Content</strong></td>
+                                                            </tr>
+                                                            {% if d.gc_content is defined %}
+                                                            <tr>
+                                                                <td>GC (%)</td>
+                                                                <td>{{ d.gc_content.min }}%</td>
+                                                                <td>{{ d.gc_content.mean }}%</td>
+                                                                <td>{{ d.gc_content.max }}%</td>
+                                                            </tr>
+                                                            {% endif %}
+
+                                                            {# ── Ambiguous Bases ── #}
+                                                            <tr class="table-secondary">
+                                                                <td colspan="4">
+                                                                    <strong>Ambiguous Bases (N)</strong>
+                                                                    <br><small class="text-muted">poor sequencing quality indicator</small>
+                                                                </td>
+                                                            </tr>
+                                                            {% if d.ambiguous_base_ratio is defined %}
+                                                            <tr {% if d.ambiguous_base_ratio.mean >= 5 %}class="table-danger"{% elif d.ambiguous_base_ratio.mean > 0 %}class="table-warning"{% endif %}>
+                                                                <td>N-Rate (%)</td>
+                                                                <td>{{ d.ambiguous_base_ratio.min }}%</td>
+                                                                <td>
+                                                                    {{ d.ambiguous_base_ratio.mean }}%
+                                                                    {% if d.ambiguous_base_ratio.mean >= 5 %}
+                                                                        <span class="badge bg-danger ms-1">High</span>
+                                                                    {% elif d.ambiguous_base_ratio.mean > 0 %}
+                                                                        <span class="badge bg-warning text-dark ms-1">Present</span>
+                                                                    {% endif %}
+                                                                </td>
+                                                                <td>{{ d.ambiguous_base_ratio.max }}%</td>
+                                                            </tr>
+                                                            {% endif %}
+
+                                                            {# ── Codon Completeness ── #}
+                                                            <tr class="table-secondary">
+                                                                <td colspan="4">
+                                                                    <strong>Codon Completeness</strong>
+                                                                    <br><small class="text-muted">length divisible by 3</small>
+                                                                </td>
+                                                            </tr>
+                                                            {% if d.codon_completeness is defined %}
+                                                            <tr {% if d.codon_completeness.mean < 90 %}class="table-warning"{% endif %}>
+                                                                <td>Complete Codons (%)</td>
+                                                                <td>{{ d.codon_completeness.min }}%</td>
+                                                                <td>
+                                                                    {{ d.codon_completeness.mean }}%
+                                                                    {% if d.codon_completeness.mean < 90 %}
+                                                                        <span class="badge bg-warning text-dark ms-1"
+                                                                              title="Many sequences are not divisible by 3 — possible frameshift or truncation">Incomplete</span>
+                                                                    {% endif %}
+                                                                </td>
+                                                                <td>{{ d.codon_completeness.max }}%</td>
+                                                            </tr>
+                                                            {% endif %}
+
+                                                            {# ── Low Complexity ── #}
+                                                            <tr class="table-secondary">
+                                                                <td colspan="4">
+                                                                    <strong>Sequence Complexity</strong>
+                                                                    <br><small class="text-muted">normalized Shannon entropy — low = poly-A / repeats</small>
+                                                                </td>
+                                                            </tr>
+                                                            {% if d.low_complexity is defined %}
+                                                            <tr {% if d.low_complexity.mean < 50 %}class="table-warning"{% endif %}>
+                                                                <td>Entropy (%)</td>
+                                                                <td>{{ d.low_complexity.min }}%</td>
+                                                                <td>
+                                                                    {{ d.low_complexity.mean }}%
+                                                                    {% if d.low_complexity.mean < 50 %}
+                                                                        <span class="badge bg-warning text-dark ms-1">Low Complexity</span>
+                                                                    {% endif %}
+                                                                </td>
+                                                                <td>{{ d.low_complexity.max }}%</td>
+                                                            </tr>
+                                                            {% endif %}
+
+                                                            {# ── Strand Bias ── #}
+                                                            <tr class="table-secondary">
+                                                                <td colspan="4">
+                                                                    <strong>Strand Bias (Skew)</strong>
+                                                                    <br><small class="text-muted">0 = no bias; ±1 = extreme strand asymmetry</small>
+                                                                </td>
+                                                            </tr>
+                                                            {% if d.gc_skew is defined %}
+                                                            <tr>
+                                                                <td>GC Skew  <small class="text-muted">(G−C)/(G+C)</small></td>
+                                                                <td>{{ d.gc_skew.min }}</td>
+                                                                <td>{{ d.gc_skew.mean }}</td>
+                                                                <td>{{ d.gc_skew.max }}</td>
+                                                            </tr>
+                                                            {% endif %}
+                                                            {% if d.at_skew is defined %}
+                                                            <tr>
+                                                                <td>AT Skew  <small class="text-muted">(A−T)/(A+T)</small></td>
+                                                                <td>{{ d.at_skew.min }}</td>
+                                                                <td>{{ d.at_skew.mean }}</td>
+                                                                <td>{{ d.at_skew.max }}</td>
+                                                            </tr>
+                                                            {% endif %}
+
+                                                            {# ── Dinucleotide O/E ── #}
+                                                            <tr class="table-secondary">
+                                                                <td colspan="4">
+                                                                    <strong>Dinucleotide Frequencies (Observed / Expected)</strong>
+                                                                    <br><small class="text-muted">CpG &lt; 0.6 = methylation suppression; TpA &lt; 0.6 = avoidance</small>
+                                                                </td>
+                                                            </tr>
+                                                            {% if d.cpg_observed_expected is defined %}
+                                                            {% set cpg = d.cpg_observed_expected %}
+                                                            <tr {% if cpg.mean < 0.6 %}class="table-warning"{% endif %}>
+                                                                <td>CpG O/E</td>
+                                                                <td>{{ cpg.min }}</td>
+                                                                <td>
+                                                                    {{ cpg.mean }}
+                                                                    {% if cpg.mean < 0.6 %}
+                                                                        <span class="badge bg-warning text-dark ms-1"
+                                                                              title="CpG suppression detected — possible methylation">Suppressed</span>
+                                                                    {% elif cpg.mean > 1.5 %}
+                                                                        <span class="badge bg-info ms-1"
+                                                                              title="CpG enrichment — possible CpG island">CpG Island</span>
+                                                                    {% endif %}
+                                                                </td>
+                                                                <td>{{ cpg.max }}</td>
+                                                            </tr>
+                                                            {% endif %}
+                                                            {% if d.tpa_observed_expected is defined %}
+                                                            {% set tpa = d.tpa_observed_expected %}
+                                                            <tr {% if tpa.mean < 0.6 %}class="table-warning"{% endif %}>
+                                                                <td>TpA O/E</td>
+                                                                <td>{{ tpa.min }}</td>
+                                                                <td>
+                                                                    {{ tpa.mean }}
+                                                                    {% if tpa.mean < 0.6 %}
+                                                                        <span class="badge bg-warning text-dark ms-1"
+                                                                              title="TpA avoidance — common in many vertebrate genomes">Avoidance</span>
+                                                                    {% endif %}
+                                                                </td>
+                                                                <td>{{ tpa.max }}</td>
+                                                            </tr>
+                                                            {% endif %}
+
+                                                            {# ── Reverse Complement Duplicates ── #}
+                                                            <tr class="table-secondary">
+                                                                <td colspan="4">
+                                                                    <strong>Reverse Complement Duplicates</strong>
+                                                                    <br><small class="text-muted">possible library prep artefact or paired-end overlap</small>
+                                                                </td>
+                                                            </tr>
+                                                            {% if d.reverse_complement_ratio is defined %}
+                                                            <tr {% if d.reverse_complement_ratio >= 10 %}class="table-danger"{% elif d.reverse_complement_ratio > 0 %}class="table-warning"{% endif %}>
+                                                                <td>RC Duplicate Rate</td>
+                                                                <td colspan="3">
+                                                                    {{ d.reverse_complement_ratio }}%
+                                                                    {% if d.reverse_complement_ratio >= 10 %}
+                                                                        <span class="badge bg-danger ms-2">High</span>
+                                                                    {% elif d.reverse_complement_ratio > 0 %}
+                                                                        <span class="badge bg-warning text-dark ms-2">Present</span>
+                                                                    {% endif %}
+                                                                    {% if d.reverse_complement_list and d.reverse_complement_list|length > 0 %}
+                                                                        <details class="mt-2">
+                                                                            <summary class="text-muted small" style="cursor:pointer;">
+                                                                                Show {{ d.reverse_complement_list|length }} affected sequence(s)
+                                                                            </summary>
+                                                                            <div class="mt-1" style="max-height:150px;overflow-y:auto;">
+                                                                                {% for rc_seq in d.reverse_complement_list %}
+                                                                                    <code class="d-block text-break small">
+                                                                                        {% if rc_seq|length > 60 %}
+                                                                                            {{ rc_seq[:30] }}…{{ rc_seq[-30:] }}
+                                                                                        {% else %}
+                                                                                            {{ rc_seq }}
+                                                                                        {% endif %}
+                                                                                    </code>
+                                                                                {% endfor %}
+                                                                            </div>
+                                                                        </details>
+                                                                    {% endif %}
+                                                                </td>
+                                                            </tr>
+                                                            {% endif %}
+
+                                                            {# ── Nucleotide Composition (Top-N aggregated) ── #}
+                                                            <tr class="table-secondary">
+                                                                <td colspan="4">
+                                                                    <strong>Nucleotide Composition</strong>
+                                                                    <br><small class="text-muted">aggregated from Top {{ top_n }}</small>
+                                                                </td>
+                                                            </tr>
                                                             {% set all_nucleotides = {} %}
-                                                            {% for nuc_dict in col.dna_rna_data.nucleotide_count %}
-                                                                {% for base, count in nuc_dict.items() %}
-                                                                    {% if all_nucleotides.update({base: all_nucleotides.get(base, 0) + count}) %}{% endif %}
+                                                            {% for nuc_dict in d.nucleotide_count %}
+                                                                {% for base, cnt in nuc_dict.items() %}
+                                                                    {% if all_nucleotides.update({base: all_nucleotides.get(base, 0) + cnt}) %}{% endif %}
                                                                 {% endfor %}
                                                             {% endfor %}
                                                             {% set total_nucleotides = all_nucleotides.values()|sum %}
-                                                            <table class="table table-sm">
-                                                                <thead>
-                                                                <tr><th>Base</th><th>Count</th><th>Percentage</th></tr>
-                                                                </thead>
-                                                                <tbody>
-                                                                {% for base, count in all_nucleotides.items()|sort(attribute='1', reverse=true) %}
-                                                                    <tr>
-                                                                        <td class="font-monospace">{{ base }}</td>
-                                                                        <td>{{ count }}</td>
-                                                                        <td>{{ "%.2f"|format((count / total_nucleotides) * 100) }}%</td>
-                                                                    </tr>
-                                                                {% endfor %}
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
+                                                            {% for base, cnt in all_nucleotides.items()|sort(attribute='1', reverse=true) %}
+                                                            <tr>
+                                                                <td class="font-monospace">{{ base }}</td>
+                                                                <td colspan="2">{{ cnt }}</td>
+                                                                <td>{{ "%.2f"|format((cnt / total_nucleotides) * 100) }}%</td>
+                                                            </tr>
+                                                            {% endfor %}
+
+                                                            </tbody>
+                                                        </table>
                                                     </div>
                                                 </div>
 
-                                                <!-- K-mers Tab -->
+                                                <!-- ── Distributions Tab ── -->
+                                                <div class="tab-pane fade" id="distributions{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
+                                                    {% set d = col.dna_rna_data %}
+                                                    <div class="mt-3">
+                                                        {# GC Content Distribution #}
+                                                        {% if d.gc_distribution %}
+                                                            <h6>GC Content Distribution</h6>
+                                                            <p class="text-muted small">Violin plot of per-sequence GC content across all sequences. Bimodal distributions may indicate contamination from a second organism.</p>
+                                                            <div class="plot-container mb-4" style="max-height: fit-content; overflow: scroll;">
+                                                                {{ d.gc_distribution | safe }}
+                                                            </div>
+                                                        {% endif %}
+
+                                                        {# AT/GC Skewness #}
+                                                        {% if d.at_gc_skewness %}
+                                                            <hr>
+                                                            <h6>AT / GC Skewness</h6>
+                                                            <p class="text-muted small">Scatter plot of AT skew vs. GC skew per sequence. Deviation from (0, 0) indicates strand asymmetry.</p>
+                                                            <div class="plot-container mb-4" style="max-height: fit-content; overflow: scroll;">
+                                                                {{ d.at_gc_skewness | safe }}
+                                                            </div>
+                                                        {% endif %}
+
+                                                        {# Length Distribution #}
+                                                        {% if d.length_distribution %}
+                                                            <hr>
+                                                            <h6>Sequence Length Distribution</h6>
+                                                            <p class="text-muted small">Histogram of sequence lengths across all sequences. High variance may indicate mixed amplicons or assembly artefacts.</p>
+                                                            <div class="plot-container mb-4" style="max-height: fit-content; overflow: scroll;">
+                                                                {{ d.length_distribution | safe }}
+                                                            </div>
+                                                        {% else %}
+                                                            <div class="alert alert-secondary mt-3">All sequences have equal length — length distribution plot not generated.</div>
+                                                        {% endif %}
+
+                                                        {# Ambiguous Base Distribution #}
+                                                        {% if d.ambiguous_distribution %}
+                                                            <hr>
+                                                            <h6>Ambiguous Base (N) Distribution</h6>
+                                                            <p class="text-muted small">N-count per sequence in chronological order. Spikes may indicate specific flowcell tiles or regions with poor sequencing quality.</p>
+                                                            <div class="plot-container mb-4" style="max-height: fit-content; overflow: scroll;">
+                                                                {{ d.ambiguous_distribution | safe }}
+                                                            </div>
+                                                        {% elif d.ambiguous_base_ratio is defined and d.ambiguous_base_ratio.mean == 0 %}
+                                                            <div class="alert alert-success mt-3">No ambiguous bases (N) detected — distribution plot not generated.</div>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+
+                                                <!-- ── K-mers Tab ── -->
                                                 <div class="tab-pane fade" id="kmers{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
                                                     {% if col.dna_rna_data.plot %}
                                                         <div class="row w-100">
@@ -783,6 +1099,7 @@
                                                         </div>
                                                     </div>
                                                 </div>
+
                                             </div>
                                         </div>
                                     </div>
