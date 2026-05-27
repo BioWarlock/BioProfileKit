@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
     <meta name="description" content="Overview of Analysis - BioProfileKit"/>
     <meta name="author" content="JLU"/>
-    <title>Columns</title>
+    <title>Column Analysis – BioProfileKit</title>
     <!-- Favicon-->
     <link rel="icon" type="image/x-icon" href="static/assets/favicon.ico"/>
     <!-- Core theme CSS (includes Bootstrap)-->
@@ -31,9 +31,16 @@
                     </a>
                     <div class="dropdown-menu" aria-labelledby="navbarDropdown">
                         <a class="dropdown-item" href="numeric_data.html">Overview of Analysis</a>
-                        <a class="dropdown-item nav-item active" href="columns.html">Column Analysis</a>
+                        <a class="dropdown-item" aria-current="page" href="columns.html">Column Analysis</a>
                         <a class="dropdown-item" href="general_statistics.html">General Statistics</a>
                     </div>
+                </li>
+                <!-- Colorblind mode toggle: switches between default and colorblind-friendly palette -->
+                <li class="nav-item ms-2 d-flex align-items-center">
+                    <button id="cbToggle" type="button" class="btn btn-cb-navbar btn-sm"
+                            aria-pressed="false" title="Toggle colorblind-friendly colour palette">
+                        Colorblind Mode
+                    </button>
                 </li>
             </ul>
         </div>
@@ -82,7 +89,7 @@
                             </div>
                             <nav aria-label="Column pagination">
                                 <ul class="pagination pagination-sm mb-0" id="column-pagination">
-                                    <!-- Pagination wird via JavaScript generiert -->
+                                    <!-- Pagination is generated via JavaScript -->
                                 </ul>
                             </nav>
                         </div>
@@ -247,7 +254,7 @@
                              id="multiCollapse{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}">
                             <div class="card card-body d-flex justify-content-between align-items-start mb-2">
                                 <div class="row w-100">
-                                    <!-- Linke Spalte: Textinfos -->
+                                    <!-- Left column: text information -->
                                     <div class="col-md-6">
                                         <strong>Column:</strong> {{ col.name }}<br>
                                         <strong>Number of Values:</strong> {{ col.number }}<br>
@@ -255,7 +262,7 @@
                                         <strong>Number of Missing:</strong> {{ col.missing }} ({{ col.missing_per }}%)<br>
                                         <strong>Cardinality Dimension Ratio:</strong> {{ col.cardinality_dimension_ratio }}<br>
                                         {% if col.type not in ('object', 'str') %}
-                                            <!--ToDo: Only Number or all Dtypes? --->
+                                            <!-- TODO: Show number type only for numeric columns, or for all dtypes? -->
                                             <strong>Number type:</strong> {{ col.type }}<br>
                                         {% endif %}
                                         {% if col.mixed_types is not none %}
@@ -294,7 +301,9 @@
                                 <div class="row w-100">
                                     {% if col.describe_plot %}
                                         <div class="plot-container mb-4" style="max-height: fit-content; overflow: scroll;">
-                                            {{ col.describe_plot | safe }}
+                                            <figure role="img" aria-label="Overview plot for column {{ col.name }}">
+                                                {{ col.describe_plot | safe }}
+                                            </figure>
                                         </div>
                                     {% endif %}
                                 </div>
@@ -346,7 +355,8 @@
 
                                     <div class="row w-100 tab-content" id="objectTabContent{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}">
                                         <!-- Object Stats Tab -->
-                                        <div class="tab-pane fade show active" id="objectStats{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
+                                        <div class="tab-pane fade show active" id="objectStats{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel"
+                                             aria-labelledby="object-stats-tab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}">
                                             <div class="table-responsive mt-3" style="max-height: 400px; overflow-y: auto;">
                                                 <table class="table table-sm table-striped w-100" style="min-width: 600px;">
                                                     <thead class="sticky-top bg-light">
@@ -374,7 +384,8 @@
                                         </div>
                                         <!-- Unit Stats Tab -->
                                         {% if col.measurement_data %}
-                                            <div class="tab-pane fade" id="unitStats{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
+                                            <div class="tab-pane fade" id="unitStats{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel"
+                                                 aria-labelledby="unit-stats-tab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}">
                                                 <div class="table-responsive mt-3" style="max-height: 400px; overflow-y: auto;">
                                                     <table class="table table-sm table-striped w-100" style="min-width: 500px;">
                                                         <thead class="sticky-top bg-light">
@@ -397,7 +408,8 @@
                                         {% endif %}
                                         <!-- Suspect Value Tab -->
                                         {% if col.suspect_values is not none %}
-                                            <div class="tab-pane fade" id="suspectStats{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
+                                            <div class="tab-pane fade" id="suspectStats{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel"
+                                                 aria-labelledby="suspect-stats-tab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}">
                                                 <div class="alert alert-warning mt-3">
                                                     <strong>Note:</strong> {{ col.suspect_values|length }} suspect value(s) detected. These values appear to be of a different type than the majority of this column.
                                                 </div>
@@ -423,7 +435,8 @@
                                         {% endif %}
                                         <!-- Taxonomy Tab -->
                                         {% if col.taxonomy is defined and col.taxonomy is not none and col.taxonomy.is_taxonomy and col.taxonomy.taxonomy is not string %}
-                                            <div class="tab-pane fade" id="taxStats{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
+                                            <div class="tab-pane fade" id="taxStats{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel"
+                                                 aria-labelledby="tax-stats-tab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}">
                                                 <div class="table-responsive mt-3" style="max-height: 400px; overflow-y: auto;">
                                                     <table class="table table-sm table-striped w-100" style="min-width: 500px;">
                                                         <thead class="sticky-top bg-light">
@@ -444,7 +457,8 @@
                                         {% endif %}
                                         <!-- General Overview for numeric columns -->
                                         {% if col.type not in ['object', 'bool', 'str'] and col.type in ['int64', 'float64'] %}
-                                            <div class="tab-pane fade" id="numberStats{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
+                                            <div class="tab-pane fade" id="numberStats{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel"
+                                                 aria-labelledby="number-stats-tab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}">
                                                 <div class="table-responsive mt-3" style="max-height: 400px; overflow-y: auto;">
                                                     {% for ov in overview %}
                                                         {% if ov.name == col.name %}
@@ -485,7 +499,8 @@
                                         {% endif %}
                                         <!-- Categorical Overview -->
                                         {% if col.type in ['object', 'bool', 'str'] and col.type not in ['int64', 'float64'] %}
-                                            <div class="tab-pane fade" id="catStats{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
+                                            <div class="tab-pane fade" id="catStats{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel"
+                                                 aria-labelledby="cat-stats-tab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}">
                                                 {% for cat in categorical %}
                                                     {% if col.name == cat.name %}
                                                         <div class="table-responsive mt-3" style="max-height: 400px; overflow-x: auto; overflow-y: auto;">
@@ -622,7 +637,7 @@
                                         <strong>Note:</strong> This column is empty.
                                     </div>
                                 {% endif %}
-                                <!-- Neue Sektion für Top 20 Sequenzen (nur bei Sequenzspalten) -->
+                                <!-- New section for sequence analysis (sequence columns only) -->
                                 {% if col.sequence != 'None' and col.dna_rna_data and col.missing_per < 100  %}
                                     <div class="row w-100 mt-4">
                                         <div class="col-12">
@@ -677,7 +692,8 @@
                                             <div class="tab-content" id="sequenceTabContent{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}">
 
                                                 <!-- ── Sequences Tab ── -->
-                                                <div class="tab-pane fade show active" id="sequences{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
+                                                <div class="tab-pane fade show active" id="sequences{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel"
+                                                     aria-labelledby="sequences-tab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}">
                                                     <div class="table-responsive mt-3" style="max-height: 400px; overflow-y: auto;">
                                                         <table class="table table-sm table-striped">
                                                             <thead class="sticky-top bg-light">
@@ -732,7 +748,8 @@
 
                                                 <!-- ── Invalid Sequences Tab ── -->
                                                 {% if col.invalid_seqs and col.invalid_seqs|length > 0 %}
-                                                    <div class="tab-pane fade" id="invalidSeqs{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
+                                                    <div class="tab-pane fade" id="invalidSeqs{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel"
+                                                         aria-labelledby="invalid-seq-tab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}">
                                                         <div class="alert alert-warning mt-3">
                                                             <strong>Note:</strong> {{ col.invalid_seqs|length }} invalid sequence(s) detected in <b>{{ col.sequence }}</b> column.
                                                         </div>
@@ -761,7 +778,8 @@
                                                 {% endif %}
 
                                                 <!-- ── Statistics Tab ── -->
-                                                <div class="tab-pane fade" id="stats{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
+                                                <div class="tab-pane fade" id="stats{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel"
+                                                     aria-labelledby="stats-tab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}">
                                                     {% set d = col.dna_rna_data %}
                                                     <div class="table-responsive mt-3">
                                                         <table class="table table-sm table-striped w-100">
@@ -1011,7 +1029,8 @@
                                                 </div>
 
                                                 <!-- ── Distributions Tab ── -->
-                                                <div class="tab-pane fade" id="distributions{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
+                                                <div class="tab-pane fade" id="distributions{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel"
+                                                     aria-labelledby="distributions-tab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}">
                                                     {% set d = col.dna_rna_data %}
                                                     <div class="mt-3">
                                                         {# GC Content Distribution #}
@@ -1019,7 +1038,9 @@
                                                             <h6>GC Content Distribution</h6>
                                                             <p class="text-muted small">Violin plot of per-sequence GC content across all sequences. Bimodal distributions may indicate contamination from a second organism.</p>
                                                             <div class="plot-container mb-4" style="max-height: fit-content; overflow: scroll;">
-                                                                {{ d.gc_distribution | safe }}
+                                                                <figure role="img" aria-label="Violin plot of GC content distribution per sequence in column {{ col.name }}">
+                                                                    {{ d.gc_distribution | safe }}
+                                                                </figure>
                                                             </div>
                                                         {% endif %}
 
@@ -1029,7 +1050,9 @@
                                                             <h6>AT / GC Skewness</h6>
                                                             <p class="text-muted small">Scatter plot of AT skew vs. GC skew per sequence. Deviation from (0, 0) indicates strand asymmetry.</p>
                                                             <div class="plot-container mb-4" style="max-height: fit-content; overflow: scroll;">
-                                                                {{ d.at_gc_skewness | safe }}
+                                                                <figure role="img" aria-label="Scatter plot of AT skew versus GC skew per sequence in column {{ col.name }}">
+                                                                    {{ d.at_gc_skewness | safe }}
+                                                                </figure>
                                                             </div>
                                                         {% endif %}
 
@@ -1039,7 +1062,9 @@
                                                             <h6>Sequence Length Distribution</h6>
                                                             <p class="text-muted small">Histogram of sequence lengths across all sequences. High variance may indicate mixed amplicons or assembly artefacts.</p>
                                                             <div class="plot-container mb-4" style="max-height: fit-content; overflow: scroll;">
-                                                                {{ d.length_distribution | safe }}
+                                                                <figure role="img" aria-label="Histogram of sequence lengths in column {{ col.name }}">
+                                                                    {{ d.length_distribution | safe }}
+                                                                </figure>
                                                             </div>
                                                         {% else %}
                                                             <div class="alert alert-secondary mt-3">All sequences have equal length — length distribution plot not generated.</div>
@@ -1051,7 +1076,9 @@
                                                             <h6>Ambiguous Base (N) Distribution</h6>
                                                             <p class="text-muted small">N-count per sequence in chronological order. Spikes may indicate specific flowcell tiles or regions with poor sequencing quality.</p>
                                                             <div class="plot-container mb-4" style="max-height: fit-content; overflow: scroll;">
-                                                                {{ d.ambiguous_distribution | safe }}
+                                                                <figure role="img" aria-label="Distribution of ambiguous base (N) counts per sequence in column {{ col.name }}">
+                                                                    {{ d.ambiguous_distribution | safe }}
+                                                                </figure>
                                                             </div>
                                                         {% elif d.ambiguous_base_ratio is defined and d.ambiguous_base_ratio.mean == 0 %}
                                                             <div class="alert alert-success mt-3">No ambiguous bases (N) detected — distribution plot not generated.</div>
@@ -1060,11 +1087,14 @@
                                                 </div>
 
                                                 <!-- ── K-mers Tab ── -->
-                                                <div class="tab-pane fade" id="kmers{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
+                                                <div class="tab-pane fade" id="kmers{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel"
+                                                     aria-labelledby="kmers-tab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}">
                                                     {% if col.dna_rna_data.plot %}
                                                         <div class="row w-100">
                                                             <div class="plot-container mb-4" style="max-height: fit-content; overflow: scroll;">
-                                                                {{ col.dna_rna_data.plot | safe }}
+                                                                <figure role="img" aria-label="K-mer frequency plot for column {{ col.name }}">
+                                                                    {{ col.dna_rna_data.plot | safe }}
+                                                                </figure>
                                                             </div>
                                                         </div>
                                                     {% endif %}
@@ -1077,7 +1107,8 @@
                                                                         <h2 class="accordion-header">
                                                                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
                                                                                     data-bs-target="#kmer{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}{{ i }}"
-                                                                                    aria-expanded="false">
+                                                                                    aria-expanded="false"
+                                                                                    aria-controls="kmer{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}{{ i }}">
                                                                                 <strong>#{{ i + 1 }}</strong> &nbsp;{{ col.dna_rna_data.sequence[i]|truncate(20, True, "...")}} ({{ col.dna_rna_data.length[i] }} bp)
                                                                             </button>
                                                                         </h2>
@@ -1220,7 +1251,8 @@
                                                 </div>
                                                 <!-- Invalid Sequences Tab -->
                                                 {% if col.invalid_seqs and col.invalid_seqs|length > 0 %}
-                                                    <div class="tab-pane fade" id="invalidSeqs{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
+                                                    <div class="tab-pane fade" id="invalidSeqs{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel"
+                                                         aria-labelledby="invalid-seq-tab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}">
                                                         <div class="alert alert-warning mt-3">
                                                             <strong>Note:</strong> {{ col.invalid_seqs|length }} invalid sequence(s) detected in {{ col.sequence }} column.
                                                         </div>
@@ -1555,14 +1587,16 @@
 
                 // First Button
                 const firstLi = document.createElement('li');
-                firstLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
-                firstLi.innerHTML = `<a class="page-link" href="#" data-page="1" title="First Page">≪</a>`;
+                const firstDisabled = currentPage === 1;
+                firstLi.className = `page-item ${firstDisabled ? 'disabled' : ''}`;
+                firstLi.innerHTML = `<a class="page-link" href="#" data-page="1" title="First Page"${firstDisabled ? ' aria-disabled="true" tabindex="-1"' : ''}>≪</a>`;
                 pagination.appendChild(firstLi);
 
                 // Previous Button
                 const prevLi = document.createElement('li');
-                prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
-                prevLi.innerHTML = `<a class="page-link" href="#" data-page="${currentPage - 1}" title="Previous Page">&lt;</a>`;
+                const prevDisabled = currentPage === 1;
+                prevLi.className = `page-item ${prevDisabled ? 'disabled' : ''}`;
+                prevLi.innerHTML = `<a class="page-link" href="#" data-page="${currentPage - 1}" title="Previous Page"${prevDisabled ? ' aria-disabled="true" tabindex="-1"' : ''}>&lt;</a>`;
                 pagination.appendChild(prevLi);
 
                 // Page Numbers
@@ -1603,14 +1637,16 @@
 
                 // Next Button
                 const nextLi = document.createElement('li');
-                nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
-                nextLi.innerHTML = `<a class="page-link" href="#" data-page="${currentPage + 1}" title="Next Page">&gt;</a>`;
+                const nextDisabled = currentPage === totalPages;
+                nextLi.className = `page-item ${nextDisabled ? 'disabled' : ''}`;
+                nextLi.innerHTML = `<a class="page-link" href="#" data-page="${currentPage + 1}" title="Next Page"${nextDisabled ? ' aria-disabled="true" tabindex="-1"' : ''}>&gt;</a>`;
                 pagination.appendChild(nextLi);
 
                 // Last Button
                 const lastLi = document.createElement('li');
-                lastLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
-                lastLi.innerHTML = `<a class="page-link" href="#" data-page="${totalPages}" title="Last Page">≫</a>`;
+                const lastDisabled = currentPage === totalPages;
+                lastLi.className = `page-item ${lastDisabled ? 'disabled' : ''}`;
+                lastLi.innerHTML = `<a class="page-link" href="#" data-page="${totalPages}" title="Last Page"${lastDisabled ? ' aria-disabled="true" tabindex="-1"' : ''}>≫</a>`;
                 pagination.appendChild(lastLi);
             });
 
@@ -1737,6 +1773,29 @@
             bootstrap.Collapse.getOrCreateInstance(el).show();
         });
     });
+</script>
+
+<!-- Colorblind mode toggle: persists the user's palette choice across pages via localStorage -->
+<script>
+    (function () {
+        const btn = document.getElementById('cbToggle');
+        const body = document.body;
+
+        function applyTheme(theme) {
+            body.dataset.cbTheme = theme;
+            btn.setAttribute('aria-pressed', theme === 'colorblind' ? 'true' : 'false');
+            btn.textContent = theme === 'colorblind' ? 'Standard Mode' : 'Colorblind Mode';
+        }
+
+        const stored = localStorage.getItem('cb-theme');
+        if (stored === 'colorblind') { applyTheme('colorblind'); }
+
+        btn.addEventListener('click', function () {
+            const next = body.dataset.cbTheme === 'colorblind' ? 'internal' : 'colorblind';
+            applyTheme(next);
+            localStorage.setItem('cb-theme', next);
+        });
+    })();
 </script>
 </body>
 </html>
