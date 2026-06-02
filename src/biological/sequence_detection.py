@@ -35,7 +35,7 @@ def check_sequence(df, col, threshold=0.92):
         return "None", []
 
     unique_values = list(set(values))
-    non_alpha_pattern = re.compile(r'[^a-zA-Z]')
+    non_alpha_pattern = re.compile(r'[^a-zA-Z-]')
     non_alpha_count = sum(1 for v in unique_values if non_alpha_pattern.search(v))
     if non_alpha_count / len(unique_values) > 0.3:
         return "None", []

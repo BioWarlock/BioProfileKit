@@ -2,6 +2,17 @@ from pandas import DataFrame
 from plotly import express as px, graph_objs as go, graph_objects as go
 from plotly.subplots import make_subplots
 
+config = {
+  'toImageButtonOptions': {
+    'format': 'png', # one of png, svg, jpeg, webp
+    'filename': None,
+    'height': 1200,
+    'width': 1600,
+    'scale': 4
+  }
+}
+
+
 
 def length_distribution(all_overview: DataFrame, unit: str = "bp"):
     bins = 300 if all_overview.shape[0] > 10000 else all_overview.shape[0]
@@ -24,7 +35,8 @@ def length_distribution(all_overview: DataFrame, unit: str = "bp"):
         yaxis_title="Sequence Count",
         bargap=0.5
     )
-    return fig.to_html(full_html=False, include_plotlyjs=False)
+    config['toImageButtonOptions']['filename'] = "length_distribution"
+    return fig.to_html(full_html=False, include_plotlyjs=False, config=config)
 
 def gc_distribution(all_overview: DataFrame):
     fig = px.violin(
@@ -54,8 +66,8 @@ def gc_distribution(all_overview: DataFrame):
             ticksuffix="%"
         )
     )
-
-    return fig.to_html(full_html=False, include_plotlyjs=False)
+    config['toImageButtonOptions']['filename'] = "gc_distribution"
+    return fig.to_html(full_html=False, include_plotlyjs=False, config=config)
 
 def ambiguous_distribution(all_overview: DataFrame, col: str = "N", label: str = "N-Count"):
     fig = go.Figure()
@@ -159,5 +171,5 @@ def at_gc_skewness(all_overview: DataFrame):
 
     fig.add_hline(y=0, line_dash="dash", line_color="rgba(0,0,0,0.2)", row=2, col=1)
     fig.add_vline(x=0, line_dash="dash", line_color="rgba(0,0,0,0.2)", row=2, col=1)
-
-    return fig.to_html(full_html=False, include_plotlyjs=False)
+    config['toImageButtonOptions']['filename'] = "at_gc_skewness"
+    return fig.to_html(full_html=False, include_plotlyjs=False, config=config)

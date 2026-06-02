@@ -63,6 +63,7 @@ def biological_data_top_entries(seqs: pd.Series, top_k: int = 20) -> Tuple[
 def dna_rna_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5, invalid: list=None) -> DNARNAColumns:
     if invalid:
         seqs = seqs[~seqs.isin(invalid)]
+    seqs.dropna(inplace=True)
     #Over Top N
     uniques, counts, min_len, max_len, lengths = biological_data_top_entries(seqs, top_n)
     nucleotide_count = [dict(Counter(s)) for s in uniques]
@@ -354,8 +355,8 @@ def make_logo(seqs, color, seq_type):
         tmp_path = tmp_file.name
 
     try:
-        m.weblogo(tmp_path, format="svg", sequence_type=seq_type, color=color, logo_font="Calibri", logo_margin=3,
-                  fontsize=12)
+        m.weblogo(tmp_path, format="svg", sequence_type=seq_type, color_scheme=color, logo_font="Calibri", logo_margin=3,
+                  fontsize=12, scale_width=True)
 
         with open(tmp_path, 'r', encoding='utf-8') as svg_file:
             svg_content = svg_file.read()
