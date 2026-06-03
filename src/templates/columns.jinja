@@ -238,6 +238,50 @@
                                         {% endif %}
                                     {% endif %}{% endfor %}
                                 {% endif %}
+                                {# ── Numeric quality badges ── #}
+                                {% if col.type in ['int64', 'float64'] %}
+                                    {% for ov in overview %}{% if ov.name == col.name %}
+                                        {% set n_total = col.number if col.number and col.number > 0 else 1 %}
+                                        {# Infinity — pipeline-critical #}
+                                        {% if ov.infinity is defined and ov.infinity > 0 %}
+                                            <span class="badge bg-danger me-2"
+                                                  title="{{ ov.infinity }} Inf / -Inf value(s) — will crash most ML pipelines">
+                                                ∞ Infinity ({{ ov.infinity }})
+                                            </span>
+                                        {% endif %}
+                                        {# Sparse feature #}
+                                        {% if ov.zero_count is defined %}
+                                            {% set zero_pct = (ov.zero_count / n_total * 100) | round(1) %}
+                                            {% if zero_pct >= 80 %}
+                                                <span class="badge bg-danger me-2"
+                                                      title="{{ zero_pct }}% of values are zero — highly sparse feature">
+                                                    Sparse ({{ zero_pct }}%)
+                                                </span>
+                                            {% elif zero_pct >= 50 %}
+                                                <span class="badge bg-warning text-dark me-2"
+                                                      title="{{ zero_pct }}% of values are zero">
+                                                    Sparse ({{ zero_pct }}%)
+                                                </span>
+                                            {% endif %}
+                                        {% endif %}
+                                        {# Outliers (Adj. IQR) #}
+                                        {% if ov.outliers %}
+                                            {% set n_out = ov.outliers.n_lower_iqr + ov.outliers.n_upper_iqr %}
+                                            {% set out_pct = (n_out / n_total * 100) | round(1) %}
+                                            {% if out_pct >= 10 %}
+                                                <span class="badge bg-danger me-2"
+                                                      title="{{ n_out }} outlier(s) outside adjusted IQR bounds ({{ out_pct }}%)">
+                                                    Outliers ({{ out_pct }}%)
+                                                </span>
+                                            {% elif out_pct >= 5 %}
+                                                <span class="badge bg-warning text-dark me-2"
+                                                      title="{{ n_out }} outlier(s) outside adjusted IQR bounds ({{ out_pct }}%)">
+                                                    Outliers ({{ out_pct }}%)
+                                                </span>
+                                            {% endif %}
+                                        {% endif %}
+                                    {% endif %}{% endfor %}
+                                {% endif %}
                                 {% if col.measurement_data %}
                                     {% if col.measurement_data.with_measurement %}
                                         <span class="badge bg-warning me-2">Mixed Values</span>
@@ -462,36 +506,181 @@
                                                 <div class="table-responsive mt-3" style="max-height: 400px; overflow-y: auto;">
                                                     {% for ov in overview %}
                                                         {% if ov.name == col.name %}
-                                                            <table class="table table-sm table-striped w-100" style="min-width: 450px;width:100%">
-                                                                <thead>
-                                                                <tr>
-                                                                    <th style="text-align: left;width:50%">Statistic</th>
-                                                                    <th style="text-align: left">Value</th>
-                                                                </tr>
-                                                                </thead>
-                                                                <tbody>
-                                                                <tr><td>Minimum</td><td>{{ ov.min }}</td></tr>
-                                                                <tr><td>Maximum</td><td>{{ ov.max }}</td></tr>
-                                                                <tr><td>Mean</td><td>{{ ov.mean }}</td></tr>
-                                                                <tr><td>Median</td><td>{{ ov.median }}</td></tr>
-                                                                <tr><td>Mode</td><td>{{ ov.mode }}</td></tr>
-                                                                <tr><td>Standard Deviation</td><td>{{ ov.std }}</td></tr>
-                                                                <tr><td>Sum</td><td>{{ ov.sum }}</td></tr>
-                                                                <tr><td>Kurtosis</td><td>{{ ov.kurtosis }}</td></tr>
-                                                                <tr><td>Skewness</td><td>{{ ov.skewness }}</td></tr>
-                                                                <tr><td>Median Abs Deviation</td><td>{{ ov.mad }}</td></tr>
-                                                                <tr><td>Coefficient of Variation</td><td>{{ ov.coefficient_of_variation }}</td></tr>
-                                                                <tr>
-                                                                    <td>Quantiles</td>
+                                                        {% set n_total = col.number if col.number and col.number > 0 else 1 %}
+                                                        <table class="table table-sm table-striped w-100" style="min-width: 450px;">
+                                                            <thead>
+                                                            <tr>
+                                                                <th style="width:55%">Statistic</th>
+                                                                <th>Value</th>
+                                                            </tr>
+                                                            </thead>
+                                                            <tbody>
+
+                                                            {# ── Central Tendency & Dispersion ── #}
+                                                            <tr class="table-secondary"><td colspan="2"><strong>Central Tendency &amp; Dispersion</strong></td></tr>
+                                                            <tr><td>Minimum</td><td>{{ ov.min }}</td></tr>
+                                                            <tr><td>Maximum</td><td>{{ ov.max }}</td></tr>
+                                                            <tr><td>Mean</td><td>{{ ov.mean }}</td></tr>
+                                                            <tr><td>Median</td><td>{{ ov.median }}</td></tr>
+                                                            <tr><td>Mode</td><td>{{ ov.mode }}</td></tr>
+                                                            <tr><td>Standard Deviation</td><td>{{ ov.std }}</td></tr>
+                                                            <tr><td>Sum</td><td>{{ ov.sum }}</td></tr>
+                                                            <tr>
+                                                                <td>Quantiles</td>
+                                                                <td>Q1: {{ ov.quantiles[0] }}&ensp;|&ensp;Q2: {{ ov.quantiles[1] }}&ensp;|&ensp;Q3: {{ ov.quantiles[2] }}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>IQR <small class="text-muted">(Q3 − Q1, linear interpolation)</small></td>
+                                                                <td>{{ (ov.quantiles[2] - ov.quantiles[0]) | round(4) }}</td>
+                                                            </tr>
+                                                            <tr><td>Median Absolute Deviation</td><td>{{ ov.mad }}</td></tr>
+                                                            <tr><td>Coefficient of Variation</td><td>{{ ov.coefficient_of_variation }}</td></tr>
+
+                                                            {# ── Distribution Shape ── #}
+                                                            <tr class="table-secondary"><td colspan="2"><strong>Distribution Shape</strong></td></tr>
+                                                            <tr>
+                                                                <td>Skewness</td>
+                                                                <td>
+                                                                    {{ ov.skewness }}
+                                                                    {% if ov.skewness is not none %}
+                                                                        {% set sk = ov.skewness | float %}
+                                                                        {% if sk | abs > 1 %}
+                                                                            <span class="badge bg-warning text-dark ms-2" title="|skewness| > 1">Highly skewed</span>
+                                                                        {% elif sk | abs > 0.5 %}
+                                                                            <span class="badge bg-secondary ms-2" title="|skewness| > 0.5">Moderate skew</span>
+                                                                        {% endif %}
+                                                                    {% endif %}
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>Kurtosis</td>
+                                                                <td>
+                                                                    {{ ov.kurtosis }}
+                                                                    {% if ov.kurtosis is not none %}
+                                                                        {% set kt = ov.kurtosis | float %}
+                                                                        {% if kt > 3 %}
+                                                                            <span class="badge bg-secondary ms-2" title="Heavy tails relative to normal">Leptokurtic</span>
+                                                                        {% elif kt < -1 %}
+                                                                            <span class="badge bg-secondary ms-2" title="Light tails relative to normal">Platykurtic</span>
+                                                                        {% endif %}
+                                                                    {% endif %}
+                                                                </td>
+                                                            </tr>
+
+                                                            {# ── Data Quality ── #}
+                                                            <tr class="table-secondary"><td colspan="2"><strong>Data Quality</strong></td></tr>
+
+                                                            {# Zero count #}
+                                                            {% set zero_pct = (ov.zero_count / n_total * 100) | round(1) %}
+                                                            <tr>
+                                                                <td>Zero Values <small class="text-muted">(sparse feature indicator)</small></td>
+                                                                <td>
+                                                                    {{ ov.zero_count }} <span class="text-muted">({{ zero_pct }}%)</span>
+                                                                    {% if zero_pct >= 80 %}<span class="badge bg-danger ms-2">Highly sparse</span>
+                                                                    {% elif zero_pct >= 50 %}<span class="badge bg-warning text-dark ms-2">Sparse</span>
+                                                                    {% endif %}
+                                                                </td>
+                                                            </tr>
+
+                                                            {# Negative count #}
+                                                            {% set neg_pct = (ov.negative_count / n_total * 100) | round(1) %}
+                                                            <tr>
+                                                                <td>Negative Values</td>
+                                                                <td>{{ ov.negative_count }} <span class="text-muted">({{ neg_pct }}%)</span></td>
+                                                            </tr>
+
+                                                            {# Infinity count #}
+                                                            <tr {% if ov.infinity > 0 %}class="table-danger"{% endif %}>
+                                                                <td>
+                                                                    Infinity Values <small class="text-muted">(Inf / -Inf)</small>
+                                                                    {% if ov.infinity > 0 %}
+                                                                        <span class="badge bg-danger ms-1">Critical</span>
+                                                                    {% endif %}
+                                                                </td>
+                                                                <td>
+                                                                    {{ ov.infinity }}
+                                                                    {% if ov.infinity > 0 %}
+                                                                        <small class="text-danger ms-2">replace with NaN or clip before use</small>
+                                                                    {% endif %}
+                                                                </td>
+                                                            </tr>
+
+                                                            {# Outliers — only if detect_outliers returned a result #}
+                                                            {% if ov.outliers %}
+                                                                {% set out = ov.outliers %}
+                                                                {% set n_iqr = out.n_lower_iqr + out.n_upper_iqr %}
+                                                                {% set n_mz  = out.n_lower_mzscore + out.n_upper_mzscore %}
+                                                                {% set n_z   = out.n_lower_zscore  + out.n_upper_zscore %}
+                                                                {% set iqr_pct = (n_iqr / n_total * 100) | round(1) %}
+                                                                {% set mz_pct  = (n_mz  / n_total * 100) | round(1) %}
+                                                                {% set z_pct   = (n_z   / n_total * 100) | round(1) %}
+
+                                                                {# Adjusted IQR (Hubert & Vandervieren, 2008) #}
+                                                                <tr {% if iqr_pct >= 5 %}class="table-warning"{% endif %}>
                                                                     <td>
-                                                                        25 %: {{ ov.quantiles[0] }}<br>
-                                                                        50 %: {{ ov.quantiles[1] }}<br>
-                                                                        75 %: {{ ov.quantiles[2] }}
+                                                                        Outliers — Adjusted IQR
+                                                                        <small class="text-muted d-block">Hubert &amp; Vandervieren (2008); bounds adjusted via Medcouple</small>
+                                                                    </td>
+                                                                    <td>
+                                                                        {{ n_iqr }} <span class="text-muted">({{ iqr_pct }}%)</span>
+                                                                        {% if iqr_pct >= 10 %}<span class="badge bg-danger ms-2">High</span>
+                                                                        {% elif iqr_pct >= 5 %}<span class="badge bg-warning text-dark ms-2">Moderate</span>
+                                                                        {% endif %}
+                                                                        <small class="text-muted d-block">
+                                                                            ↓ {{ out.n_lower_iqr }} below {{ out.lower_bound }}
+                                                                            &ensp;↑ {{ out.n_upper_iqr }} above {{ out.upper_bound }}
+                                                                            &ensp;MC: {{ out.medcouple }}
+                                                                        </small>
                                                                     </td>
                                                                 </tr>
-                                                                <tr><td>Memory</td><td>{{ ov.memory }}</td></tr>
-                                                                </tbody>
-                                                            </table>
+
+                                                                {# Modified Z-Score (Iglewicz & Hoaglin, 1993) #}
+                                                                <tr {% if mz_pct >= 5 %}class="table-warning"{% endif %}>
+                                                                    <td>
+                                                                        Outliers — Modified Z-Score
+                                                                        <small class="text-muted d-block">Iglewicz &amp; Hoaglin (1993); |M_i| &gt; 3.5, MAD-based</small>
+                                                                    </td>
+                                                                    <td>
+                                                                        {{ n_mz }} <span class="text-muted">({{ mz_pct }}%)</span>
+                                                                        {% if mz_pct >= 10 %}<span class="badge bg-danger ms-2">High</span>
+                                                                        {% elif mz_pct >= 5 %}<span class="badge bg-warning text-dark ms-2">Moderate</span>
+                                                                        {% endif %}
+                                                                        <small class="text-muted d-block">
+                                                                            ↓ {{ out.n_lower_mzscore }} &ensp;↑ {{ out.n_upper_mzscore }}
+                                                                        </small>
+                                                                    </td>
+                                                                </tr>
+
+                                                                {# Standard Z-Score #}
+                                                                <tr {% if z_pct >= 5 %}class="table-warning"{% endif %}>
+                                                                    <td>
+                                                                        Outliers — Z-Score
+                                                                        <small class="text-muted d-block">|z| &gt; 3.0; sensitive to non-normal distributions</small>
+                                                                    </td>
+                                                                    <td>
+                                                                        {{ n_z }} <span class="text-muted">({{ z_pct }}%)</span>
+                                                                        {% if z_pct >= 10 %}<span class="badge bg-danger ms-2">High</span>
+                                                                        {% elif z_pct >= 5 %}<span class="badge bg-warning text-dark ms-2">Moderate</span>
+                                                                        {% endif %}
+                                                                        <small class="text-muted d-block">
+                                                                            ↓ {{ out.n_lower_zscore }} &ensp;↑ {{ out.n_upper_zscore }}
+                                                                        </small>
+                                                                    </td>
+                                                                </tr>
+                                                            {% else %}
+                                                                <tr>
+                                                                    <td>Outlier Detection</td>
+                                                                    <td class="text-muted">
+                                                                        Not performed
+                                                                        <small class="d-block">Requires ≥ 20 values with &gt; 10 distinct values and IQR &gt; 0</small>
+                                                                    </td>
+                                                                </tr>
+                                                            {% endif %}
+
+                                                            <tr><td>Memory</td><td>{{ ov.memory }}</td></tr>
+
+                                                            </tbody>
+                                                        </table>
                                                         {% endif %}
                                                     {% endfor %}
                                                 </div>
