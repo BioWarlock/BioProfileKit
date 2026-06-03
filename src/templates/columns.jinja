@@ -15,6 +15,39 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/2.0.7/css/dataTables.bootstrap5.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/3.0.0/css/responsive.bootstrap5.min.css">
     <script src="https://cdn.plot.ly/plotly-3.5.0.min.js" charset="utf-8"></script>
+    <style>
+        /* Filter bar — quality flag button variants
+           cbf-warning: amber outline (readable) → active: yellow fill, black text
+           cbf-danger:  red outline              → active: red fill, white text
+           cbf-secondary: grey outline           → active: grey fill, white text       */
+        .cbf-warning {
+            color: #664d03; background: transparent;
+            border: 1px solid #ffc107; border-radius: 0.25rem;
+        }
+        .cbf-warning:hover { background: rgba(255,193,7,0.15); color: #664d03; }
+        .cbf-warning.cbf-active {
+            background: #ffc107 !important; color: #000 !important;
+            border-color: #ffc107 !important;
+        }
+        .cbf-danger {
+            color: #dc3545; background: transparent;
+            border: 1px solid #dc3545; border-radius: 0.25rem;
+        }
+        .cbf-danger:hover  { background: rgba(220,53,69,0.1); }
+        .cbf-danger.cbf-active {
+            background: #dc3545 !important; color: #fff !important;
+            border-color: #dc3545 !important;
+        }
+        .cbf-secondary {
+            color: #6c757d; background: transparent;
+            border: 1px solid #6c757d; border-radius: 0.25rem;
+        }
+        .cbf-secondary:hover { background: rgba(108,117,125,0.1); }
+        .cbf-secondary.cbf-active {
+            background: #6c757d !important; color: #fff !important;
+            border-color: #6c757d !important;
+        }
+    </style>
 </head>
 <body data-cb-theme="internal">
 <!-- Responsive navbar-->
@@ -74,6 +107,93 @@
                 </div>
             </div>
 
+
+            <!-- ── Filter Bar ── -->
+            <div class="mb-4">
+                <!-- Always-visible row: search + toggle + counter -->
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <input type="search" id="col-search" class="form-control form-control-sm"
+                           style="max-width:300px;"
+                           placeholder="Search column name…" autocomplete="off">
+                    <button id="toggle-filters-btn" type="button"
+                            class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+                            data-bs-toggle="collapse" data-bs-target="#filter-options"
+                            aria-expanded="false" aria-controls="filter-options">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M6 10.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z"/>
+                        </svg>
+                        Filters
+                        <span id="active-filter-badge" class="badge rounded-pill bg-primary"
+                              style="display:none; font-size:0.7em;">0</span>
+                    </button>
+                    <span class="text-muted small">
+                        Showing <strong id="filter-count">{{ columns|length }}</strong>
+                        of {{ columns|length }} columns
+                    </span>
+                    <button id="reset-filters" class="btn btn-sm btn-outline-secondary ms-auto"
+                            style="display:none;">✕ Reset</button>
+                </div>
+
+                <!-- Collapsible: type + quality filters -->
+                <div class="collapse" id="filter-options">
+                    <div class="card card-body border-0 bg-light mt-2 py-3">
+                        <div class="row g-3 align-items-start">
+
+                            <!-- Data type -->
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold mb-1">Data type</label>
+                                <div class="d-flex flex-wrap gap-1" id="type-filters">
+                                    <button class="btn btn-sm btn-primary active" data-type-filter="all">All</button>
+                                    <button class="btn btn-sm btn-outline-primary" data-type-filter="numeric">Numeric</button>
+                                    <button class="btn btn-sm btn-outline-primary" data-type-filter="categorical">Categorical</button>
+                                    <button class="btn btn-sm btn-outline-primary" data-type-filter="sequence">Sequence</button>
+                                    <button class="btn btn-sm btn-outline-primary" data-type-filter="bool">Boolean</button>
+                                </div>
+                            </div>
+
+                            <!-- Quality flags -->
+                            <div class="col-md-8">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="form-label small fw-semibold mb-0">Quality flags</label>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="text-muted small">Match:</span>
+                                        <div class="btn-group btn-group-sm" id="logic-toggle" role="group">
+                                            <button type="button" class="btn btn-outline-secondary" data-logic="and"
+                                                    title="Show only columns that match ALL selected flags (AND)">ALL</button>
+                                            <button type="button" class="btn btn-secondary active" data-logic="or"
+                                                    title="Show columns matching ANY selected flag (OR)">ANY</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex flex-wrap gap-1" id="quality-filters">
+                                    <button class="btn btn-sm cbf-secondary" data-quality="missing"
+                                            title="Has any missing values">Missing</button>
+                                    <button class="btn btn-sm cbf-secondary" data-quality="constant"
+                                            title="All values identical">Constant</button>
+                                    <button class="btn btn-sm cbf-secondary" data-quality="correlation"
+                                            title="Correlated with another column">Correlated</button>
+                                    <button class="btn btn-sm cbf-danger" data-quality="infinity"
+                                            title="Contains Inf / -Inf — will crash pipelines">∞ Infinity</button>
+                                    <button class="btn btn-sm cbf-warning" data-quality="sparse"
+                                            title="≥ 50 % zero values — sparse feature">Sparse</button>
+                                    <button class="btn btn-sm cbf-warning" data-quality="outliers"
+                                            title="≥ 5 % outliers (adjusted IQR)">Outliers</button>
+                                    <button class="btn btn-sm cbf-warning" data-quality="imbalanced"
+                                            title="Class imbalance ratio > 3">Imbalanced</button>
+                                    <button class="btn btn-sm cbf-danger" data-quality="nzv"
+                                            title="Near-zero variance — top category ≥ 95 %">NZV</button>
+                                    <button class="btn btn-sm cbf-secondary" data-quality="rare"
+                                            title="Has rare categories (< 1 %)">Rare Cat.</button>
+                                    <button class="btn btn-sm cbf-danger" data-quality="invalidseqs"
+                                            title="Contains invalid sequences">Invalid Seq.</button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             {% set items_per_page = 20 %}
             {% set total_pages = (columns|length / items_per_page)|round(0, 'ceil')|int %}
 
@@ -100,7 +220,33 @@
             <!-- Toggle Elements Container -->
             <div id="columns-container">
                 {% for col in columns %}
+                    {# fns = filter namespace, separate from badge ns #}
+                    {% set fns = namespace(has_inf='no', is_sparse='no', has_outliers='no', imbalanced='no', nzv='no', rare='no') %}
+                    {% for ov in overview %}{% if ov.name == col.name %}
+                        {% set _n = col.number if col.number and col.number > 0 else 1 %}
+                        {% if ov.infinity is defined and ov.infinity > 0 %}{% set fns.has_inf = 'yes' %}{% endif %}
+                        {% if ov.zero_count is defined and (ov.zero_count / _n) >= 0.5 %}{% set fns.is_sparse = 'yes' %}{% endif %}
+                        {% if ov.outliers and ((ov.outliers.n_lower_iqr + ov.outliers.n_upper_iqr) / _n) >= 0.05 %}{% set fns.has_outliers = 'yes' %}{% endif %}
+                    {% endif %}{% endfor %}
+                    {% for cat in categorical %}{% if cat.name == col.name %}
+                        {% if cat.cib_ratio is defined and cat.cib_ratio > 3 %}{% set fns.imbalanced = 'yes' %}{% endif %}
+                        {% if cat.top_1_coverage is defined and cat.top_1_coverage >= 0.95 %}{% set fns.nzv = 'yes' %}{% endif %}
+                        {% if cat.rare_categories is defined and cat.rare_categories > 0 %}{% set fns.rare = 'yes' %}{% endif %}
+                    {% endif %}{% endfor %}
                     <div class="card row mt-3 column-item" data-index="{{ loop.index0 }}"
+                         data-name="{{ col.name | lower }}"
+                         data-type="{{ col.type }}"
+                         data-sequence="{{ col.sequence }}"
+                         data-missing="{{ 'yes' if col.missing_per and col.missing_per > 0 else 'no' }}"
+                         data-constant="{{ 'yes' if col.unique == 1 else 'no' }}"
+                         data-correlation="{{ 'yes' if col.correlation else 'no' }}"
+                         data-infinity="{{ fns.has_inf }}"
+                         data-sparse="{{ fns.is_sparse }}"
+                         data-outliers="{{ fns.has_outliers }}"
+                         data-imbalanced="{{ fns.imbalanced }}"
+                         data-nzv="{{ fns.nzv }}"
+                         data-rare="{{ fns.rare }}"
+                         data-invalidseqs="{{ 'yes' if col.invalid_seqs and col.invalid_seqs|length > 0 else 'no' }}"
                          style="display: {% if loop.index0 < items_per_page %}block{% else %}none{% endif %};">
                         <div class="card-header d-inline-flex gap-1 mb-2">
                             <button class="btn btn-cb-outline-primary" type="button" data-bs-toggle="collapse"
@@ -1756,9 +1902,10 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const itemsPerPage = {{ items_per_page }};
-        const totalItems = {{ columns|length }};
-        const totalPages = {{ total_pages }};
-        let currentPage = 1;
+        const totalItems   = {{ columns|length }};
+        const totalPages   = {{ total_pages }};
+        let currentPage    = 1;
+        let filterActive   = false;
 
         if (totalPages > 1) {
             generatePagination();
@@ -1860,6 +2007,7 @@
         }
 
         function updateDisplay() {
+            if (filterActive) return;
             const columnItems = document.querySelectorAll('.column-item');
             const startIndex = (currentPage - 1) * itemsPerPage;
             const endIndex = startIndex + itemsPerPage;
@@ -1897,6 +2045,7 @@
 
         // Keyboard navigation
         document.addEventListener('keydown', function(e) {
+            if (filterActive) return;
             if (e.target.tagName.toLowerCase() === 'input' || e.target.tagName.toLowerCase() === 'textarea') {
                 return;
             }
@@ -1929,7 +2078,7 @@
                         if (targetIndex !== -1) {
                             const targetPage = Math.floor(targetIndex / itemsPerPage) + 1;
 
-                            if (targetPage !== currentPage) {
+                            if (!filterActive && targetPage !== currentPage) {
                                 currentPage = targetPage;
                                 updateDisplay();
                                 generatePagination();
@@ -1949,6 +2098,141 @@
                 }
             }
         });
+
+        // ── Filter logic ─────────────────────────────────────────────────────
+        const searchInput    = document.getElementById('col-search');
+        const typeButtons    = document.querySelectorAll('[data-type-filter]');
+        const qualityButtons = document.querySelectorAll('[data-quality]');
+        const logicButtons   = document.querySelectorAll('[data-logic]');
+        const resetBtn       = document.getElementById('reset-filters');
+        const filterCountEl  = document.getElementById('filter-count');
+        const badgeEl        = document.getElementById('active-filter-badge');
+
+        let activeType      = 'all';
+        let activeQualities = new Set();
+        let filterLogic     = 'or';
+
+        const TYPE_MAP = {
+            numeric:     ['int64', 'float64'],
+            categorical: ['object', 'str', 'bool'],
+            bool:        ['bool'],
+        };
+
+        function updateBadge() {
+            let n = activeQualities.size + (activeType !== 'all' ? 1 : 0) + (searchInput.value.trim() ? 1 : 0);
+            if (badgeEl) { badgeEl.textContent = n; badgeEl.style.display = n > 0 ? 'inline-block' : 'none'; }
+        }
+
+        function applyFilters() {
+            const query = searchInput.value.trim().toLowerCase();
+            filterActive = query !== '' || activeType !== 'all' || activeQualities.size > 0;
+
+            document.querySelectorAll('#column-pagination, #column-pagination-bottom')
+                .forEach(el => { if (el) el.style.opacity = filterActive ? '0.35' : '1'; });
+            resetBtn.style.display = filterActive ? 'inline-block' : 'none';
+            updateBadge();
+
+            let visible = 0;
+            document.querySelectorAll('.column-item').forEach(card => {
+                let show = true;
+
+                if (query && !card.dataset.name.includes(query)) show = false;
+
+                if (show && activeType !== 'all') {
+                    if (activeType === 'sequence') {
+                        show = card.dataset.sequence && card.dataset.sequence !== 'None';
+                    } else {
+                        show = (TYPE_MAP[activeType] || []).includes(card.dataset.type);
+                    }
+                }
+
+                if (show && activeQualities.size > 0) {
+                    if (filterLogic === 'and') {
+                        for (const q of activeQualities) {
+                            if (card.dataset[q] !== 'yes') { show = false; break; }
+                        }
+                    } else {
+                        let any = false;
+                        for (const q of activeQualities) { if (card.dataset[q] === 'yes') { any = true; break; } }
+                        if (!any) show = false;
+                    }
+                }
+
+                card.style.display = show ? 'block' : 'none';
+                if (show) visible++;
+            });
+
+            if (filterCountEl) filterCountEl.textContent = visible;
+        }
+
+        // Search
+        searchInput.addEventListener('input', applyFilters);
+
+        // Type buttons
+        typeButtons.forEach(btn => {
+            btn.addEventListener('click', function () {
+                typeButtons.forEach(b => { b.classList.remove('active', 'btn-primary'); b.classList.add('btn-outline-primary'); });
+                this.classList.add('active', 'btn-primary');
+                this.classList.remove('btn-outline-primary');
+                activeType = this.dataset.typeFilter;
+                applyFilters();
+            });
+        });
+
+        // Quality flags — simple cbf-active toggle; CSS handles all visuals
+        qualityButtons.forEach(btn => {
+            btn.addEventListener('click', function () {
+                const q = this.dataset.quality;
+                if (activeQualities.has(q)) {
+                    activeQualities.delete(q);
+                    this.classList.remove('cbf-active');
+                } else {
+                    activeQualities.add(q);
+                    this.classList.add('cbf-active');
+                }
+                applyFilters();
+            });
+        });
+
+        // AND / OR toggle
+        logicButtons.forEach(btn => {
+            btn.addEventListener('click', function () {
+                logicButtons.forEach(b => { b.classList.remove('active', 'btn-secondary'); b.classList.add('btn-outline-secondary'); });
+                this.classList.add('active', 'btn-secondary');
+                this.classList.remove('btn-outline-secondary');
+                filterLogic = this.dataset.logic;
+                if (activeQualities.size > 0) applyFilters();
+            });
+        });
+
+        // Reset
+        resetBtn.addEventListener('click', function () {
+            searchInput.value = '';
+            activeType        = 'all';
+            activeQualities.clear();
+            filterLogic       = 'or';
+
+            typeButtons.forEach(b => { b.classList.remove('active', 'btn-primary'); b.classList.add('btn-outline-primary'); });
+            const allBtn = document.querySelector('[data-type-filter="all"]');
+            if (allBtn) { allBtn.classList.add('active', 'btn-primary'); allBtn.classList.remove('btn-outline-primary'); }
+
+            // Remove cbf-active from all quality buttons — CSS restores the original color automatically
+            qualityButtons.forEach(b => b.classList.remove('cbf-active'));
+
+            logicButtons.forEach(b => { b.classList.remove('active', 'btn-secondary'); b.classList.add('btn-outline-secondary'); });
+            const orBtn = document.querySelector('[data-logic="or"]');
+            if (orBtn) { orBtn.classList.add('active', 'btn-secondary'); orBtn.classList.remove('btn-outline-secondary'); }
+
+            filterActive = false;
+            updateDisplay();
+            generatePagination();
+            if (filterCountEl) filterCountEl.textContent = totalItems;
+            if (badgeEl)       badgeEl.style.display = 'none';
+            resetBtn.style.display = 'none';
+            document.querySelectorAll('#column-pagination, #column-pagination-bottom')
+                .forEach(el => { if (el) el.style.opacity = '1'; });
+        });
+
     });
 
     document.getElementById('collapseAllBtn').addEventListener('click', () => {
