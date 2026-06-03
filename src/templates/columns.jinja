@@ -15,38 +15,36 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/2.0.7/css/dataTables.bootstrap5.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/3.0.0/css/responsive.bootstrap5.min.css">
     <script src="https://cdn.plot.ly/plotly-3.5.0.min.js" charset="utf-8"></script>
+    <!-- Performance: pre-establish CDN connections while HTML is parsed -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://cdn.datatables.net" crossorigin>
+    <link rel="preconnect" href="https://cdn.plot.ly" crossorigin>
+    <link rel="preconnect" href="https://code.jquery.com" crossorigin>
     <style>
+        /*
+         * content-visibility: auto  — browser skips layout+paint of off-screen
+         * column cards entirely. contain-intrinsic-size gives the browser an
+         * estimated placeholder height so the scroll bar doesn't jump.
+         * This is the single highest-impact CSS optimisation for long pages.
+         */
+        .column-item {
+            content-visibility: auto;
+            contain-intrinsic-block-size: 80px;
+        }
+
         /* Filter bar — quality flag button variants
            cbf-warning: amber outline (readable) → active: yellow fill, black text
            cbf-danger:  red outline              → active: red fill, white text
-           cbf-secondary: grey outline           → active: grey fill, white text       */
-        .cbf-warning {
-            color: #664d03; background: transparent;
-            border: 1px solid #ffc107; border-radius: 0.25rem;
-        }
-        .cbf-warning:hover { background: rgba(255,193,7,0.15); color: #664d03; }
-        .cbf-warning.cbf-active {
-            background: #ffc107 !important; color: #000 !important;
-            border-color: #ffc107 !important;
-        }
-        .cbf-danger {
-            color: #dc3545; background: transparent;
-            border: 1px solid #dc3545; border-radius: 0.25rem;
-        }
-        .cbf-danger:hover  { background: rgba(220,53,69,0.1); }
-        .cbf-danger.cbf-active {
-            background: #dc3545 !important; color: #fff !important;
-            border-color: #dc3545 !important;
-        }
-        .cbf-secondary {
-            color: #6c757d; background: transparent;
-            border: 1px solid #6c757d; border-radius: 0.25rem;
-        }
-        .cbf-secondary:hover { background: rgba(108,117,125,0.1); }
-        .cbf-secondary.cbf-active {
-            background: #6c757d !important; color: #fff !important;
-            border-color: #6c757d !important;
-        }
+           cbf-secondary: grey outline           → active: grey fill, white text   */
+        .cbf-warning  { color:#664d03; background:transparent; border:1px solid #ffc107; border-radius:.25rem; }
+        .cbf-warning:hover  { background:rgba(255,193,7,.15); color:#664d03; }
+        .cbf-warning.cbf-active  { background:#ffc107!important; color:#000!important; border-color:#ffc107!important; }
+        .cbf-danger   { color:#dc3545; background:transparent; border:1px solid #dc3545; border-radius:.25rem; }
+        .cbf-danger:hover   { background:rgba(220,53,69,.1); }
+        .cbf-danger.cbf-active   { background:#dc3545!important; color:#fff!important; border-color:#dc3545!important; }
+        .cbf-secondary{ color:#6c757d; background:transparent; border:1px solid #6c757d; border-radius:.25rem; }
+        .cbf-secondary:hover{ background:rgba(108,117,125,.1); }
+        .cbf-secondary.cbf-active{ background:#6c757d!important; color:#fff!important; border-color:#6c757d!important; }
     </style>
 </head>
 <body data-cb-theme="internal">
@@ -110,11 +108,9 @@
 
             <!-- ── Filter Bar ── -->
             <div class="mb-4">
-                <!-- Always-visible row: search + toggle + counter -->
                 <div class="d-flex flex-wrap gap-2 align-items-center">
                     <input type="search" id="col-search" class="form-control form-control-sm"
-                           style="max-width:300px;"
-                           placeholder="Search column name…" autocomplete="off">
+                           style="max-width:300px;" placeholder="Search column name…" autocomplete="off">
                     <button id="toggle-filters-btn" type="button"
                             class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
                             data-bs-toggle="collapse" data-bs-target="#filter-options"
@@ -124,7 +120,7 @@
                         </svg>
                         Filters
                         <span id="active-filter-badge" class="badge rounded-pill bg-primary"
-                              style="display:none; font-size:0.7em;">0</span>
+                              style="display:none;font-size:.7em;">0</span>
                     </button>
                     <span class="text-muted small">
                         Showing <strong id="filter-count">{{ columns|length }}</strong>
@@ -133,13 +129,9 @@
                     <button id="reset-filters" class="btn btn-sm btn-outline-secondary ms-auto"
                             style="display:none;">✕ Reset</button>
                 </div>
-
-                <!-- Collapsible: type + quality filters -->
                 <div class="collapse" id="filter-options">
                     <div class="card card-body border-0 bg-light mt-2 py-3">
                         <div class="row g-3 align-items-start">
-
-                            <!-- Data type -->
                             <div class="col-md-4">
                                 <label class="form-label small fw-semibold mb-1">Data type</label>
                                 <div class="d-flex flex-wrap gap-1" id="type-filters">
@@ -150,8 +142,6 @@
                                     <button class="btn btn-sm btn-outline-primary" data-type-filter="bool">Boolean</button>
                                 </div>
                             </div>
-
-                            <!-- Quality flags -->
                             <div class="col-md-8">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                     <label class="form-label small fw-semibold mb-0">Quality flags</label>
@@ -159,36 +149,25 @@
                                         <span class="text-muted small">Match:</span>
                                         <div class="btn-group btn-group-sm" id="logic-toggle" role="group">
                                             <button type="button" class="btn btn-outline-secondary" data-logic="and"
-                                                    title="Show only columns that match ALL selected flags (AND)">ALL</button>
+                                                    title="Show only columns matching ALL selected flags">ALL</button>
                                             <button type="button" class="btn btn-secondary active" data-logic="or"
-                                                    title="Show columns matching ANY selected flag (OR)">ANY</button>
+                                                    title="Show columns matching ANY selected flag">ANY</button>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="d-flex flex-wrap gap-1" id="quality-filters">
-                                    <button class="btn btn-sm cbf-secondary" data-quality="missing"
-                                            title="Has any missing values">Missing</button>
-                                    <button class="btn btn-sm cbf-secondary" data-quality="constant"
-                                            title="All values identical">Constant</button>
-                                    <button class="btn btn-sm cbf-secondary" data-quality="correlation"
-                                            title="Correlated with another column">Correlated</button>
-                                    <button class="btn btn-sm cbf-danger" data-quality="infinity"
-                                            title="Contains Inf / -Inf — will crash pipelines">∞ Infinity</button>
-                                    <button class="btn btn-sm cbf-warning" data-quality="sparse"
-                                            title="≥ 50 % zero values — sparse feature">Sparse</button>
-                                    <button class="btn btn-sm cbf-warning" data-quality="outliers"
-                                            title="≥ 5 % outliers (adjusted IQR)">Outliers</button>
-                                    <button class="btn btn-sm cbf-warning" data-quality="imbalanced"
-                                            title="Class imbalance ratio > 3">Imbalanced</button>
-                                    <button class="btn btn-sm cbf-danger" data-quality="nzv"
-                                            title="Near-zero variance — top category ≥ 95 %">NZV</button>
-                                    <button class="btn btn-sm cbf-secondary" data-quality="rare"
-                                            title="Has rare categories (< 1 %)">Rare Cat.</button>
-                                    <button class="btn btn-sm cbf-danger" data-quality="invalidseqs"
-                                            title="Contains invalid sequences">Invalid Seq.</button>
+                                    <button class="btn btn-sm cbf-secondary" data-quality="missing"    title="Has any missing values">Missing</button>
+                                    <button class="btn btn-sm cbf-secondary" data-quality="constant"   title="All values identical">Constant</button>
+                                    <button class="btn btn-sm cbf-secondary" data-quality="correlation" title="Correlated with another column">Correlated</button>
+                                    <button class="btn btn-sm cbf-danger"    data-quality="infinity"   title="Contains Inf/-Inf — crashes pipelines">∞ Infinity</button>
+                                    <button class="btn btn-sm cbf-warning"   data-quality="sparse"     title="≥ 50% zero values — sparse feature">Sparse</button>
+                                    <button class="btn btn-sm cbf-warning"   data-quality="outliers"   title="≥ 5% outliers (adjusted IQR)">Outliers</button>
+                                    <button class="btn btn-sm cbf-warning"   data-quality="imbalanced" title="Class imbalance ratio > 3">Imbalanced</button>
+                                    <button class="btn btn-sm cbf-danger"    data-quality="nzv"        title="Near-zero variance — top category ≥ 95%">NZV</button>
+                                    <button class="btn btn-sm cbf-secondary" data-quality="rare"       title="Has rare categories (< 1%)">Rare Cat.</button>
+                                    <button class="btn btn-sm cbf-danger"    data-quality="invalidseqs" title="Contains invalid sequences">Invalid Seq.</button>
                                 </div>
                             </div>
-
                         </div>
                     </div>
                 </div>
@@ -220,8 +199,8 @@
             <!-- Toggle Elements Container -->
             <div id="columns-container">
                 {% for col in columns %}
-                    {# fns = filter namespace, separate from badge ns #}
-                    {% set fns = namespace(has_inf='no', is_sparse='no', has_outliers='no', imbalanced='no', nzv='no', rare='no') %}
+                    {# fns = filter namespace — separate from badge ns #}
+                    {% set fns = namespace(has_inf='no',is_sparse='no',has_outliers='no',imbalanced='no',nzv='no',rare='no') %}
                     {% for ov in overview %}{% if ov.name == col.name %}
                         {% set _n = col.number if col.number and col.number > 0 else 1 %}
                         {% if ov.infinity is defined and ov.infinity > 0 %}{% set fns.has_inf = 'yes' %}{% endif %}
@@ -1893,12 +1872,12 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
 <!-- Core theme JS-->
 <script src="../static/js/scripts.js"></script>
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js" defer></script>
 <!-- DataTables -->
-<script src="https://cdn.datatables.net/2.3.1/js/dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/2.3.1/js/dataTables.bootstrap5.min.js"></script>
-<script src="https://cdn.datatables.net/responsive/3.0.4/js/dataTables.responsive.min.js"></script>
-<script src="https://cdn.datatables.net/responsive/3.0.4/js/responsive.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/2.3.1/js/dataTables.min.js" defer></script>
+<script src="https://cdn.datatables.net/2.3.1/js/dataTables.bootstrap5.min.js" defer></script>
+<script src="https://cdn.datatables.net/responsive/3.0.4/js/dataTables.responsive.min.js" defer></script>
+<script src="https://cdn.datatables.net/responsive/3.0.4/js/responsive.bootstrap5.min.js" defer></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const itemsPerPage = {{ items_per_page }};
@@ -1910,6 +1889,47 @@
         if (totalPages > 1) {
             generatePagination();
             updateDisplay();
+        }
+
+        /*
+         * Lazy-load collapse content via <template>.
+         *
+         * After DOMContentLoaded all inline scripts (including Plotly) have
+         * already executed. Moving the now-rendered but hidden collapse content
+         * into a DocumentFragment (<template>) achieves three things:
+         *   1. Reduces active DOM node count → faster reflows / JS queries
+         *   2. Frees layout memory for invisible cards
+         *   3. Future Plotly calls (resize, re-render) won't touch lazy cards
+         *
+         * Note: for Plotly initialisation to be lazy, report_writer.py would
+         * need to emit JSON data separately instead of inline <script> tags.
+         * That architectural change is outside the scope of this template.
+         */
+        function initLazyCards() {
+            document.querySelectorAll('.multi-collapse:not(.show)').forEach(el => {
+                if (!el.children.length) return;
+                const tpl = document.createElement('template');
+                while (el.firstChild) tpl.content.appendChild(el.firstChild);
+                el._lazyTpl = tpl;
+                el.dataset.lazy = '1';
+            });
+        }
+
+        // Hydrate collapse content on Bootstrap expand event
+        document.addEventListener('show.bs.collapse', function(e) {
+            const el = e.target;
+            if (el.dataset.lazy === '1' && el._lazyTpl) {
+                el.appendChild(el._lazyTpl.content.cloneNode(true));
+                el._lazyTpl = null;
+                delete el.dataset.lazy;
+            }
+        });
+
+        // Run after a short idle moment so it doesn't block the initial render
+        if ('requestIdleCallback' in window) {
+            requestIdleCallback(initLazyCards, { timeout: 1500 });
+        } else {
+            setTimeout(initLazyCards, 200);
         }
 
         function generatePagination() {
@@ -2099,7 +2119,7 @@
             }
         });
 
-        // ── Filter logic ─────────────────────────────────────────────────────
+        // ── Filter logic ────────────────────────────────────────────────────
         const searchInput    = document.getElementById('col-search');
         const typeButtons    = document.querySelectorAll('[data-type-filter]');
         const qualityButtons = document.querySelectorAll('[data-quality]');
@@ -2119,7 +2139,7 @@
         };
 
         function updateBadge() {
-            let n = activeQualities.size + (activeType !== 'all' ? 1 : 0) + (searchInput.value.trim() ? 1 : 0);
+            const n = activeQualities.size + (activeType !== 'all' ? 1 : 0) + (searchInput.value.trim() ? 1 : 0);
             if (badgeEl) { badgeEl.textContent = n; badgeEl.style.display = n > 0 ? 'inline-block' : 'none'; }
         }
 
@@ -2135,9 +2155,7 @@
             let visible = 0;
             document.querySelectorAll('.column-item').forEach(card => {
                 let show = true;
-
                 if (query && !card.dataset.name.includes(query)) show = false;
-
                 if (show && activeType !== 'all') {
                     if (activeType === 'sequence') {
                         show = card.dataset.sequence && card.dataset.sequence !== 'None';
@@ -2145,87 +2163,55 @@
                         show = (TYPE_MAP[activeType] || []).includes(card.dataset.type);
                     }
                 }
-
                 if (show && activeQualities.size > 0) {
                     if (filterLogic === 'and') {
-                        for (const q of activeQualities) {
-                            if (card.dataset[q] !== 'yes') { show = false; break; }
-                        }
+                        for (const q of activeQualities) { if (card.dataset[q] !== 'yes') { show = false; break; } }
                     } else {
                         let any = false;
                         for (const q of activeQualities) { if (card.dataset[q] === 'yes') { any = true; break; } }
                         if (!any) show = false;
                     }
                 }
-
                 card.style.display = show ? 'block' : 'none';
                 if (show) visible++;
             });
-
             if (filterCountEl) filterCountEl.textContent = visible;
         }
 
-        // Search
-        searchInput.addEventListener('input', applyFilters);
+        if (searchInput) searchInput.addEventListener('input', applyFilters);
 
-        // Type buttons
-        typeButtons.forEach(btn => {
-            btn.addEventListener('click', function () {
-                typeButtons.forEach(b => { b.classList.remove('active', 'btn-primary'); b.classList.add('btn-outline-primary'); });
-                this.classList.add('active', 'btn-primary');
-                this.classList.remove('btn-outline-primary');
-                activeType = this.dataset.typeFilter;
-                applyFilters();
-            });
-        });
+        typeButtons.forEach(btn => btn.addEventListener('click', function () {
+            typeButtons.forEach(b => { b.classList.remove('active','btn-primary'); b.classList.add('btn-outline-primary'); });
+            this.classList.add('active','btn-primary'); this.classList.remove('btn-outline-primary');
+            activeType = this.dataset.typeFilter;
+            applyFilters();
+        }));
 
-        // Quality flags — simple cbf-active toggle; CSS handles all visuals
-        qualityButtons.forEach(btn => {
-            btn.addEventListener('click', function () {
-                const q = this.dataset.quality;
-                if (activeQualities.has(q)) {
-                    activeQualities.delete(q);
-                    this.classList.remove('cbf-active');
-                } else {
-                    activeQualities.add(q);
-                    this.classList.add('cbf-active');
-                }
-                applyFilters();
-            });
-        });
+        qualityButtons.forEach(btn => btn.addEventListener('click', function () {
+            const q = this.dataset.quality;
+            if (activeQualities.has(q)) { activeQualities.delete(q); this.classList.remove('cbf-active'); }
+            else                        { activeQualities.add(q);    this.classList.add('cbf-active'); }
+            applyFilters();
+        }));
 
-        // AND / OR toggle
-        logicButtons.forEach(btn => {
-            btn.addEventListener('click', function () {
-                logicButtons.forEach(b => { b.classList.remove('active', 'btn-secondary'); b.classList.add('btn-outline-secondary'); });
-                this.classList.add('active', 'btn-secondary');
-                this.classList.remove('btn-outline-secondary');
-                filterLogic = this.dataset.logic;
-                if (activeQualities.size > 0) applyFilters();
-            });
-        });
+        logicButtons.forEach(btn => btn.addEventListener('click', function () {
+            logicButtons.forEach(b => { b.classList.remove('active','btn-secondary'); b.classList.add('btn-outline-secondary'); });
+            this.classList.add('active','btn-secondary'); this.classList.remove('btn-outline-secondary');
+            filterLogic = this.dataset.logic;
+            if (activeQualities.size > 0) applyFilters();
+        }));
 
-        // Reset
-        resetBtn.addEventListener('click', function () {
-            searchInput.value = '';
-            activeType        = 'all';
-            activeQualities.clear();
-            filterLogic       = 'or';
-
-            typeButtons.forEach(b => { b.classList.remove('active', 'btn-primary'); b.classList.add('btn-outline-primary'); });
+        if (resetBtn) resetBtn.addEventListener('click', function () {
+            searchInput.value = ''; activeType = 'all'; activeQualities.clear(); filterLogic = 'or';
+            typeButtons.forEach(b => { b.classList.remove('active','btn-primary'); b.classList.add('btn-outline-primary'); });
             const allBtn = document.querySelector('[data-type-filter="all"]');
-            if (allBtn) { allBtn.classList.add('active', 'btn-primary'); allBtn.classList.remove('btn-outline-primary'); }
-
-            // Remove cbf-active from all quality buttons — CSS restores the original color automatically
+            if (allBtn) { allBtn.classList.add('active','btn-primary'); allBtn.classList.remove('btn-outline-primary'); }
             qualityButtons.forEach(b => b.classList.remove('cbf-active'));
-
-            logicButtons.forEach(b => { b.classList.remove('active', 'btn-secondary'); b.classList.add('btn-outline-secondary'); });
+            logicButtons.forEach(b => { b.classList.remove('active','btn-secondary'); b.classList.add('btn-outline-secondary'); });
             const orBtn = document.querySelector('[data-logic="or"]');
-            if (orBtn) { orBtn.classList.add('active', 'btn-secondary'); orBtn.classList.remove('btn-outline-secondary'); }
-
+            if (orBtn) { orBtn.classList.add('active','btn-secondary'); orBtn.classList.remove('btn-outline-secondary'); }
             filterActive = false;
-            updateDisplay();
-            generatePagination();
+            updateDisplay(); generatePagination();
             if (filterCountEl) filterCountEl.textContent = totalItems;
             if (badgeEl)       badgeEl.style.display = 'none';
             resetBtn.style.display = 'none';
