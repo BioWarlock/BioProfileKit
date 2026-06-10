@@ -38,6 +38,12 @@
         .cbf-secondary{ color:#6c757d;background:transparent;border:1px solid #6c757d;border-radius:.25rem; }
         .cbf-secondary:hover{ background:rgba(108,117,125,.1); }
         .cbf-secondary.cbf-active{ background:#6c757d!important;color:#fff!important;border-color:#6c757d!important; }
+        .cbf-info     { color:#0d6efd;background:transparent;border:1px solid #0d6efd;border-radius:.25rem; }
+        .cbf-info:hover     { background:rgba(13,110,253,.1); }
+        .cbf-info.cbf-active     { background:#0d6efd!important;color:#fff!important;border-color:#0d6efd!important; }
+        .cbf-success  { color:#198754;background:transparent;border:1px solid #198754;border-radius:.25rem; }
+        .cbf-success:hover  { background:rgba(25,135,84,.1); }
+        .cbf-success.cbf-active  { background:#198754!important;color:#fff!important;border-color:#198754!important; }
     </style>
 </head>
 <body data-cb-theme="internal">
@@ -148,17 +154,37 @@
                                         </div>
                                     </div>
                                 </div>
+                                <!-- Quick shortcut: show all columns that carry at least one alert badge -->
+                                <div class="mb-2">
+                                    <button class="btn btn-sm btn-outline-danger" id="any-alert-btn"
+                                            title="Show only columns that have at least one quality alert (any severity)">
+                                        ⚠ Any Alert
+                                    </button>
+                                </div>
                                 <div class="d-flex flex-wrap gap-1" id="quality-filters">
-                                    <button class="btn btn-sm cbf-secondary" data-quality="missing"     title="Has any missing values">Missing</button>
-                                    <button class="btn btn-sm cbf-secondary" data-quality="constant"    title="All values identical">Constant</button>
-                                    <button class="btn btn-sm cbf-secondary" data-quality="correlation" title="Correlated with another column">Correlated</button>
-                                    <button class="btn btn-sm cbf-danger"    data-quality="infinity"    title="Contains Inf/-Inf — crashes pipelines">∞ Infinity</button>
-                                    <button class="btn btn-sm cbf-warning"   data-quality="sparse"      title="≥ 50% zero values — sparse feature">Sparse</button>
-                                    <button class="btn btn-sm cbf-warning"   data-quality="outliers"    title="≥ 5% outliers (adjusted IQR)">Outliers</button>
-                                    <button class="btn btn-sm cbf-warning"   data-quality="imbalanced"  title="Class imbalance ratio > 3">Imbalanced</button>
-                                    <button class="btn btn-sm cbf-danger"    data-quality="nzv"         title="Near-zero variance — top category ≥ 95%">NZV</button>
-                                    <button class="btn btn-sm cbf-secondary" data-quality="rare"        title="Has rare categories (< 1%)">Rare Cat.</button>
-                                    <button class="btn btn-sm cbf-danger"    data-quality="invalidseqs" title="Contains invalid sequences">Invalid Seq.</button>
+                                    <!-- General / structural -->
+                                    <button class="btn btn-sm cbf-secondary" data-quality="missing"       title="Has any missing values">Missing</button>
+                                    <button class="btn btn-sm cbf-danger"    data-quality="constant"      title="All values identical — zero variance">Constant</button>
+                                    <button class="btn btn-sm cbf-secondary" data-quality="correlation"   title="Correlated with another column">Correlated</button>
+                                    <!-- Numeric -->
+                                    <button class="btn btn-sm cbf-danger"    data-quality="infinity"      title="Contains Inf/-Inf — will crash most ML pipelines">∞ Infinity</button>
+                                    <button class="btn btn-sm cbf-warning"   data-quality="sparse"        title="≥ 50% zero values — sparse feature">Sparse</button>
+                                    <button class="btn btn-sm cbf-warning"   data-quality="outliers"      title="≥ 5% outliers detected (adjusted IQR)">Outliers</button>
+                                    <!-- Categorical -->
+                                    <button class="btn btn-sm cbf-warning"   data-quality="imbalanced"    title="Class imbalance ratio > 3">Imbalanced</button>
+                                    <button class="btn btn-sm cbf-danger"    data-quality="nzv"           title="Near-zero variance — top category ≥ 95%">NZV</button>
+                                    <button class="btn btn-sm cbf-secondary" data-quality="rare"          title="Has rare categories (< 1% frequency)">Rare Cat.</button>
+                                    <button class="btn btn-sm cbf-warning"   data-quality="mixedvalues"   title="Column contains mixed numeric and non-numeric values">Mixed Values</button>
+                                    <!-- Sequence -->
+                                    <button class="btn btn-sm cbf-danger"    data-quality="invalidseqs"   title="Contains invalid / unparseable sequences">Invalid Seq.</button>
+                                    <button class="btn btn-sm cbf-warning"   data-quality="ambiguousbases" title="Mean ambiguous base ratio (N) > 0 — possible low sequencing quality">Ambiguous Bases</button>
+                                    <button class="btn btn-sm cbf-warning"   data-quality="rcduplicates"  title="Reverse-complement duplicate sequences detected">RC Duplicates</button>
+                                    <button class="btn btn-sm cbf-warning"   data-quality="lowcomplexity" title="Low sequence complexity (Shannon entropy < 50%) — possible repeats or poly-A tails">Low Complexity</button>
+                                    <!-- Biological metadata -->
+                                    <button class="btn btn-sm cbf-danger"    data-quality="taxonomyinvalid"    title="Taxonomy identifiers failed validation">Taxonomy Invalid</button>
+                                    <button class="btn btn-sm cbf-danger"    data-quality="annotationinvalid"  title="Functional annotation failed controlled vocabulary check">Annotation Invalid</button>
+                                    <!-- Data anomalies -->
+                                    <button class="btn btn-sm cbf-warning"   data-quality="dataanomalies" title="Suspect or anomalous values detected in this column">Data Anomalies</button>
                                 </div>
                             </div>
                         </div>
@@ -193,7 +219,7 @@
             <div id="columns-container">
                 {% for col in columns %}
                     {# fns = filter namespace — separate from badge ns #}
-                    {% set fns = namespace(has_inf='no',is_sparse='no',has_outliers='no',imbalanced='no',nzv='no',rare='no') %}
+                    {% set fns = namespace(has_inf='no',is_sparse='no',has_outliers='no',imbalanced='no',nzv='no',rare='no',ambiguous_bases='no',rc_duplicates='no',low_complexity='no',mixed_values='no',data_anomalies='no',taxonomy_invalid='no',annotation_invalid='no') %}
                     {% for ov in overview %}{% if ov.name == col.name %}
                         {% set _n = col.number if col.number and col.number > 0 else 1 %}
                         {% if ov.infinity is defined and ov.infinity > 0 %}{% set fns.has_inf = 'yes' %}{% endif %}
@@ -205,6 +231,15 @@
                         {% if cat.top_1_coverage is defined and cat.top_1_coverage >= 0.95 %}{% set fns.nzv = 'yes' %}{% endif %}
                         {% if cat.rare_categories is defined and cat.rare_categories > 0 %}{% set fns.rare = 'yes' %}{% endif %}
                     {% endif %}{% endfor %}
+                    {% if col.sequence != 'None' and col.dna_rna_data %}
+                        {% if col.dna_rna_data.ambiguous_base_ratio is defined and col.dna_rna_data.ambiguous_base_ratio.mean > 0 %}{% set fns.ambiguous_bases = 'yes' %}{% endif %}
+                        {% if col.dna_rna_data.reverse_complement_ratio is defined and col.dna_rna_data.reverse_complement_ratio > 0 %}{% set fns.rc_duplicates = 'yes' %}{% endif %}
+                        {% if col.dna_rna_data.low_complexity is defined and col.dna_rna_data.low_complexity.mean < 50 %}{% set fns.low_complexity = 'yes' %}{% endif %}
+                    {% endif %}
+                    {% if col.measurement_data and col.measurement_data.with_measurement %}{% set fns.mixed_values = 'yes' %}{% endif %}
+                    {% if col.suspect_values is not none and not (col.invalid_seqs and col.invalid_seqs|length > 0) %}{% set fns.data_anomalies = 'yes' %}{% endif %}
+                    {% if col.taxonomy and col.taxonomy.is_taxonomy and col.taxonomy.taxonomy is not string %}{% set fns.taxonomy_invalid = 'yes' %}{% endif %}
+                    {% if col.annotation and col.annotation.is_annotation and col.taxonomy.valid_annotation is not string %}{% set fns.annotation_invalid = 'yes' %}{% endif %}
                     <div class="card row mt-3 column-item" data-index="{{ loop.index0 }}"
                          data-name="{{ col.name | lower }}"
                          data-type="{{ col.type }}"
@@ -219,6 +254,13 @@
                          data-nzv="{{ fns.nzv }}"
                          data-rare="{{ fns.rare }}"
                          data-invalidseqs="{{ 'yes' if col.invalid_seqs and col.invalid_seqs|length > 0 else 'no' }}"
+                         data-ambiguousbases="{{ fns.ambiguous_bases }}"
+                         data-rcduplicates="{{ fns.rc_duplicates }}"
+                         data-lowcomplexity="{{ fns.low_complexity }}"
+                         data-mixedvalues="{{ fns.mixed_values }}"
+                         data-dataanomalies="{{ fns.data_anomalies }}"
+                         data-taxonomyinvalid="{{ fns.taxonomy_invalid }}"
+                         data-annotationinvalid="{{ fns.annotation_invalid }}"
                          style="display: {% if loop.index0 < items_per_page %}block{% else %}none{% endif %};">
                         <div class="card-header d-inline-flex gap-1 mb-2">
                             <button class="btn btn-cb-outline-primary" type="button" data-bs-toggle="collapse"
@@ -2077,12 +2119,22 @@
         const qualityButtons = document.querySelectorAll('[data-quality]');
         const logicButtons   = document.querySelectorAll('[data-logic]');
         const resetBtn       = document.getElementById('reset-filters');
+        const anyAlertBtn    = document.getElementById('any-alert-btn');
         const filterCountEl  = document.getElementById('filter-count');
         const badgeEl        = document.getElementById('active-filter-badge');
+
+        // All data-quality keys that constitute an "alert" for the Any Alert shortcut
+        const ALERT_FLAGS = [
+            'missing','constant','correlation','infinity','sparse','outliers',
+            'imbalanced','nzv','rare','mixedvalues','invalidseqs',
+            'ambiguousbases','rcduplicates','lowcomplexity',
+            'taxonomyinvalid','annotationinvalid','dataanomalies'
+        ];
 
         let activeType      = 'all';
         let activeQualities = new Set();
         let filterLogic     = 'or';
+        let anyAlertActive  = false;
 
         const TYPE_MAP = {
             numeric:     ['int64', 'float64'],
@@ -2091,13 +2143,13 @@
         };
 
         function updateBadge() {
-            const n = activeQualities.size + (activeType !== 'all' ? 1 : 0) + (searchInput.value.trim() ? 1 : 0);
+            const n = activeQualities.size + (activeType !== 'all' ? 1 : 0) + (searchInput.value.trim() ? 1 : 0) + (anyAlertActive ? 1 : 0);
             if (badgeEl) { badgeEl.textContent = n; badgeEl.style.display = n > 0 ? 'inline-block' : 'none'; }
         }
 
         function applyFilters() {
             const query = searchInput.value.trim().toLowerCase();
-            filterActive = query !== '' || activeType !== 'all' || activeQualities.size > 0;
+            filterActive = query !== '' || activeType !== 'all' || activeQualities.size > 0 || anyAlertActive;
             document.querySelectorAll('#column-pagination, #column-pagination-bottom')
                 .forEach(el => { if (el) el.style.opacity = filterActive ? '0.35' : '1'; });
             resetBtn.style.display = filterActive ? 'inline-block' : 'none';
@@ -2110,6 +2162,10 @@
                     show = activeType === 'sequence'
                         ? (card.dataset.sequence && card.dataset.sequence !== 'None')
                         : (TYPE_MAP[activeType] || []).includes(card.dataset.type);
+                }
+                // Any Alert: show only columns that have at least one flag set to 'yes'
+                if (show && anyAlertActive) {
+                    show = ALERT_FLAGS.some(f => card.dataset[f] === 'yes');
                 }
                 if (show && activeQualities.size > 0) {
                     if (filterLogic === 'and') {
@@ -2127,6 +2183,13 @@
         }
 
         if (searchInput) searchInput.addEventListener('input', applyFilters);
+
+        if (anyAlertBtn) anyAlertBtn.addEventListener('click', function () {
+            anyAlertActive = !anyAlertActive;
+            this.classList.toggle('btn-danger', anyAlertActive);
+            this.classList.toggle('btn-outline-danger', !anyAlertActive);
+            applyFilters();
+        });
 
         typeButtons.forEach(btn => btn.addEventListener('click', function () {
             typeButtons.forEach(b => { b.classList.remove('active','btn-primary'); b.classList.add('btn-outline-primary'); });
@@ -2150,6 +2213,8 @@
 
         if (resetBtn) resetBtn.addEventListener('click', function () {
             searchInput.value = ''; activeType = 'all'; activeQualities.clear(); filterLogic = 'or';
+            anyAlertActive = false;
+            if (anyAlertBtn) { anyAlertBtn.classList.remove('btn-danger'); anyAlertBtn.classList.add('btn-outline-danger'); }
             typeButtons.forEach(b => { b.classList.remove('active','btn-primary'); b.classList.add('btn-outline-primary'); });
             const allBtn = document.querySelector('[data-type-filter="all"]');
             if (allBtn) { allBtn.classList.add('active','btn-primary'); allBtn.classList.remove('btn-outline-primary'); }
