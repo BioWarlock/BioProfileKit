@@ -77,7 +77,7 @@ Options:
 ```
 
 > [!WARNING]  
-> For high-dimensional datasets with many columns, report rendering times may increase significantly. In such cases, the hosted web application at bioprofilekit.computational.bio is recommended.
+> For high-dimensional datasets with many columns, report rendering times may increase significantly. In such cases, the hosted web application at https://bioprofilekit.computational.bio/ is recommended.
 
 ## Contributing
 
