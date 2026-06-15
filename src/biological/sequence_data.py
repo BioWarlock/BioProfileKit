@@ -1,3 +1,4 @@
+import re
 import tempfile
 from collections import defaultdict, Counter
 from itertools import chain
@@ -359,14 +360,21 @@ def make_logo(seqs, color, seq_type):
                   fontsize=12, scale_width=True)
 
         with open(tmp_path, 'r', encoding='utf-8') as svg_file:
-            svg_content = svg_file.read()
-            if '<svg ' in svg_content:
-                svg_content = svg_content.replace(
-                    '<svg ',
-                    '<svg style="width: 100%; height: 250px; max-width: 800px;" '
-                )
+            raw = svg_file.read()
 
-        return svg_content
+        # WebLogo 3 wraps the SVG in a full HTML document — extract only the SVG fragment
+        # to avoid injecting Bootstrap 3, jQuery 1.x and other legacy dependencies into the report
+        svg_match = re.search(r'(<svg[\s\S]*?</svg>)', raw, re.IGNORECASE)
+        if svg_match:
+            svg_content = svg_match.group(1)
+            svg_content = svg_content.replace(
+                '<svg ',
+                '<svg style="width: 100%; height: 250px; max-width: 800px;" '
+            )
+            return svg_content
+
+        return None
+
     except (HTTPError, URLError, OSError) as e:
         print(f"WebLogo Connection Error: {e}")
         return None
