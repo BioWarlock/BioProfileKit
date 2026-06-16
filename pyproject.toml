@@ -51,6 +51,10 @@ Repository="https://github.com/BioWarlock/BioProfileKit/"
 
 [project.optional-dependencies]
 cli = ["click"]
+dev = [
+    "pytest>=9.1.0",
+    "pytest-cov>=6.0.0",
+]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -78,5 +82,17 @@ addopts = "--tb=short -q"
 source = ["src"]
 omit = ["src/cython_wrapper/*"]
 
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]
+show_missing = true
+skip_empty = true
+
 [project.scripts]
 bioprofilekit = "cli.app:cli"
+
+[pytest]
+strict = true
