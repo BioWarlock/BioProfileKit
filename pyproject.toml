@@ -69,5 +69,14 @@ include-package-data = true
     "*.egg-info"
 ]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "--tb=short -q"
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["src/cython_wrapper/*"]
+
 [project.scripts]
 bioprofilekit = "cli.app:cli"

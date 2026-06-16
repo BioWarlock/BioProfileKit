@@ -40,6 +40,20 @@ Example report: [BioProfileKit Example](https://hansen-maria.github.io/BioProfil
 - Colorblind-safe theme (Okabe-Ito palette) with persistent toggle
 - WCAG AA accessible
 
+## Project Structure
+
+```
+BioProfileKit/
+├── src/
+│   ├── analysis/        # Column-level and dataset-level EDA
+│   ├── biological/      # Sequence profiling and metadata validation
+│   ├── cli/             # Entry point and report writer
+│   ├── cython_wrapper/  # Cython-accelerated components
+│   ├── data_utils/      # File I/O and remote data access
+│   ├── models/          # Data models per column type
+│   ├── templates/       # Data models per column type
+│   └── tests/           # Unit and integration tests
+```
 
 ## Web Application
 
