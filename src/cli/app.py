@@ -13,7 +13,7 @@ from analysis.multivariate import general_plots
 from biological.sequence_data import dna_rna_columns, protein_columns
 from biological.functional_annotation import annotation_flags
 from biological.measurement_data import measurement_columns
-from biological.taxonomy import taxonomy_flags
+from biological.taxonomy import taxonomy_flags, build_lookups
 from data_utils.remote_data import get_tax_ids
 from data_utils.file_reader import read_file, parse_parquet
 from cli.report_writer import write_report
@@ -49,9 +49,13 @@ def cli(input: str, tax: bool = False, func: str = None,
 
     tax_df = get_tax_ids() if tax else None
 
+    valid_names, valid_tax_ids, name_to_rank, taxid_to_rank, name_to_scientific = None, None, None, None, None
+    if tax and tax_df is not None:
+        valid_names, valid_tax_ids, name_to_rank, taxid_to_rank, name_to_scientific = build_lookups(tax_df)
+
     for col_ov in column_overviews:
         if tax and tax_df is not None:
-            col_ov.taxonomy = taxonomy_flags(df, col_ov.name, tax_df)
+            col_ov.taxonomy = taxonomy_flags(df, col_ov.name, valid_names, valid_tax_ids, name_to_rank, taxid_to_rank, name_to_scientific)
         if func and tax_df is not None:
             col_ov.annotation = [annotation_flags(df, col_ov.name, func)]
         if hasattr(col_ov, "top_10") and isinstance(col_ov.top_10, pd.Series):
@@ -84,7 +88,7 @@ def cli(input: str, tax: bool = False, func: str = None,
         numeric_columns(df, col) if not df[col].isnull().all() else exclude_cols.append(col)
         for col in df.select_dtypes(include="number").columns
     ]
-    #Todo Identify numeric cat columnd
+    #Todo Identify numeric cat columns
     cat_columns = [
         col for col in df.select_dtypes(include=['str', 'object', 'bool', 'int64', 'float64']).columns
         if any(i.sequence == 'None' for i in column_overviews if i.name == col)

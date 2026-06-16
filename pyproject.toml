@@ -2,8 +2,8 @@
 requires = [
     "setuptools==82.0.0",
     "wheel>=0.44.0",
-    "cython>=3.2.1",
-    "numpy>=2.4.2"
+    "cython>=3.2.5",
+    "numpy>=2.4.6"
 ]
 build-backend = "setuptools.build_meta"
 
@@ -28,19 +28,19 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 dependencies = [
-    "cython==3.2.4",
+    "cython==3.2.5",
     "click>=8.3.3",
     "Jinja2==3.1.6",
-    "numpy==2.4.4",
+    "numpy==2.4.6",
     "pandas==3.0.3",
-    "plotly==6.7.0",
+    "plotly==6.8.0",
     "scipy==1.17.1",
     "termcolor==3.3.0",
     "pyarrow==24.0.0",
     "peptides==0.5.0",
     "iteration_utilities==0.13.0",
-    "requests==2.33.0",
-    "goatools==1.5.2",
+    "requests==2.34.2",
+    "goatools==1.6.5",
     "importlib_resources==7.1.0",
     "biopython==1.87",
     "weblogo==3.9.0",
