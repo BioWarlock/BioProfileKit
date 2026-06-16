@@ -13,11 +13,19 @@ def read_file(file: click.Path) -> pd.DataFrame | None:
     seperator = _get_sep(file)
     with open(file, encoding="utf-8") as csv_file:
         csv_bytes = "".join(csv_file.readline() for _ in range(1000))
-        dialect = csv.Sniffer().sniff(csv_bytes)
-        header = csv.Sniffer().has_header(csv_bytes)
+        try:
+            dialect = csv.Sniffer().sniff(csv_bytes)
+            header = csv.Sniffer().has_header(csv_bytes)
+        except csv.Error:
+            # Fallback for single-column or un-sniffable files
+            class DummyDialect:
+                delimiter = seperator
+            dialect = DummyDialect()
+            header = True
         csv_file.seek(0)
-    if dialect.delimiter is not seperator:
-        dialect.delimiter=seperator
+
+    if dialect.delimiter != seperator:
+        dialect.delimiter = seperator
         head_col = 0
         idx_col = None
     else:
@@ -36,19 +44,24 @@ def read_file(file: click.Path) -> pd.DataFrame | None:
         return df
 
     elif ext == ".json":
-        df = pd.read_json(file.__str__(), orient='values')
-        cols = [i for i in df.columns if isinstance(df[i][0], dict)]
-        if not cols:
-            df = df.T
-            cols = [i for i in df.columns if isinstance(df[i][0], dict)]
+        # Removed orient='values' to allow pandas to natively infer dictionaries vs arrays
+        df = pd.read_json(file.__str__())
+
+        if not df.empty:
+            # Use .iloc[0] to look up positionally and avoid KeyErrors
+            cols = [i for i in df.columns if isinstance(df[i].iloc[0], dict)]
             if not cols:
-                return df
-            else:
-                data_frames = list()
-                for i in cols:
-                    tmp = pd.json_normalize(df[i])
-                    data_frames.append(tmp)
-                df = reduce(lambda left, right: pd.merge(left, right, left_index=True, right_index=True), data_frames)
+                df = df.T
+                cols = [i for i in df.columns if isinstance(df[i].iloc[0], dict)]
+                if not cols:
+                    return df
+                else:
+                    data_frames = list()
+                    for i in cols:
+                        tmp = pd.json_normalize(df[i])
+                        data_frames.append(tmp)
+                    df = reduce(lambda left, right: pd.merge(left, right, left_index=True, right_index=True),
+                                data_frames)
         return df
 
     return None
@@ -74,5 +87,5 @@ def parse_parquet(file: click.Path) -> pd.DataFrame:
     if not all([isinstance(col, str) for col in df.columns]):
         df.columns = df.columns.map(str)
     if '' in df.columns or None in df.columns:
-        df = df.rename({"": "Unknown", None: "Unknown_None"})
+        df = df.rename(columns={"": "Unknown", None: "Unknown_None"})
     return df
