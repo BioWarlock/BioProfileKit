@@ -4,36 +4,34 @@ from typing import List
 import pandas as pd
 
 from models.measurement import UNITColumns
-from models.overview import ColumnOverview
 from enums.measurement_enum import MEASUREMENTS
 
 
-def measurement_columns(column_overview: ColumnOverview, df: pd.DataFrame) -> UNITColumns | bool:
-    if column_overview.sequence == 'None':
-        name_match = MEASUREMENTS.UNIT_IN_COL_TITLE.value.match(column_overview.name)
-        if name_match:
-            unit: str = name_match.group(0).lstrip('[').rstrip(']')
-            return UNITColumns(
-                units=[unit],
-                unit_counts=[{unit: 1}],
-                with_measurement=False
-            )
-        if column_overview.type == 'str':
-            values = df[column_overview.name].dropna().unique().astype(str).tolist()
-            if all(len(x) > 1 for x in values):
-                measurement_and_unit = match_units(values, MEASUREMENTS.UNIT_COLUMN.value)
-                if len(measurement_and_unit) == len(values):
-                    measurement_passed = True
-                else:
-                    all_values = df[column_overview.name].dropna().astype(str).tolist()
-                    all_measurement_and_unit = match_units(values, MEASUREMENTS.UNIT_COLUMN.value)
-                    measurement_passed = len(all_measurement_and_unit)/len(all_values) > 0.95
-                if measurement_passed:
-                    return UNITColumns(
-                        units=[unit.split(' ')[1] if ' ' in unit else unit for unit in measurement_and_unit],
-                        unit_counts=df[column_overview.name].value_counts(dropna=False).to_dict(),
-                        with_measurement=any([has_number_and_unit(unit) for unit in measurement_and_unit])
-                    )
+def measurement_columns(col: pd.Series, name: str, col_type: str) -> UNITColumns | bool:
+    name_match = MEASUREMENTS.UNIT_IN_COL_TITLE.value.match(name)
+    if name_match:
+        unit: str = name_match.group(0).lstrip('[').rstrip(']')
+        return UNITColumns(
+            units=[unit],
+            unit_counts={unit: 1},
+            with_measurement=False
+        )
+    if col_type == 'str':
+        values = col.dropna().unique().astype(str).tolist()
+        if all(len(x) > 1 for x in values):
+            measurement_and_unit = match_units(values, MEASUREMENTS.UNIT_COLUMN.value)
+            if len(measurement_and_unit) == len(values):
+                measurement_passed = True
+            else:
+                all_values = col.dropna().astype(str).tolist()
+                all_measurement_and_unit = match_units(values, MEASUREMENTS.UNIT_COLUMN.value)
+                measurement_passed = len(all_measurement_and_unit) / len(all_values) > 0.95
+            if measurement_passed:
+                return UNITColumns(
+                    units=[unit.split(' ')[1] if ' ' in unit else unit for unit in measurement_and_unit],
+                    unit_counts=col.value_counts().to_dict(),
+                    with_measurement=any([has_number_and_unit(unit) for unit in measurement_and_unit])
+                )
     return False
 
 def match_units(entries: List[str], regex: re.Pattern) -> List[str]:

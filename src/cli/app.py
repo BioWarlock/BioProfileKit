@@ -74,7 +74,7 @@ def cli(input: str, tax: bool = False, func: str = None,
 
         # Measurement-Analyse
         if col_ov.sequence == 'None':
-            measurement_data = measurement_columns(col_ov, df)
+            measurement_data = measurement_columns(df[col_ov.name], col_ov.name, col_ov.type)
             if measurement_data:
                 print(colored(f'Analyzing lab measurements in column: {col_ov.name}', 'cyan'))
             col_ov.measurement_data = measurement_data if measurement_data else None
