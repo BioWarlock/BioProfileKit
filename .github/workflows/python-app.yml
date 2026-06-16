@@ -33,8 +33,10 @@ jobs:
     - name: Build Cython extensions
       run: python setup.py build_ext --inplace
 
-    - name: Install package with dev dependencies
-      run: pip install -e ".[dev]"
+    - name: Install package with test dependencies
+      run: |
+        pip install -e .
+        pip install pytest pytest-cov flake8
         
     - name: Lint with flake8
       run: |
