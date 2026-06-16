@@ -26,6 +26,8 @@ ssl._create_default_https_context = ssl._create_stdlib_context
 
 
 def count_nmer(sequence, n) -> defaultdict:
+    if n > len(sequence):
+        return defaultdict(int)
     seqs = np.frombuffer(sequence.encode('utf-8'), dtype='S1')
     nmere = np.lib.stride_tricks.sliding_window_view(seqs, n)
     unique, counts = np.unique(nmere, return_counts=True, axis=0)
