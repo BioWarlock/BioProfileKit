@@ -8,7 +8,7 @@ def categorical_columns(df: pd.DataFrame, col: str) -> CategoricalColumns:
     value_counts = df[col].value_counts()
     n = int(df[col].notna().sum())
     frequencies = value_counts / n if n > 0 else value_counts
-    rare = np.sum(value_counts< len(df[col]) * 0.01)
+    rare = np.sum(value_counts <= len(df[col]) * 0.01)
     cib_ratio = value_counts.max()  / value_counts.min()
     top_coverage = df[col].value_counts(normalize=True).head(5).sum()
 
@@ -41,7 +41,7 @@ def categorical_columns(df: pd.DataFrame, col: str) -> CategoricalColumns:
         rare_categories=rare,
         top_5_coverage=top_coverage,
         cib_ratio=cib_ratio,
-        top_1_coverage=(max( df[col].value_counts(normalize=True))), # Near Zero Variance (NZV)
+        top_1_coverage=(df[col].value_counts(normalize=True).max() if n > 0 else np.nan), # Near Zero Variance (NZV)
         effective_cardinality=((df[col].nunique()/len(df[col]))*100),
         memory = df[col].memory_usage(deep=True),
     )
