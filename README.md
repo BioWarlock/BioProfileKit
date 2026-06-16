@@ -51,8 +51,8 @@ BioProfileKit/
 │   ├── cython_wrapper/  # Cython-accelerated components
 │   ├── data_utils/      # File I/O and remote data access
 │   ├── models/          # Data models per column type
-│   ├── templates/       # Data models per column type
-│   └── tests/           # Unit and integration tests
+│   └── templates/       # Data models per column type
+└── tests/               # Unit and integration tests
 ```
 
 ## Web Application
