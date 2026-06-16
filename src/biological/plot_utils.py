@@ -13,7 +13,6 @@ config = {
 }
 
 
-
 def length_distribution(all_overview: DataFrame, unit: str = "bp"):
     bins = 300 if all_overview.shape[0] > 10000 else all_overview.shape[0]
     fig = px.histogram(
@@ -172,4 +171,29 @@ def at_gc_skewness(all_overview: DataFrame):
     fig.add_hline(y=0, line_dash="dash", line_color="rgba(0,0,0,0.2)", row=2, col=1)
     fig.add_vline(x=0, line_dash="dash", line_color="rgba(0,0,0,0.2)", row=2, col=1)
     config['toImageButtonOptions']['filename'] = "at_gc_skewness"
+    return fig.to_html(full_html=False, include_plotlyjs=False, config=config)
+
+def aa_group_distribution(group_dist: dict):
+    groups = list(group_dist.keys())
+    values = [round(v * 100, 2) for v in group_dist.values()]
+
+    fig = px.bar(
+        x=groups,
+        y=values,
+        title="Amino Acid Group Distribution Across All Sequences",
+        labels={"x": "Amino Acid Group", "y": "Proportion (%)"},
+        color_discrete_sequence=['#0F65A0'],
+    )
+    fig.update_traces(
+        marker_line_color="#616D78",
+        marker_line_width=1,
+        opacity=0.85,
+    )
+    fig.update_layout(
+        template="plotly_white",
+        xaxis_title="Amino Acid Group",
+        yaxis_title="Proportion (%)",
+        bargap=0.3,
+    )
+    config['toImageButtonOptions']['filename'] = "aa_group_distribution"
     return fig.to_html(full_html=False, include_plotlyjs=False, config=config)

@@ -7,6 +7,7 @@ from typing import Tuple
 from urllib.error import URLError, HTTPError
 
 from Bio import motifs
+from Bio.SeqUtils.ProtParam import ProteinAnalysis
 from weblogo import *
 import numpy as np
 import pandas as pd
@@ -16,7 +17,8 @@ import ssl
 
 from analysis.outlier_detection import detect_outliers
 from analysis.plot_utils import apply_standard_axes
-from biological.plot_utils import length_distribution, gc_distribution, ambiguous_distribution, at_gc_skewness
+from biological.plot_utils import length_distribution, gc_distribution, ambiguous_distribution, at_gc_skewness, \
+    aa_group_distribution
 from models.sequence import DNARNAColumns, PROTEINColumns, SequenceMetricSummary
 
 ssl._create_default_https_context = ssl._create_stdlib_context
@@ -306,6 +308,34 @@ def protein_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5, 
         mean=round(float(all_overview['entropy'].mean()), 2),
     )
 
+    all_overview['gravy'] = all_overview['sequence'].apply(_gravy)
+    all_overview['cysteine'] = all_overview['sequence'].str.count('C')
+    all_overview['disorder'] = all_overview['sequence'].str.count(f"[{''.join(DISORDER_AA)}]")
+    all_overview['disorder_ratio'] = np.round(
+        np.where(all_overview['lengths'] > 0, all_overview['disorder'] / all_overview['lengths'] * 100, 0.0), 2
+    )
+
+    gravy = SequenceMetricSummary(
+        min=round(float(all_overview['gravy'].min()), 4),
+        max=round(float(all_overview['gravy'].max()), 4),
+        mean=round(float(all_overview['gravy'].mean()), 4),
+    )
+
+    cysteine_count = SequenceMetricSummary(
+        min=round(float(all_overview['cysteine'].min()), 2),
+        max=round(float(all_overview['cysteine'].max()), 2),
+        mean=round(float(all_overview['cysteine'].mean()), 2),
+    )
+
+    disorder_propensity = SequenceMetricSummary(
+        min=round(float(all_overview['disorder_ratio'].min()), 2),
+        max=round(float(all_overview['disorder_ratio'].max()), 2),
+        mean=round(float(all_overview['disorder_ratio'].mean()), 2),
+    )
+
+    aa_group_dist = _aa_group_distribution(all_overview['sequence'])
+    aa_group_plot = aa_group_distribution(aa_group_dist)
+
     length_dist_plot = None
     if all_overview['lengths'].nunique() > 1:
         length_dist_plot = length_distribution(all_overview, unit="residues")
@@ -347,7 +377,44 @@ def protein_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5, 
         plot=plot,
         length_distribution=length_dist_plot,
         ambiguous_distribution=ambiguous_dist_plot,
+        gravy=gravy,
+        cysteine_count=cysteine_count,
+        disorder_propensity=disorder_propensity,
+        aa_group_distribution=aa_group_dist,
+        aa_group_plot=aa_group_plot
     )
+
+AA_GROUPS = {
+    "Unpolar":  set("GAVLIMP"),
+    "Aromatic": set("FWY"),
+    "Polar":    set("STCNQ"),
+    "Positive": set("KRH"),
+    "Negative": set("DE"),
+}
+
+DISORDER_AA = set("PESQK")
+KYTE_DOOLITTLE = {'A': 1.8, 'R': -4.5, 'N': -3.5, 'D': -3.5, 'C': 2.5,'Q': -3.5, 'E': -3.5, 'G': -0.4, 'H': -3.2,
+                  'I': 4.5, 'L': 3.8, 'K': -3.9, 'M': 1.9, 'F': 2.8, 'P': -1.6, 'S': -0.8, 'T': -0.7, 'W': -0.9, 'Y': -1.3, 'V': 4.2,}
+
+def _gravy(seq: str) -> float:
+    if len(seq) == 0:
+        return 0.0
+    try:
+        return ProteinAnalysis(seq).gravy()
+    except (KeyError, ValueError):
+        # Fallback for sequences with ambiguous residues (X, J, U, *)
+        return sum(KYTE_DOOLITTLE.get(aa, 0.0) for aa in seq) / len(seq)
+
+def _aa_group_distribution(all_seqs: pd.Series) -> dict:
+    concat = all_seqs.str.cat()
+    total = len(concat)
+    if total == 0:
+        return {g: 0.0 for g in AA_GROUPS}
+    counts = Counter(concat)
+    return {
+        group: round(sum(counts.get(aa, 0) for aa in members) / total, 4)
+        for group, members in AA_GROUPS.items()
+    }
 
 def make_logo(seqs, color, seq_type):
     if seq_type == "protein":

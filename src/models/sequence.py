@@ -65,8 +65,13 @@ class PROTEINColumns:
     length_outliers: Optional[Outliers]
     stop_codon_ratio: float
     low_complexity: SequenceMetricSummary
+    gravy: SequenceMetricSummary
+    cysteine_count: SequenceMetricSummary
+    disorder_propensity: SequenceMetricSummary
+    aa_group_distribution: Dict[str, float]
 
     k_mers: List[List[Tuple[str, int]]]
     plot: str
     length_distribution: Optional[str]
     ambiguous_distribution: Optional[str]
+    aa_group_plot: Optional[str]
