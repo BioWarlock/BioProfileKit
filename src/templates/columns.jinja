@@ -236,6 +236,10 @@
                         {% if col.dna_rna_data.reverse_complement_ratio is defined and col.dna_rna_data.reverse_complement_ratio > 0 %}{% set fns.rc_duplicates = 'yes' %}{% endif %}
                         {% if col.dna_rna_data.low_complexity is defined and col.dna_rna_data.low_complexity.mean < 50 %}{% set fns.low_complexity = 'yes' %}{% endif %}
                     {% endif %}
+                    {% if col.sequence != 'None' and col.protein_data %}
+                        {% if col.protein_data.low_complexity is defined and col.protein_data.low_complexity.mean < 50 %}{% set fns.low_complexity = 'yes' %}{% endif %}
+                        {% if col.protein_data.stop_codon_ratio is defined and col.protein_data.stop_codon_ratio > 0 %}{% set fns.data_anomalies = 'yes' %}{% endif %}
+                    {% endif %}
                     {% if col.measurement_data and col.measurement_data.with_measurement %}{% set fns.mixed_values = 'yes' %}{% endif %}
                     {% if col.suspect_values is not none and not (col.invalid_seqs and col.invalid_seqs|length > 0) %}{% set fns.data_anomalies = 'yes' %}{% endif %}
                     {% if col.taxonomy and col.taxonomy.is_taxonomy and col.taxonomy.taxonomy is not string %}{% set fns.taxonomy_invalid = 'yes' %}{% endif %}
@@ -1687,41 +1691,68 @@
                                 {% if col.sequence != 'None' and col.protein_data and col.missing_per < 100 %}
                                     <div class="row w-100 mt-4">
                                         <div class="col-12">
-                                            <h5>Top {{ top_n }} Protein Sequences Analysis</h5>
+                                            <h5>Top {{ top_n }} Protein Sequences Analysis
+                                                <small class="text-muted fw-normal ms-1" style="font-size: 0.75em;">
+                                                    — Statistics, Distributions: all sequences &nbsp;|&nbsp; Sequences, Composition, Properties, K-mers: Top {{ top_n }}
+                                                </small>
+                                            </h5>
 
                                             <!-- Tabs für verschiedene Ansichten -->
                                             <ul class="nav nav-tabs" id="proteinTab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tablist">
                                                 <li class="nav-item" role="presentation">
                                                     <button class="nav-link active" id="protein-sequences-tab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
                                                             data-bs-toggle="tab" data-bs-target="#proteinSequences{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
-                                                            type="button" role="tab">Sequences</button>
+                                                            type="button" role="tab">
+                                                        Sequences
+                                                        <span class="badge bg-secondary ms-1" style="font-size:0.7em;" title="Based on the {{ top_n }} most frequent sequences">Top {{ top_n }}</span>
+                                                    </button>
                                                 </li>
                                                 {% if col.invalid_seqs and col.invalid_seqs|length > 0 %}
                                                     <li class="nav-item" role="presentation">
                                                         <button class="nav-link" id="invalid-seq-tab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
                                                                 data-bs-toggle="tab" data-bs-target="#invalidSeqs{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
-                                                                type="button" role="tab">Data Invalid Sequences</button>
+                                                                type="button" role="tab">Invalid Sequences</button>
                                                     </li>
                                                 {% endif %}
                                                 <li class="nav-item" role="presentation">
                                                     <button class="nav-link" id="protein-stats-tab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
                                                             data-bs-toggle="tab" data-bs-target="#proteinStats{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
-                                                            type="button" role="tab">Statistics</button>
+                                                            type="button" role="tab">
+                                                        Statistics
+                                                        <span class="badge bg-success ms-1" style="font-size:0.7em;" title="Computed over all sequences in this column">All</span>
+                                                    </button>
                                                 </li>
                                                 <li class="nav-item" role="presentation">
                                                     <button class="nav-link" id="protein-composition-tab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
                                                             data-bs-toggle="tab" data-bs-target="#proteinComposition{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
-                                                            type="button" role="tab">Amino Acid Composition</button>
+                                                            type="button" role="tab">
+                                                        Amino Acid Composition
+                                                        <span class="badge bg-secondary ms-1" style="font-size:0.7em;" title="Based on the {{ top_n }} most frequent sequences">Top {{ top_n }}</span>
+                                                    </button>
                                                 </li>
                                                 <li class="nav-item" role="presentation">
                                                     <button class="nav-link" id="protein-properties-tab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
                                                             data-bs-toggle="tab" data-bs-target="#proteinProperties{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
-                                                            type="button" role="tab">Protein Properties</button>
+                                                            type="button" role="tab">
+                                                        Protein Properties
+                                                        <span class="badge bg-secondary ms-1" style="font-size:0.7em;" title="Based on the {{ top_n }} most frequent sequences">Top {{ top_n }}</span>
+                                                    </button>
+                                                </li>
+                                                <li class="nav-item" role="presentation">
+                                                    <button class="nav-link" id="protein-distributions-tab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
+                                                            data-bs-toggle="tab" data-bs-target="#proteinDistributions{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
+                                                            type="button" role="tab">
+                                                        Distributions
+                                                        <span class="badge bg-success ms-1" style="font-size:.7em;" title="Computed over all sequences in this column">All</span>
+                                                    </button>
                                                 </li>
                                                 <li class="nav-item" role="presentation">
                                                     <button class="nav-link" id="protein-kmers-tab{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
                                                             data-bs-toggle="tab" data-bs-target="#proteinKmers{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
-                                                            type="button" role="tab">K-mers</button>
+                                                            type="button" role="tab">
+                                                        K-mers
+                                                        <span class="badge bg-secondary ms-1" style="font-size:0.7em;" title="Based on the {{ top_n }} most frequent sequences">Top {{ top_n }}</span>
+                                                    </button>
                                                 </li>
                                             </ul>
 
@@ -1825,62 +1856,157 @@
 
                                                 <!-- Protein Statistics Tab -->
                                                 <div class="tab-pane fade" id="proteinStats{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
-                                                    <div class="row mt-3">
-                                                        <div class="col-md-4">
-                                                            <h6>Length Statistics</h6>
-                                                            {% set lengths = col.protein_data.length %}
-                                                            <table class="table table-sm">
-                                                                <tr><td>Min Length:</td><td>{{ lengths|min }} AA</td></tr>
-                                                                <tr><td>Mean Length:</td><td>{{ "%.1f"|format((lengths|sum) / (lengths|length)) }} AA</td></tr>
-                                                                <tr><td>Max Length:</td><td>{{ lengths|max }} AA</td></tr>
-                                                            </table>
-                                                        </div>
-                                                        <div class="col-md-4">
-                                                            <h6>Molecular Weight Statistics</h6>
-                                                            {% set mw = col.protein_data.molecular_weight %}
-                                                            <table class="table table-sm">
-                                                                <tr><td>Min MW:</td><td>{{ "%.1f"|format(mw|min) }} Da</td></tr>
-                                                                <tr><td>Mean MW:</td><td>{{ "%.1f"|format((mw|sum) / (mw|length)) }} Da</td></tr>
-                                                                <tr><td>Max MW:</td><td>{{ "%.1f"|format(mw|max) }} Da</td></tr>
-                                                            </table>
-                                                        </div>
-                                                        <div class="col-md-4">
-                                                            <h6>Isoelectric Point Statistics</h6>
-                                                            {% set pi = col.protein_data.isoelectric_point %}
-                                                            <table class="table table-sm">
-                                                                <tr><td>Min pI:</td><td>{{ "%.2f"|format(pi|min) }}</td></tr>
-                                                                <tr><td>Mean pI:</td><td>{{ "%.2f"|format((pi|sum) / (pi|length)) }}</td></tr>
-                                                                <tr><td>Max pI:</td><td>{{ "%.2f"|format(pi|max) }}</td></tr>
-                                                            </table>
-                                                        </div>
-                                                    </div>
+                                                    {% set pd = col.protein_data %}
+                                                    <div class="table-responsive mt-3">
+                                                        <table class="table table-sm table-striped w-100">
+                                                            <thead>
+                                                            <tr>
+                                                                <th style="width:40%">Metric</th>
+                                                                <th style="width:20%">Min</th>
+                                                                <th style="width:20%">Mean</th>
+                                                                <th style="width:20%">Max</th>
+                                                            </tr>
+                                                            </thead>
+                                                            <tbody>
 
-                                                    <div class="row mt-3">
-                                                        <div class="col-md-4">
-                                                            <h6>Hydrophobicity Statistics</h6>
-                                                            {% set hydro = col.protein_data.hydrophobicity %}
-                                                            <table class="table table-sm">
-                                                                <tr><td>Min Hydrophobicity:</td><td>{{ "%.3f"|format(hydro|min) }}</td></tr>
-                                                                <tr><td>Mean Hydrophobicity:</td><td>{{ "%.3f"|format((hydro|sum) / (hydro|length)) }}</td></tr>
-                                                                <tr><td>Max Hydrophobicity:</td><td>{{ "%.3f"|format(hydro|max) }}</td></tr>
-                                                            </table>
-                                                        </div>
-                                                        <div class="col-md-4">
-                                                            <h6>Charge Statistics</h6>
-                                                            {% set charge = col.protein_data.charge %}
-                                                            <table class="table table-sm">
-                                                                <tr><td>Min Charge:</td><td>{{ "%.2f"|format(charge|min) }}</td></tr>
-                                                                <tr><td>Mean Charge:</td><td>{{ "%.2f"|format((charge|sum) / (charge|length)) }}</td></tr>
-                                                                <tr><td>Max Charge:</td><td>{{ "%.2f"|format(charge|max) }}</td></tr>
-                                                            </table>
-                                                        </div>
+                                                            {# ── Sequence Length ── #}
+                                                            <tr class="table-secondary"><td colspan="4"><strong>Sequence Length</strong></td></tr>
+                                                            {% if pd.length_stats is defined %}
+                                                            <tr>
+                                                                <td>Length (AA)</td>
+                                                                <td>{{ pd.length_stats.min }}</td>
+                                                                <td>{{ pd.length_stats.mean }}</td>
+                                                                <td>{{ pd.length_stats.max }}</td>
+                                                            </tr>
+                                                            {% endif %}
+                                                            {% if pd.length_outliers is defined and pd.length_outliers %}
+                                                            <tr>
+                                                                <td colspan="4">
+                                                                    <small class="text-muted">
+                                                                        <strong>Length Outliers (Adj. IQR):</strong>
+                                                                        {{ pd.length_outliers.n_lower_iqr }} below {{ pd.length_outliers.lower_bound }} AA &nbsp;|&nbsp;
+                                                                        {{ pd.length_outliers.n_upper_iqr }} above {{ pd.length_outliers.upper_bound }} AA &nbsp;|&nbsp;
+                                                                        Medcouple: {{ pd.length_outliers.medcouple }}
+                                                                    </small>
+                                                                </td>
+                                                            </tr>
+                                                            {% endif %}
+
+                                                            {# ── Ambiguous Residues ── #}
+                                                            <tr class="table-secondary">
+                                                                <td colspan="4">
+                                                                    <strong>Ambiguous Residues (X / J / U)</strong>
+                                                                    <br><small class="text-muted">non-standard or unresolved amino acids</small>
+                                                                </td>
+                                                            </tr>
+                                                            {% if pd.ambiguous_residue_ratio is defined %}
+                                                            <tr {% if pd.ambiguous_residue_ratio.mean >= 5 %}class="table-danger"{% elif pd.ambiguous_residue_ratio.mean > 0 %}class="table-warning"{% endif %}>
+                                                                <td>Ambiguous Residue Rate (%)</td>
+                                                                <td>{{ pd.ambiguous_residue_ratio.min }}%</td>
+                                                                <td>
+                                                                    {{ pd.ambiguous_residue_ratio.mean }}%
+                                                                    {% if pd.ambiguous_residue_ratio.mean >= 5 %}
+                                                                        <span class="badge bg-danger ms-1">High</span>
+                                                                    {% elif pd.ambiguous_residue_ratio.mean > 0 %}
+                                                                        <span class="badge bg-warning text-dark ms-1">Present</span>
+                                                                    {% endif %}
+                                                                </td>
+                                                                <td>{{ pd.ambiguous_residue_ratio.max }}%</td>
+                                                            </tr>
+                                                            {% endif %}
+
+                                                            {# ── Stop Codons ── #}
+                                                            <tr class="table-secondary">
+                                                                <td colspan="4">
+                                                                    <strong>Stop Codon Presence (*)</strong>
+                                                                    <br><small class="text-muted">premature stop codons may indicate translation errors or pseudogenes</small>
+                                                                </td>
+                                                            </tr>
+                                                            {% if pd.stop_codon_ratio is defined %}
+                                                            <tr {% if pd.stop_codon_ratio > 10 %}class="table-danger"{% elif pd.stop_codon_ratio > 0 %}class="table-warning"{% endif %}>
+                                                                <td>Sequences with Stop Codon (%)</td>
+                                                                <td colspan="3">
+                                                                    {{ "%.2f"|format(pd.stop_codon_ratio) }}%
+                                                                    {% if pd.stop_codon_ratio > 10 %}
+                                                                        <span class="badge bg-danger ms-2">High</span>
+                                                                    {% elif pd.stop_codon_ratio > 0 %}
+                                                                        <span class="badge bg-warning text-dark ms-2">Present</span>
+                                                                    {% endif %}
+                                                                </td>
+                                                            </tr>
+                                                            {% endif %}
+
+                                                            {# ── Low Complexity ── #}
+                                                            <tr class="table-secondary">
+                                                                <td colspan="4">
+                                                                    <strong>Sequence Complexity</strong>
+                                                                    <br><small class="text-muted">normalized Shannon entropy — low = homopolymers / tandem repeats</small>
+                                                                </td>
+                                                            </tr>
+                                                            {% if pd.low_complexity is defined %}
+                                                            <tr {% if pd.low_complexity.mean < 50 %}class="table-warning"{% endif %}>
+                                                                <td>Entropy (%)</td>
+                                                                <td>{{ pd.low_complexity.min }}%</td>
+                                                                <td>
+                                                                    {{ pd.low_complexity.mean }}%
+                                                                    {% if pd.low_complexity.mean < 50 %}
+                                                                        <span class="badge bg-warning text-dark ms-1">Low Complexity</span>
+                                                                    {% endif %}
+                                                                </td>
+                                                                <td>{{ pd.low_complexity.max }}%</td>
+                                                            </tr>
+                                                            {% endif %}
+
+                                                            {# ── Physicochemical Properties ── #}
+                                                            <tr class="table-secondary"><td colspan="4"><strong>Physicochemical Properties</strong></td></tr>
+                                                            {% if pd.gravy is defined %}
+                                                            <tr {% if pd.gravy.mean > 0 %}class="table-info"{% endif %} title="GRAVY > 0: hydrophobic; < 0: hydrophilic">
+                                                                <td>GRAVY Score <small class="text-muted">(hydropathy)</small></td>
+                                                                <td>{{ "%.3f"|format(pd.gravy.min) }}</td>
+                                                                <td>
+                                                                    {{ "%.3f"|format(pd.gravy.mean) }}
+                                                                    {% if pd.gravy.mean > 0 %}
+                                                                        <span class="badge bg-info text-dark ms-1" title="Positive = hydrophobic tendency">Hydrophobic</span>
+                                                                    {% elif pd.gravy.mean < -1 %}
+                                                                        <span class="badge bg-secondary ms-1" title="Strongly negative = hydrophilic">Hydrophilic</span>
+                                                                    {% endif %}
+                                                                </td>
+                                                                <td>{{ "%.3f"|format(pd.gravy.max) }}</td>
+                                                            </tr>
+                                                            {% endif %}
+                                                            {% if pd.cysteine_count is defined %}
+                                                            <tr>
+                                                                <td>Cysteine Count <small class="text-muted">(disulfide bridges)</small></td>
+                                                                <td>{{ pd.cysteine_count.min }}</td>
+                                                                <td>{{ "%.2f"|format(pd.cysteine_count.mean) }}</td>
+                                                                <td>{{ pd.cysteine_count.max }}</td>
+                                                            </tr>
+                                                            {% endif %}
+                                                            {% if pd.disorder_propensity is defined %}
+                                                            <tr {% if pd.disorder_propensity.mean > 30 %}class="table-warning"{% endif %} title="Disorder-promoting: P, E, S, Q, K">
+                                                                <td>Disorder Propensity <small class="text-muted">(P,E,S,Q,K %)</small></td>
+                                                                <td>{{ pd.disorder_propensity.min }}%</td>
+                                                                <td>
+                                                                    {{ "%.1f"|format(pd.disorder_propensity.mean) }}%
+                                                                    {% if pd.disorder_propensity.mean > 30 %}
+                                                                        <span class="badge bg-warning text-dark ms-1">Elevated</span>
+                                                                    {% endif %}
+                                                                </td>
+                                                                <td>{{ pd.disorder_propensity.max }}%</td>
+                                                            </tr>
+                                                            {% endif %}
+
+                                                            </tbody>
+                                                        </table>
                                                     </div>
                                                 </div>
 
                                                 <!-- Amino Acid Composition Tab -->
                                                 <div class="tab-pane fade" id="proteinComposition{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
                                                     <div class="mt-3">
-                                                        <h6>Amino Acid Composition (Aggregated from Top 20)</h6>
+                                                        <h6>Amino Acid Composition
+                                                            <small class="text-muted fw-normal ms-1" style="font-size:0.8em;">aggregated from Top {{ top_n }}</small>
+                                                        </h6>
                                                         {% set all_amino_acids = {} %}
                                                         {% for aa_dict in col.protein_data.composition %}
                                                             {% for aa, count in aa_dict.items() %}
@@ -1991,6 +2117,24 @@
                                                                     <td><strong>Instability Index</strong></td>
                                                                     <td>from {{ "%.2f"|format(col.protein_data.instability|min) }} to {{ "%.2f"|format(col.protein_data.instability|max) }}</td>
                                                                 </tr>
+                                                                {% if col.protein_data.gravy is defined %}
+                                                                <tr>
+                                                                    <td><strong>GRAVY Score</strong></td>
+                                                                    <td>from {{ "%.3f"|format(col.protein_data.gravy.min) }} to {{ "%.3f"|format(col.protein_data.gravy.max) }} (mean: {{ "%.3f"|format(col.protein_data.gravy.mean) }})</td>
+                                                                </tr>
+                                                                {% endif %}
+                                                                {% if col.protein_data.cysteine_count is defined %}
+                                                                <tr>
+                                                                    <td><strong>Cysteine Count</strong></td>
+                                                                    <td>{{ col.protein_data.cysteine_count.min }}–{{ col.protein_data.cysteine_count.max }} (mean: {{ "%.1f"|format(col.protein_data.cysteine_count.mean) }})</td>
+                                                                </tr>
+                                                                {% endif %}
+                                                                {% if col.protein_data.disorder_propensity is defined %}
+                                                                <tr>
+                                                                    <td><strong>Disorder Propensity</strong></td>
+                                                                    <td>from {{ col.protein_data.disorder_propensity.min }}% to {{ col.protein_data.disorder_propensity.max }}% (mean: {{ "%.1f"|format(col.protein_data.disorder_propensity.mean) }}%)</td>
+                                                                </tr>
+                                                                {% endif %}
                                                             </table>
                                                         </div>
                                                         <div class="col-md-6">
@@ -2000,8 +2144,88 @@
                                                                 <p><strong>Boman Index:</strong> Protein-protein interaction potential</p>
                                                                 <p><strong>Aromaticity:</strong> Fraction of aromatic amino acids (Phe, Trp, Tyr)</p>
                                                                 <p><strong>Instability Index:</strong> &lt;40 = stable, &gt;40 = unstable protein</p>
+                                                                <p><strong>GRAVY Score:</strong> &gt;0 = hydrophobic, &lt;0 = hydrophilic</p>
+                                                                <p><strong>Cysteine Count:</strong> Relevant for disulfide bridges and structural stability</p>
+                                                                <p><strong>Disorder Propensity:</strong> Fraction of disorder-promoting residues (P,E,S,Q,K) — high values suggest intrinsically disordered regions</p>
                                                             </div>
                                                         </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Protein Distributions Tab -->
+                                                <div class="tab-pane fade" id="proteinDistributions{{ col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}" role="tabpanel">
+                                                    {% set pd = col.protein_data %}
+                                                    <div class="mt-3">
+
+                                                        {# ── AA Group Distribution plot ── #}
+                                                        {% if pd.aa_group_plot %}
+                                                            <h6>Amino Acid Group Distribution</h6>
+                                                            <p class="text-muted small">Proportion of physicochemical groups across all sequences. Helps identify dominant biochemical character (hydrophobic core, charged surface, etc.).</p>
+                                                            <div class="plot-container mb-4" style="max-height: fit-content; overflow: scroll;">
+                                                                <figure role="img" aria-label="Amino acid group distribution bar chart for column {{ col.name }}">
+                                                                    {{ pd.aa_group_plot | safe }}
+                                                                </figure>
+                                                            </div>
+                                                        {% elif pd.aa_group_distribution %}
+                                                            <h6>Amino Acid Group Distribution</h6>
+                                                            <div class="table-responsive mb-4" style="max-height: 300px; overflow-y: auto;">
+                                                                <table class="table table-sm table-striped w-100">
+                                                                    <thead class="sticky-top bg-light">
+                                                                    <tr>
+                                                                        <th>Group</th>
+                                                                        <th>Proportion</th>
+                                                                        <th style="min-width:160px;">Distribution</th>
+                                                                    </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                    {% for group, proportion in pd.aa_group_distribution.items() | sort(attribute='1', reverse=true) %}
+                                                                        {% set pct = (proportion * 100) | round(2) %}
+                                                                        <tr>
+                                                                            <td>{{ group }}</td>
+                                                                            <td>{{ pct }}%</td>
+                                                                            <td>
+                                                                                <div class="progress" style="height:14px;">
+                                                                                    <div class="progress-bar bg-primary" role="progressbar"
+                                                                                         style="width:{{ pct }}%"
+                                                                                         aria-valuenow="{{ pct }}" aria-valuemin="0" aria-valuemax="100">
+                                                                                    </div>
+                                                                                </div>
+                                                                            </td>
+                                                                        </tr>
+                                                                    {% endfor %}
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        {% endif %}
+
+                                                        {# ── Length Distribution ── #}
+                                                        {% if pd.length_distribution %}
+                                                            <hr>
+                                                            <h6>Sequence Length Distribution</h6>
+                                                            <p class="text-muted small">Histogram of protein lengths across all sequences. Multimodal distributions may indicate multiple protein families or isoforms.</p>
+                                                            <div class="plot-container mb-4" style="max-height: fit-content; overflow: scroll;">
+                                                                <figure role="img" aria-label="Protein length distribution histogram for column {{ col.name }}">
+                                                                    {{ pd.length_distribution | safe }}
+                                                                </figure>
+                                                            </div>
+                                                        {% else %}
+                                                            <div class="alert alert-secondary mt-3">All sequences have equal length — length distribution plot not generated.</div>
+                                                        {% endif %}
+
+                                                        {# ── Ambiguous Residue Distribution ── #}
+                                                        {% if pd.ambiguous_distribution %}
+                                                            <hr>
+                                                            <h6>Ambiguous Residue (X/J/U) Distribution</h6>
+                                                            <p class="text-muted small">Count of ambiguous residues per sequence. Elevated counts may indicate incomplete sequencing or database annotation issues.</p>
+                                                            <div class="plot-container mb-4" style="max-height: fit-content; overflow: scroll;">
+                                                                <figure role="img" aria-label="Ambiguous residue distribution per sequence for column {{ col.name }}">
+                                                                    {{ pd.ambiguous_distribution | safe }}
+                                                                </figure>
+                                                            </div>
+                                                        {% elif pd.ambiguous_residue_ratio is defined and pd.ambiguous_residue_ratio.mean == 0 %}
+                                                            <div class="alert alert-success mt-3">No ambiguous residues (X/J/U) detected — distribution plot not generated.</div>
+                                                        {% endif %}
+
                                                     </div>
                                                 </div>
 
