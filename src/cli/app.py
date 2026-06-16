@@ -9,7 +9,7 @@ from termcolor import colored
 from analysis.overview import overview, column_overview
 from analysis.numeric_analysis import numeric_columns
 from analysis.categorical_analysis import categorical_columns
-from analysis.multivariate import general_plots
+from analysis.multivariate_analysis import multivariate_analysis
 from biological.sequence_data import dna_rna_columns, protein_columns
 from biological.functional_annotation import annotation_flags
 from biological.measurement_data import measurement_columns
@@ -36,7 +36,7 @@ def cli(input: str, tax: bool = False, func: str = None,
     print(colored(f'Reading file {input_path.name}', 'green'))
     df = read_file(input_path) if input_path.suffix != '.parquet' else parse_parquet(input_path)
     general = overview(df, input_path.name)
-    plots = general_plots(df, target_column)
+    plots = multivariate_analysis(df, target_column)
 
     dups = df[df.duplicated(keep=False)].reset_index()
     duplicates_table = dups.to_html(

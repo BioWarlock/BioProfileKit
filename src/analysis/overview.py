@@ -5,7 +5,7 @@ from biological.sequence_detection import check_sequence
 from models.overview import DatasetSummary, ColumnOverview
 from .data_quality import check_mixed_types, check_suspect_values
 from .plot_utils import plot_overview
-from .multivariate import get_correlation
+from .multivariate_analysis import get_correlation
 
 
 def overview(df: pd.DataFrame, file) -> DatasetSummary:

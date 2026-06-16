@@ -9,7 +9,7 @@ import os
 # ---------------------------------------------------------------------------
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from analysis.multivariate import (
+from analysis.multivariate_analysis import (
     get_correlation,
     correlation_heatmap,
     missing_matrix,
@@ -17,9 +17,9 @@ from analysis.multivariate import (
     balance_plot,
     boxplot,
     scatter_matrix,
-    general_plots,
-    GeneralPlots,
+    multivariate_analysis,
 )
+from models.multivariate import MultivariateAnalysis
 
 
 # ---------------------------------------------------------------------------
@@ -301,16 +301,16 @@ class TestScatterMatrix:
 
 
 # ---------------------------------------------------------------------------
-# general_plots
+# multivariate_analysis
 # ---------------------------------------------------------------------------
 
 class TestGeneralPlots:
     def test_returns_general_plots_object(self, numeric_df):
-        result = general_plots(numeric_df, target=None)
-        assert isinstance(result, GeneralPlots)
+        result = multivariate_analysis(numeric_df, target=None)
+        assert isinstance(result, MultivariateAnalysis)
 
     def test_all_fields_are_html_strings_without_target(self, numeric_df):
-        result = general_plots(numeric_df, target=None)
+        result = multivariate_analysis(numeric_df, target=None)
         assert isinstance(result.correlation_heatmap, str)
         assert isinstance(result.missing_matrix, str)
         assert isinstance(result.missing_values_barchart, str)
@@ -318,25 +318,25 @@ class TestGeneralPlots:
         assert isinstance(result.scatter_matrix, str)
 
     def test_balance_plot_none_when_no_target(self, numeric_df):
-        result = general_plots(numeric_df, target=None)
+        result = multivariate_analysis(numeric_df, target=None)
         assert result.balance_plot is None
 
     def test_balance_plot_present_with_target(self, mixed_df):
-        result = general_plots(mixed_df, target="category")
+        result = multivariate_analysis(mixed_df, target="category")
         assert result.balance_plot is not None
         assert isinstance(result.balance_plot, str)
 
     def test_empty_string_target_yields_no_balance_plot(self, numeric_df):
-        result = general_plots(numeric_df, target="")
+        result = multivariate_analysis(numeric_df, target="")
         assert result.balance_plot is None
 
     def test_missing_heavy_dataframe(self, missing_df):
-        result = general_plots(missing_df, target=None)
-        assert isinstance(result, GeneralPlots)
+        result = multivariate_analysis(missing_df, target=None)
+        assert isinstance(result, MultivariateAnalysis)
 
     def test_bioinformatics_full_pipeline(self, bioinformatics_df):
-        result = general_plots(bioinformatics_df, target=None)
-        assert isinstance(result, GeneralPlots)
+        result = multivariate_analysis(bioinformatics_df, target=None)
+        assert isinstance(result, MultivariateAnalysis)
         assert all(isinstance(getattr(result, f), str) for f in [
             "correlation_heatmap", "missing_matrix",
             "missing_values_barchart", "boxplot", "scatter_matrix",

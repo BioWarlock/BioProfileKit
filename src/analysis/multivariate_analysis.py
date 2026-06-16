@@ -1,24 +1,13 @@
-from dataclasses import dataclass
-
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
+from models.multivariate import MultivariateAnalysis
 from .plot_utils import apply_standard_axes
 
 
-@dataclass
-class GeneralPlots:
-    correlation_heatmap: str
-    missing_matrix: str
-    missing_values_barchart: str
-    balance_plot: str | None
-    boxplot: str
-    scatter_matrix: str
-
-
-def general_plots(df: pd.DataFrame, target: str) -> GeneralPlots:
-    return GeneralPlots(
+def multivariate_analysis(df: pd.DataFrame, target: str) -> MultivariateAnalysis:
+    return MultivariateAnalysis(
         correlation_heatmap=correlation_heatmap(df),
         missing_matrix=missing_matrix(df),
         missing_values_barchart=missing_values_barchart(df),

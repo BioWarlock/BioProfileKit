@@ -19,7 +19,7 @@ from cli.app import cli
 # Mock targets
 # ---------------------------------------------------------------------------
 WRITE_REPORT   = "cli.app.write_report"
-GENERAL_PLOTS  = "cli.app.general_plots"
+GENERAL_PLOTS  = "cli.app.multivariate_analysis"
 DNA_RNA_COLS   = "cli.app.dna_rna_columns"
 PROTEIN_COLS   = "cli.app.protein_columns"
 TAX_FLAGS      = "cli.app.taxonomy_flags"
@@ -74,7 +74,7 @@ def dna_csv(tmp_path):
 
 @pytest.fixture
 def mock_plots():
-    """Standard mock for general_plots that returns a GeneralPlots-like object."""
+    """Standard mock for multivariate_analysis that returns a GeneralPlots-like object."""
     m = MagicMock()
     m.balance_plot = None
     return m
