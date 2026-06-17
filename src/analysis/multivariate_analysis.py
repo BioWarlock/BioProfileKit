@@ -417,7 +417,6 @@ def mutual_information_plot(mi: dict | None):
         bargap=0.3,
         height=max(400, 40 * len(features) + 150),
     )
-    fig.show()
     return fig.to_html(full_html=False, include_plotlyjs=False)
 
 

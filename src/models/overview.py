@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass
@@ -34,3 +35,5 @@ class ColumnOverview:
     correlation: list[str] | None
     cardinality_dimension_ratio: float | None
     monotonicity: bool | None
+    taxonomy: Optional = None
+    measurement_data: Optional = None

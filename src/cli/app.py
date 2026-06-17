@@ -6,17 +6,18 @@ import click
 import pandas as pd
 from termcolor import colored
 
-from analysis.overview import overview, column_overview
-from analysis.numeric_analysis import numeric_columns
 from analysis.categorical_analysis import categorical_columns
 from analysis.multivariate_analysis import multivariate_analysis
-from biological.sequence_data import dna_rna_columns, protein_columns
+from analysis.numeric_analysis import numeric_columns
+from analysis.overview import overview, column_overview
 from biological.functional_annotation import annotation_flags
 from biological.measurement_data import measurement_columns
+from biological.sequence_data import dna_rna_columns, protein_columns
 from biological.taxonomy import taxonomy_flags, build_lookups
-from data_utils.remote_data import get_tax_ids
-from data_utils.file_reader import read_file, parse_parquet
 from cli.report_writer import write_report
+from data_utils.file_reader import read_file, parse_parquet
+from data_utils.remote_data import get_tax_ids
+from quality_assessment.quality_assessment import quality_assessment, print_quality_report
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
@@ -99,7 +100,9 @@ def cli(input: str, tax: bool = False, func: str = None,
         categorical_columns(df, col) if col not in exclude_cols else None
         for col in cat_columns
     ]
-
+    readiness = quality_assessment(general, column_overviews, numeric_overviews,
+                                   categorical_overviews, plots)
+    print_quality_report(readiness)
     output_path = Path(input_path.stem + "_renders")
     print(colored('Writing report …', 'green'))
     write_report(output_path, general, plots, duplicates_table,
