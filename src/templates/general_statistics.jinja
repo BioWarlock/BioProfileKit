@@ -13,25 +13,53 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/3.0.0/css/responsive.bootstrap5.min.css">
     <script src="https://cdn.plot.ly/plotly-3.3.1.min.js" charset="utf-8"></script>
     <style>
-        /* Section headings */
+        /* ── Section headings ── */
         .section-heading {
-            font-size: 1.1rem;
-            font-weight: 600;
-            letter-spacing: .02em;
+            font-size: 1.35rem;
+            font-weight: 700;
             color: var(--cb-text, #1A1A1A);
-            border-left: 3px solid var(--cb-primary, #0F65A0);
-            padding-left: .6rem;
-            margin-bottom: 1rem;
+            border-left: 4px solid var(--cb-primary, #0F65A0);
+            padding-left: .65rem;
+            margin-top: 0;
+            margin-bottom: 1.1rem;
         }
-        /* DataTables font consistency */
+        .sub-heading {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--cb-text, #1A1A1A);
+            margin-bottom: .6rem;
+        }
+
+        /* ── Section filter bar ── */
+        #sectionFilter {
+            gap: .5rem;
+        }
+        #sectionFilter .btn {
+            font-size: .85rem;
+        }
+        .gs-section {
+            transition: opacity .15s;
+        }
+        .gs-section.d-none-filter {
+            display: none !important;
+        }
+
+        /* ── DataTables – inherit body font ── */
         .dataTables_wrapper,
         .dataTables_wrapper table,
         .dataTables_wrapper input,
-        .dataTables_wrapper select {
+        .dataTables_wrapper select,
+        .dataTables_wrapper .dataTables_info,
+        .dataTables_wrapper .dataTables_paginate {
             font-family: inherit;
-            font-size: 0.875rem;
+            font-size: .875rem;
         }
-        /* Strength cell: number + bar in one cell */
+        .dataTables_wrapper .dataTables_filter label,
+        .dataTables_wrapper .dataTables_length label {
+            font-size: .875rem;
+        }
+
+        /* ── Inline strength bar ── */
         .strength-cell { min-width: 140px; }
         .strength-bar  { height: 6px; border-radius: 3px; margin-top: 3px; background: #e9ecef; }
         .strength-bar-fill { height: 100%; border-radius: 3px; }
@@ -76,10 +104,34 @@
   <div id="content-wrap">
     <div class="container px-4 px-lg-5">
 
-      <!-- Page heading -->
+      <!-- ── Page heading ── -->
       <div class="row gx-4 gx-lg-5 align-items-center my-5">
         <div class="col-12">
           <h1 class="font-weight-light">Multivariate Statistics</h1>
+
+          <!-- ── Section filter bar ── -->
+          <div class="d-flex flex-wrap align-items-center mt-3" id="sectionFilter" role="group" aria-label="Filter sections">
+            <span class="text-muted me-2" style="font-size:.85rem;">Show:</span>
+            <button type="button" class="btn btn-sm btn-primary filter-btn active" data-filter="all">
+              All
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary filter-btn" data-filter="missingness">
+              Missingness
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary filter-btn" data-filter="correlations">
+              Correlations
+            </button>
+            {% if plots.feature_target_plot or plots.feature_target_correlation
+                  or plots.mutual_information or plots.mutual_information_plot
+                  or plots.mi_relationship_plots or plots.balance_plot %}
+            <button type="button" class="btn btn-sm btn-outline-secondary filter-btn" data-filter="target">
+              Target
+            </button>
+            {% endif %}
+            <button type="button" class="btn btn-sm btn-outline-secondary filter-btn" data-filter="general">
+              General Statistics
+            </button>
+          </div>
         </div>
       </div>
 
@@ -89,56 +141,51 @@
           {# ================================================================
              1) MISSINGNESS
              ================================================================ #}
-          <p class="section-heading">Missingness</p>
+          <div class="gs-section" data-section="missingness">
+            <p class="section-heading">Missingness</p>
 
-          <ul class="nav nav-tabs" id="missingTabs" role="tablist">
-            <li class="nav-item" role="presentation">
-              <button class="nav-link active" id="missingTab1btn"
-                      data-bs-toggle="tab" data-bs-target="#missingTab1Target"
-                      type="button" role="tab">Missing Matrix</button>
-            </li>
-            <li class="nav-item" role="presentation">
-              <button class="nav-link" id="missingTab2btn"
-                      data-bs-toggle="tab" data-bs-target="#missingTab2Target"
-                      type="button" role="tab">Missing Value Barchart</button>
-            </li>
-            {% if plots.missing_mechanisms %}
-            <li class="nav-item" role="presentation">
-              <button class="nav-link" id="missingTab3btn"
-                      data-bs-toggle="tab" data-bs-target="#missingTab3Target"
-                      type="button" role="tab">Missing Mechanisms</button>
-            </li>
-            {% endif %}
-            {% if plots.mcar_result %}
-            <li class="nav-item" role="presentation">
-              <button class="nav-link" id="missingTab4btn"
-                      data-bs-toggle="tab" data-bs-target="#missingTab4Target"
-                      type="button" role="tab">Little&rsquo;s MCAR Test</button>
-            </li>
-            {% endif %}
-          </ul>
+            <ul class="nav nav-tabs" id="missingTabs" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="missingTab1btn"
+                        data-bs-toggle="tab" data-bs-target="#missingTab1Target"
+                        type="button" role="tab">Missing Matrix</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="missingTab2btn"
+                        data-bs-toggle="tab" data-bs-target="#missingTab2Target"
+                        type="button" role="tab">Missing Value Barchart</button>
+              </li>
+              {% if plots.missing_mechanisms %}
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="missingTab3btn"
+                        data-bs-toggle="tab" data-bs-target="#missingTab3Target"
+                        type="button" role="tab">Missing Mechanisms</button>
+              </li>
+              {% endif %}
+              {% if plots.mcar_result %}
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="missingTab4btn"
+                        data-bs-toggle="tab" data-bs-target="#missingTab4Target"
+                        type="button" role="tab">Little&rsquo;s MCAR Test</button>
+              </li>
+              {% endif %}
+            </ul>
 
-          <div class="tab-content mb-5" id="missingTabContent">
-            <div class="tab-pane fade show active" id="missingTab1Target" role="tabpanel">
-              <div class="plot-container" style="max-height:fit-content;overflow:scroll;">
-                <figure role="img" aria-label="Missing value matrix">
-                  {{ plots.missing_matrix | safe }}
-                </figure>
+            <div class="tab-content mb-5" id="missingTabContent">
+              <div class="tab-pane fade show active" id="missingTab1Target" role="tabpanel">
+                <div class="plot-container" style="max-height:fit-content;overflow:scroll;">
+                  <figure role="img" aria-label="Missing value matrix">{{ plots.missing_matrix | safe }}</figure>
+                </div>
               </div>
-            </div>
-            <div class="tab-pane fade" id="missingTab2Target" role="tabpanel">
-              <div class="plot-container" style="max-height:fit-content;overflow:scroll;">
-                <figure role="img" aria-label="Missing values per column bar chart">
-                  {{ plots.missing_values_barchart | safe }}
-                </figure>
+              <div class="tab-pane fade" id="missingTab2Target" role="tabpanel">
+                <div class="plot-container" style="max-height:fit-content;overflow:scroll;">
+                  <figure role="img" aria-label="Missing values barchart">{{ plots.missing_values_barchart | safe }}</figure>
+                </div>
               </div>
-            </div>
-            {% if plots.missing_mechanisms %}
-            <div class="tab-pane fade" id="missingTab3Target" role="tabpanel">
-              <div class="mt-3">
-                <div class="table-responsive">
+              {% if plots.missing_mechanisms %}
+              <div class="tab-pane fade" id="missingTab3Target" role="tabpanel">
+                <div class="mt-3 table-responsive">
                   <table class="table table-sm table-striped w-100 dt-table" id="tblMissingMech">
-                    <caption class="visually-hidden">Missing data mechanisms per column</caption>
                     <thead>
                     <tr>
                       <th>Column</th>
@@ -176,216 +223,217 @@
                   <strong>Mann-Whitney&nbsp;U:</strong> Tests numeric distribution difference when target is missing vs. present.<br>
                   <strong>Chi-Squared:</strong> Tests whether missing patterns of two columns are associated.<br>
                   <hr class="my-2">
-                  Results are statistical estimates — interpret cautiously. MNAR cannot be detected from observed data alone.
+                  Results are statistical estimates — interpret cautiously.
+                  MNAR cannot be detected from observed data alone.
                 </div>
               </div>
-            </div>
-            {% endif %}
-            {% if plots.mcar_result %}
-            <div class="tab-pane fade" id="missingTab4Target" role="tabpanel">
-              <div class="mt-3">
-                {% if plots.mcar_result is mapping and plots.mcar_result.keys() | list == ['Hello'] %}
-                  <div class="alert alert-info">
-                    <strong>Little&rsquo;s MCAR Test</strong> is not yet fully implemented.
-                    Results will appear here once the statistical test is complete.
-                  </div>
-                {% else %}
-                  <div class="table-responsive" style="max-height:400px;overflow-y:auto;">
-                    <table class="table table-sm table-striped w-100">
-                      <caption class="visually-hidden">Little&rsquo;s MCAR test result</caption>
-                      <thead class="sticky-top bg-light">
-                      <tr><th>Metric</th><th>Value</th></tr>
-                      </thead>
-                      <tbody>
-                      {% for key, value in plots.mcar_result.items() %}
-                      <tr><td><strong>{{ key }}</strong></td><td>{{ value }}</td></tr>
-                      {% endfor %}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div class="alert alert-light mt-3 small text-muted">
-                    <strong>Little&rsquo;s MCAR Test:</strong> p&nbsp;&lt;&nbsp;0.05 suggests data is <em>not</em> MCAR.
-                    MNAR cannot be detected from observed data alone.
-                  </div>
-                {% endif %}
+              {% endif %}
+              {% if plots.mcar_result %}
+              <div class="tab-pane fade" id="missingTab4Target" role="tabpanel">
+                <div class="mt-3">
+                  {% if plots.mcar_result is mapping and plots.mcar_result.keys() | list == ['Hello'] %}
+                    <div class="alert alert-info">
+                      <strong>Little&rsquo;s MCAR Test</strong> is not yet fully implemented.
+                      Results will appear here once the statistical test is complete.
+                    </div>
+                  {% else %}
+                    <div class="table-responsive">
+                      <table class="table table-sm table-striped w-100">
+                        <thead class="sticky-top bg-light">
+                        <tr><th>Metric</th><th>Value</th></tr>
+                        </thead>
+                        <tbody>
+                        {% for key, value in plots.mcar_result.items() %}
+                        <tr><td><strong>{{ key }}</strong></td><td>{{ value }}</td></tr>
+                        {% endfor %}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div class="alert alert-light mt-3 small text-muted">
+                      <strong>Little&rsquo;s MCAR Test:</strong> p&nbsp;&lt;&nbsp;0.05 suggests data is <em>not</em> MCAR.
+                      MNAR cannot be detected from observed data alone.
+                    </div>
+                  {% endif %}
+                </div>
               </div>
+              {% endif %}
             </div>
-            {% endif %}
-          </div>
+          </div>{# /missingness #}
 
           <hr>
 
           {# ================================================================
              2) CORRELATIONS
              ================================================================ #}
-          <p class="section-heading">Correlations</p>
+          <div class="gs-section" data-section="correlations">
+            <p class="section-heading">Correlations</p>
 
-          {# ── Correlation heatmap tabs: Association first, then individual ── #}
-          <ul class="nav nav-tabs" id="corrPlotTabs" role="tablist">
-            <li class="nav-item" role="presentation">
-              <button class="nav-link active" id="corrAssocBtn"
-                      data-bs-toggle="tab" data-bs-target="#corrAssocTarget"
-                      type="button" role="tab" aria-selected="true">
-                Association Heatmap
-                <span class="badge bg-secondary ms-1" style="font-size:.7em;">all types</span>
-              </button>
-            </li>
-            <li class="nav-item" role="presentation">
-              <button class="nav-link" id="corrStrongBtn"
-                      data-bs-toggle="tab" data-bs-target="#corrStrongTarget"
-                      type="button" role="tab" aria-selected="false">
-                Strong Associations
-                <span class="badge bg-secondary ms-1" style="font-size:.7em;">&ge; 0.7</span>
-              </button>
-            </li>
-            <li class="nav-item" role="presentation">
-              <button class="nav-link" id="corrPearsonBtn"
-                      data-bs-toggle="tab" data-bs-target="#corrPearsonTarget"
-                      type="button" role="tab" aria-selected="false">
-                Pearson
-                <span class="badge bg-secondary ms-1" style="font-size:.7em;">numeric</span>
-              </button>
-            </li>
-            <li class="nav-item" role="presentation">
-              <button class="nav-link" id="corrCramersBtn"
-                      data-bs-toggle="tab" data-bs-target="#corrCramersTarget"
-                      type="button" role="tab" aria-selected="false">
-                Cramér&rsquo;s&nbsp;V
-                <span class="badge bg-secondary ms-1" style="font-size:.7em;">categorical</span>
-              </button>
-            </li>
-            <li class="nav-item" role="presentation">
-              <button class="nav-link" id="corrEtaBtn"
-                      data-bs-toggle="tab" data-bs-target="#corrEtaTarget"
-                      type="button" role="tab" aria-selected="false">
-                Eta&sup2;
-                <span class="badge bg-secondary ms-1" style="font-size:.7em;">mixed</span>
-              </button>
-            </li>
-          </ul>
+            <ul class="nav nav-tabs" id="corrPlotTabs" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="corrAssocBtn"
+                        data-bs-toggle="tab" data-bs-target="#corrAssocTarget"
+                        type="button" role="tab" aria-selected="true">
+                  Association Heatmap
+                  <span class="badge bg-secondary ms-1" style="font-size:.7em;">all types</span>
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="corrStrongBtn"
+                        data-bs-toggle="tab" data-bs-target="#corrStrongTarget"
+                        type="button" role="tab" aria-selected="false">
+                  Strong Associations
+                  <span class="badge bg-secondary ms-1" style="font-size:.7em;">&ge;&nbsp;0.7</span>
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="corrPearsonBtn"
+                        data-bs-toggle="tab" data-bs-target="#corrPearsonTarget"
+                        type="button" role="tab" aria-selected="false">
+                  Pearson
+                  <span class="badge bg-secondary ms-1" style="font-size:.7em;">numeric</span>
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="corrCramersBtn"
+                        data-bs-toggle="tab" data-bs-target="#corrCramersTarget"
+                        type="button" role="tab" aria-selected="false">
+                  Cramér&rsquo;s&nbsp;V
+                  <span class="badge bg-secondary ms-1" style="font-size:.7em;">categorical</span>
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="corrEtaBtn"
+                        data-bs-toggle="tab" data-bs-target="#corrEtaTarget"
+                        type="button" role="tab" aria-selected="false">
+                  Eta&sup2;
+                  <span class="badge bg-secondary ms-1" style="font-size:.7em;">mixed</span>
+                </button>
+              </li>
+            </ul>
 
-          <div class="tab-content mb-5" id="corrPlotContent">
+            <div class="tab-content mb-5" id="corrPlotContent">
 
-            {# Association Heatmap (combined) #}
-            <div class="tab-pane fade show active" id="corrAssocTarget" role="tabpanel">
-              <p class="text-muted mt-3 mb-2" style="font-size:.85em;">
-                Absolute association strengths in [0,&thinsp;1]. Methods differ by variable type (hover for detail):
-                Pearson for numeric pairs, Cramér&rsquo;s&nbsp;V for categorical pairs, Eta&sup2; for mixed.
-                A&nbsp;0.7&nbsp;Pearson and a&nbsp;0.7&nbsp;Cramér&rsquo;s&nbsp;V are not directly comparable.
-              </p>
-              {% if plots.correlation_heatmap %}
-                <div class="plot-container" style="max-height:fit-content;overflow:scroll;">
-                  <figure role="img" aria-label="Combined association heatmap">
-                    {{ plots.correlation_heatmap | safe }}
-                  </figure>
-                </div>
-              {% else %}
-                <div class="alert alert-secondary mt-3">Association heatmap not available.</div>
-              {% endif %}
-            </div>
-
-            {# Strong Associations table #}
-            <div class="tab-pane fade" id="corrStrongTarget" role="tabpanel">
-              <div class="mt-3">
-                <p class="text-muted small mb-3">
-                  Column pairs with association &ge;&nbsp;0.7. Method is chosen automatically by column type.
-                  Values from different methods are not directly comparable.
+              {# Association Heatmap #}
+              <div class="tab-pane fade show active" id="corrAssocTarget" role="tabpanel">
+                <p class="text-muted mt-3 mb-2" style="font-size:.85em;">
+                  Absolute association strengths in [0,&thinsp;1]. Methods differ by variable type (hover for detail):
+                  Pearson for numeric pairs, Cramér&rsquo;s&nbsp;V for categorical pairs, Eta&sup2; for mixed.
+                  A&nbsp;0.7&nbsp;Pearson and a&nbsp;0.7&nbsp;Cramér&rsquo;s&nbsp;V are not directly comparable.
                 </p>
-                {% if plots.top_associations %}
-                  <div class="table-responsive">
-                    <table class="table table-sm table-striped w-100 dt-table" id="tblStrongAssoc">
-                      <thead>
-                      <tr>
-                        <th>Variable 1</th>
-                        <th>Variable 2</th>
-                        <th>Strength</th>
-                        <th>Method</th>
-                      </tr>
-                      </thead>
-                      <tbody>
-                      {% for pair in plots.top_associations %}
-                        {% set pct = (pair.value * 100) | round(1) %}
-                        <tr>
-                          <td class="font-monospace">{{ pair.var1 }}</td>
-                          <td class="font-monospace">{{ pair.var2 }}</td>
-                          <td class="strength-cell" data-order="{{ pair.value }}">
-                            <strong>{{ "%.3f"|format(pair.value) }}</strong>
-                            <div class="strength-bar">
-                              <div class="strength-bar-fill {% if pair.value >= 0.9 %}bg-danger{% elif pair.value >= 0.8 %}bg-warning{% else %}bg-primary{% endif %}"
-                                   style="width:{{ pct }}%"></div>
-                            </div>
-                          </td>
-                          <td>
-                            <span class="badge {% if pair.method == 'Pearson' %}bg-secondary{% elif pair.method == "Cramér's V" %}bg-info text-dark{% else %}bg-secondary{% endif %}"
-                                  style="font-size:.75em;">{{ pair.method }}</span>
-                          </td>
-                        </tr>
-                      {% endfor %}
-                      </tbody>
-                    </table>
+                {% if plots.correlation_heatmap %}
+                  <div class="plot-container" style="max-height:fit-content;overflow:scroll;">
+                    <figure role="img" aria-label="Combined association heatmap">{{ plots.correlation_heatmap | safe }}</figure>
                   </div>
                 {% else %}
-                  <div class="alert alert-success">No column pairs exceed the association threshold of 0.7.</div>
+                  <div class="alert alert-secondary mt-3">Association heatmap not available.</div>
                 {% endif %}
               </div>
-            </div>
 
-            {# Pearson #}
-            <div class="tab-pane fade" id="corrPearsonTarget" role="tabpanel">
-              {% if plots.pearson_heatmap %}
-                <div class="plot-container mt-2" style="max-height:fit-content;overflow:scroll;">
-                  <figure role="img" aria-label="Pearson correlation heatmap">{{ plots.pearson_heatmap | safe }}</figure>
+              {# Strong Associations #}
+              <div class="tab-pane fade" id="corrStrongTarget" role="tabpanel">
+                <div class="mt-3">
+                  <p class="text-muted small mb-3">
+                    Column pairs with association &ge;&nbsp;0.7. Method is chosen automatically by column type.
+                    Values from different methods are not directly comparable.
+                  </p>
+                  {% if plots.top_associations %}
+                    <div class="table-responsive">
+                      <table class="table table-sm table-striped w-100 dt-table" id="tblStrongAssoc">
+                        <thead>
+                        <tr>
+                          <th>Variable 1</th>
+                          <th>Variable 2</th>
+                          <th>Strength</th>
+                          <th>Method</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for pair in plots.top_associations %}
+                          {% set pct = (pair.value * 100) | round(1) %}
+                          <tr>
+                            <td class="font-monospace">{{ pair.var1 }}</td>
+                            <td class="font-monospace">{{ pair.var2 }}</td>
+                            <td class="strength-cell" data-order="{{ pair.value }}">
+                              <strong>{{ "%.3f"|format(pair.value) }}</strong>
+                              <div class="strength-bar">
+                                <div class="strength-bar-fill
+                                  {% if pair.value >= 0.9 %}bg-danger
+                                  {% elif pair.value >= 0.8 %}bg-warning
+                                  {% else %}bg-primary{% endif %}"
+                                     style="width:{{ pct }}%"></div>
+                              </div>
+                            </td>
+                            <td>
+                              <span class="badge {% if pair.method == 'Pearson' %}bg-secondary{% elif pair.method == "Cramér's V" %}bg-info text-dark{% else %}bg-secondary{% endif %}"
+                                    style="font-size:.75em;">{{ pair.method }}</span>
+                            </td>
+                          </tr>
+                        {% endfor %}
+                        </tbody>
+                      </table>
+                    </div>
+                  {% else %}
+                    <div class="alert alert-success">No column pairs exceed the association threshold of 0.7.</div>
+                  {% endif %}
                 </div>
-              {% else %}
-                <div class="alert alert-secondary mt-3">No numeric column pairs — Pearson heatmap not available.</div>
-              {% endif %}
-            </div>
+              </div>
 
-            {# Cramér's V #}
-            <div class="tab-pane fade" id="corrCramersTarget" role="tabpanel">
-              {% if plots.cramers_heatmap %}
-                <div class="plot-container mt-2" style="max-height:fit-content;overflow:scroll;">
-                  <figure role="img" aria-label="Cramér's V heatmap">{{ plots.cramers_heatmap | safe }}</figure>
-                </div>
-              {% else %}
-                <div class="alert alert-secondary mt-3">At least two categorical columns required — Cramér&rsquo;s&nbsp;V not available.</div>
-              {% endif %}
-            </div>
+              {# Pearson #}
+              <div class="tab-pane fade" id="corrPearsonTarget" role="tabpanel">
+                {% if plots.pearson_heatmap %}
+                  <div class="plot-container mt-2" style="max-height:fit-content;overflow:scroll;">
+                    <figure role="img" aria-label="Pearson correlation heatmap">{{ plots.pearson_heatmap | safe }}</figure>
+                  </div>
+                {% else %}
+                  <div class="alert alert-secondary mt-3">No numeric column pairs — Pearson heatmap not available.</div>
+                {% endif %}
+              </div>
 
-            {# Eta² #}
-            <div class="tab-pane fade" id="corrEtaTarget" role="tabpanel">
-              {% if plots.eta_heatmap %}
-                <div class="plot-container mt-2" style="max-height:fit-content;overflow:scroll;">
-                  <figure role="img" aria-label="Eta squared heatmap">{{ plots.eta_heatmap | safe }}</figure>
-                </div>
-              {% else %}
-                <div class="alert alert-secondary mt-3">At least one categorical and one numeric column required — Eta&sup2; not available.</div>
-              {% endif %}
-            </div>
+              {# Cramér's V #}
+              <div class="tab-pane fade" id="corrCramersTarget" role="tabpanel">
+                {% if plots.cramers_heatmap %}
+                  <div class="plot-container mt-2" style="max-height:fit-content;overflow:scroll;">
+                    <figure role="img" aria-label="Cramér's V heatmap">{{ plots.cramers_heatmap | safe }}</figure>
+                  </div>
+                {% else %}
+                  <div class="alert alert-secondary mt-3">At least two categorical columns required — Cramér&rsquo;s&nbsp;V not available.</div>
+                {% endif %}
+              </div>
 
-          </div>{# /corrPlotContent #}
+              {# Eta² #}
+              <div class="tab-pane fade" id="corrEtaTarget" role="tabpanel">
+                {% if plots.eta_heatmap %}
+                  <div class="plot-container mt-2" style="max-height:fit-content;overflow:scroll;">
+                    <figure role="img" aria-label="Eta squared heatmap">{{ plots.eta_heatmap | safe }}</figure>
+                  </div>
+                {% else %}
+                  <div class="alert alert-secondary mt-3">At least one categorical and one numeric column required — Eta&sup2; not available.</div>
+                {% endif %}
+              </div>
+
+            </div>{# /corrPlotContent #}
+          </div>{# /correlations #}
 
           <hr>
 
           {# ================================================================
-             3) TARGET  (only rendered when a target column was specified)
+             3) TARGET
              ================================================================ #}
           {% if plots.feature_target_plot or plots.feature_target_correlation
                 or plots.mutual_information or plots.mutual_information_plot
                 or plots.mi_relationship_plots or plots.balance_plot %}
 
-          <p class="section-heading">Target</p>
+          <div class="gs-section" data-section="target">
+            <p class="section-heading">Target</p>
 
             {# ── Feature–Target Association ── #}
             {% if plots.feature_target_plot or plots.feature_target_correlation %}
-            <h6 class="text-muted fw-normal mb-3" style="font-size:.9rem;">Feature–Target Association</h6>
-            <div class="row mb-4">
+            <p class="sub-heading">Feature–Target Association</p>
+            <div class="row mb-5">
               {% if plots.feature_target_plot %}
               <div class="col-lg-7">
                 <div class="plot-container" style="max-height:fit-content;overflow:scroll;">
-                  <figure role="img" aria-label="Feature-target association bar chart">
-                    {{ plots.feature_target_plot | safe }}
-                  </figure>
+                  <figure role="img" aria-label="Feature-target association bar chart">{{ plots.feature_target_plot | safe }}</figure>
                 </div>
               </div>
               {% endif %}
@@ -407,7 +455,10 @@
                       <td class="strength-cell" data-order="{{ info.value }}">
                         <strong>{{ "%.3f"|format(info.value) }}</strong>
                         <div class="strength-bar">
-                          <div class="strength-bar-fill {% if info.value >= 0.7 %}bg-danger{% elif info.value >= 0.3 %}bg-warning{% else %}bg-secondary{% endif %}"
+                          <div class="strength-bar-fill
+                            {% if info.value >= 0.7 %}bg-danger
+                            {% elif info.value >= 0.3 %}bg-warning
+                            {% else %}bg-secondary{% endif %}"
                                style="width:{{ (info.value * 100) | round(1) }}%"></div>
                         </div>
                       </td>
@@ -427,11 +478,11 @@
 
             {# ── Mutual Information ── #}
             {% if plots.mutual_information or plots.mutual_information_plot or plots.mi_relationship_plots %}
-            <h6 class="text-muted fw-normal mb-2" style="font-size:.9rem;">
+            <p class="sub-heading">
               Mutual Information
-              <small class="ms-1" style="font-size:.85em;">feature → target, non-linear</small>
-            </h6>
-            <p class="text-muted mb-3" style="font-size:.85em;">
+              <small class="text-muted fw-normal ms-1" style="font-size:.85em;">feature → target, non-linear</small>
+            </p>
+            <p class="text-muted mb-3" style="font-size:.875rem;">
               Mutual information measures non-linear statistical dependency between each feature and the target.
               Unlike correlation, it captures any kind of relationship. Values are non-negative and unbounded —
               higher means more information shared.
@@ -461,21 +512,17 @@
                         data-bs-toggle="tab" data-bs-target="#miRelTarget"
                         type="button" role="tab" aria-selected="false">
                   Top Relationships
-                  <span class="badge bg-secondary ms-1" style="font-size:.7em;">
-                    Top {{ plots.mi_relationship_plots | length }}
-                  </span>
+                  <span class="badge bg-secondary ms-1" style="font-size:.7em;">Top {{ plots.mi_relationship_plots | length }}</span>
                 </button>
               </li>
               {% endif %}
             </ul>
 
-            <div class="tab-content mb-4" id="miTabContent">
+            <div class="tab-content mb-5" id="miTabContent">
               {% if plots.mutual_information_plot %}
               <div class="tab-pane fade show active" id="miPlotTarget" role="tabpanel">
                 <div class="plot-container mt-2" style="max-height:fit-content;overflow:scroll;">
-                  <figure role="img" aria-label="Mutual information ranking bar chart">
-                    {{ plots.mutual_information_plot | safe }}
-                  </figure>
+                  <figure role="img" aria-label="Mutual information ranking">{{ plots.mutual_information_plot | safe }}</figure>
                 </div>
               </div>
               {% endif %}
@@ -489,22 +536,13 @@
                     <tr>
                       <th>Feature</th>
                       <th>MI Score</th>
-                      <th>Relative Strength</th>
                     </tr>
                     </thead>
                     <tbody>
-                    {% set max_mi = plots.mutual_information.values() | map(attribute='value') | max %}
                     {% for feature, info in plots.mutual_information.items() | sort(attribute='1.value', reverse=true) %}
-                    {% set pct = ((info.value / max_mi) * 100) | round(1) if max_mi > 0 else 0 %}
                     <tr>
                       <td class="font-monospace">{{ feature }}</td>
-                      <td class="strength-cell" data-order="{{ info.value }}">
-                        <strong>{{ "%.4f"|format(info.value) }}</strong>
-                        <div class="strength-bar">
-                          <div class="strength-bar-fill bg-primary" style="width:{{ pct }}%"></div>
-                        </div>
-                      </td>
-                      <td>{{ pct }}%</td>
+                      <td data-order="{{ info.value }}">{{ "%.4f"|format(info.value) }}</td>
                     </tr>
                     {% endfor %}
                     </tbody>
@@ -515,7 +553,7 @@
 
               {% if plots.mi_relationship_plots %}
               <div class="tab-pane fade" id="miRelTarget" role="tabpanel">
-                <p class="text-muted mt-3 mb-2" style="font-size:.85em;">
+                <p class="text-muted mt-3 mb-2" style="font-size:.875rem;">
                   Pairwise plots for top {{ plots.mi_relationship_plots | length }} features by MI score.
                   Plot type adapts to column types automatically.
                 </p>
@@ -527,9 +565,7 @@
                       <span class="badge bg-secondary" style="font-size:.75em;">MI = {{ "%.4f"|format(item.value) }}</span>
                     </div>
                     <div class="plot-container" style="max-height:fit-content;overflow:scroll;">
-                      <figure role="img" aria-label="Relationship plot: {{ item.feature }} vs target">
-                        {{ item.plot | safe }}
-                      </figure>
+                      <figure role="img" aria-label="Relationship: {{ item.feature }} vs target">{{ item.plot | safe }}</figure>
                     </div>
                   </div>
                   {% endfor %}
@@ -537,40 +573,38 @@
               </div>
               {% endif %}
             </div>{# /miTabContent #}
-            {% endif %}{# /MI block #}
+            {% endif %}{# /MI #}
 
             {# ── Class Balance ── #}
             {% if plots.balance_plot %}
-            <h6 class="text-muted fw-normal mb-3" style="font-size:.9rem;">Class Balance</h6>
-            <div class="plot-container mb-4" style="max-height:fit-content;overflow:scroll;">
-              <figure role="img" aria-label="Class balance distribution of target column">
-                {{ plots.balance_plot | safe }}
-              </figure>
+            <p class="sub-heading">Class Balance</p>
+            <div class="plot-container mb-5" style="max-height:fit-content;overflow:scroll;">
+              <figure role="img" aria-label="Class balance of target column">{{ plots.balance_plot | safe }}</figure>
             </div>
             {% endif %}
 
+          </div>{# /target #}
+
           <hr>
 
-          {% endif %}{# /Target section #}
+          {% endif %}
 
           {# ================================================================
              4) GENERAL STATISTICS
              ================================================================ #}
-          <p class="section-heading">General Statistics</p>
+          <div class="gs-section" data-section="general">
+            <p class="section-heading">General Statistics</p>
 
-          <h6 class="text-muted fw-normal mb-2" style="font-size:.9rem;">Boxplot</h6>
-          <div class="plot-container mb-5" style="max-height:fit-content;overflow:scroll;">
-            <figure role="img" aria-label="Boxplot for all numeric columns">
-              {{ plots.boxplot | safe }}
-            </figure>
-          </div>
+            <p class="sub-heading">Boxplot</p>
+            <div class="plot-container mb-5" style="max-height:fit-content;overflow:scroll;">
+              <figure role="img" aria-label="Boxplot for all numeric columns">{{ plots.boxplot | safe }}</figure>
+            </div>
 
-          <h6 class="text-muted fw-normal mb-2" style="font-size:.9rem;">Scatter Matrix</h6>
-          <div class="plot-container mb-5" style="max-height:fit-content;overflow:scroll;">
-            <figure role="img" aria-label="Scatter matrix for all numeric columns">
-              {{ plots.scatter_matrix | safe }}
-            </figure>
-          </div>
+            <p class="sub-heading">Scatter Matrix</p>
+            <div class="plot-container mb-5" style="max-height:fit-content;overflow:scroll;">
+              <figure role="img" aria-label="Scatter matrix for all numeric columns">{{ plots.scatter_matrix | safe }}</figure>
+            </div>
+          </div>{# /general #}
 
         </div>{# /col-12 #}
       </div>{# /row #}
@@ -587,11 +621,12 @@
   </footer>
 </div>
 
+<!-- JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="../static/js/scripts.js"></script>
 
 <script>
-  /* Colorblind toggle */
+  /* ── Colorblind toggle ── */
   (function () {
     const btn  = document.getElementById('cbToggle');
     const body = document.body;
@@ -601,7 +636,7 @@
       btn.textContent = t === 'colorblind' ? 'Standard Mode' : 'Colorblind Mode';
     }
     const stored = localStorage.getItem('cb-theme');
-    if (stored === 'colorblind') { applyTheme('colorblind'); }
+    if (stored === 'colorblind') applyTheme('colorblind');
     btn.addEventListener('click', function () {
       const next = body.dataset.cbTheme === 'colorblind' ? 'internal' : 'colorblind';
       applyTheme(next); localStorage.setItem('cb-theme', next);
@@ -616,29 +651,56 @@
 <script src="https://cdn.datatables.net/responsive/3.0.4/js/responsive.bootstrap5.min.js"></script>
 
 <script>
-  /* DataTables – initialise every table with class dt-table */
-  $(document).ready(function () {
-    $('.dt-table').DataTable({
-      responsive: true,
-      pageLength: 25,
-      language: {
-        search: 'Search:',
-        lengthMenu: 'Show _MENU_ entries',
-        info: 'Showing _START_ to _END_ of _TOTAL_ entries',
-      },
-      columnDefs: [
-        /* strength-cell columns: sort by data-order, display as-is */
-        { targets: '.strength-cell', orderDataType: 'dom-data-order' }
-      ]
+$(document).ready(function () {
+
+  /* ── DataTables ── */
+  $('.dt-table').DataTable({
+    responsive: true,
+    pageLength: 25,
+    language: {
+      search:     'Search:',
+      lengthMenu: 'Show _MENU_ entries',
+      info:       'Showing _START_ to _END_ of _TOTAL_ entries',
+    },
+  });
+
+  /* ── Section filter ── */
+  const sections  = document.querySelectorAll('.gs-section');
+  const hrs       = document.querySelectorAll('.col-12 > hr, .row > hr');
+
+  document.querySelectorAll('.filter-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      /* toggle active styling */
+      document.querySelectorAll('.filter-btn').forEach(function (b) {
+        b.classList.remove('active', 'btn-primary');
+        b.classList.add('btn-outline-secondary');
+      });
+      btn.classList.add('active', 'btn-primary');
+      btn.classList.remove('btn-outline-secondary');
+
+      const filter = btn.dataset.filter;
+
+      sections.forEach(function (sec) {
+        if (filter === 'all' || sec.dataset.section === filter) {
+          sec.classList.remove('d-none-filter');
+        } else {
+          sec.classList.add('d-none-filter');
+        }
+      });
+
+      /* hide <hr> separators that follow a hidden section */
+      document.querySelectorAll('hr').forEach(function (hr) {
+        const prev = hr.previousElementSibling;
+        if (prev && prev.classList.contains('gs-section') && prev.classList.contains('d-none-filter')) {
+          hr.style.display = 'none';
+        } else {
+          hr.style.display = '';
+        }
+      });
     });
   });
 
-  /* Custom sort type reading data-order attribute */
-  $.fn.dataTable.ext.order['dom-data-order'] = function (settings, col) {
-    return this.api().column(col, { order: 'index' }).nodes().map(function (td) {
-      return parseFloat($(td).data('order')) || 0;
-    });
-  };
+});
 </script>
 </body>
 </html>
