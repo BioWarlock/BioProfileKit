@@ -36,7 +36,7 @@ def cli(input: str, tax: bool = False, func: str = None,
     print(colored(f'Reading file {input_path.name}', 'green'))
     df = read_file(input_path) if input_path.suffix != '.parquet' else parse_parquet(input_path)
     general = overview(df, input_path.name)
-    plots = multivariate_analysis(df, target_column)
+    plots = multivariate_analysis(df, target_column) # ToDo Rename Plots to Multivariate
 
     dups = df[df.duplicated(keep=False)].reset_index()
     duplicates_table = dups.to_html(

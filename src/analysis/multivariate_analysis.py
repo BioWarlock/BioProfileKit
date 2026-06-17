@@ -1,22 +1,157 @@
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from scipy.stats import chi2_contingency
 
 from models.multivariate import MultivariateAnalysis
 from .plot_utils import apply_standard_axes
 
 
 def multivariate_analysis(df: pd.DataFrame, target: str) -> MultivariateAnalysis:
+    values, methods = compute_correlation_matrix(df)
+
     return MultivariateAnalysis(
-        correlation_heatmap=correlation_heatmap(df),
+        correlation_heatmap=correlation_heatmap(values, methods),
+        pearson_heatmap=pearson_correlation_heatmap(df),
+        cramers_heatmap=cramers_heatmap(df),
+        eta_heatmap=eta_heatmap(df),
         missing_matrix=missing_matrix(df),
         missing_values_barchart=missing_values_barchart(df),
         balance_plot=balance_plot(df, target) if target else None,
         boxplot=boxplot(df),
         scatter_matrix=scatter_matrix(df),
+        correlation_matrix=values,
+        correlation_methods=methods,
+        feature_target_correlation=feature_target_correlation(df, target) if target else None,
+        mutual_information=None,
+        mcar_result=littles_mcar_test(df),
     )
 
+def _classify_columns(df: pd.DataFrame) -> dict:
+    """Return {column: 'numeric' | 'categorical'} for usable columns.
 
+    Drops constant numeric columns and single-value categoricals, since they
+    carry no association signal.
+    """
+    num = df.select_dtypes(include='number')
+    num_std = num.std(ddof=0)
+    numeric = num_std[num_std > 0].index
+
+    cat = df.select_dtypes(exclude='number')
+    cat_nunique = cat.nunique(dropna=True)
+    categorical = cat_nunique[cat_nunique > 1].index
+
+    return {**{c: 'numeric' for c in numeric}, **{c: 'categorical' for c in categorical}}
+"""
+Correlation
+"""
+# Num x Num
+def _pearson(df: pd.DataFrame, a: str, b: str) -> float:
+    pair = df[[a, b]].dropna()
+    if len(pair) < 2:
+        return np.nan
+    return pair[a].corr(pair[b], method='pearson')
+
+# Cat x Cat
+def _cramers_v(df: pd.DataFrame, a: str, b: str) -> float:
+    """Bias-corrected Cramér's V (Bergsma 2013)."""
+    pair = df[[a, b]].dropna()
+    if pair.empty:
+        return np.nan
+
+    confusion = pd.crosstab(pair[a], pair[b])
+    if confusion.shape[0] < 2 or confusion.shape[1] < 2:
+        return np.nan
+
+    chi2 = chi2_contingency(confusion)[0]
+    n = confusion.to_numpy().sum()
+    phi2 = chi2 / n
+    r, k = confusion.shape
+
+    # Bergsma-Bias Correction
+    phi2corr = max(0.0, phi2 - ((k - 1) * (r - 1)) / (n - 1))
+    rcorr = r - ((r - 1) ** 2) / (n - 1)
+    kcorr = k - ((k - 1) ** 2) / (n - 1)
+
+    denom = min((kcorr - 1), (rcorr - 1))
+    if denom <= 0:
+        return np.nan
+    return np.sqrt(phi2corr / denom)
+
+# Num x Cat
+def _eta_squared(df: pd.DataFrame, cat: str, num: str) -> float:
+    """Correlation ratio eta^2 (ANOVA): variance in num explained by groups of cat."""
+    pair = df[[cat, num]].dropna()
+    if len(pair) < 2:
+        return np.nan
+
+    groups = pair.groupby(cat)[num]
+    grand_mean = pair[num].mean()
+
+    ss_between = sum(len(g) * (g.mean() - grand_mean) ** 2 for _, g in groups)
+    ss_total = ((pair[num] - grand_mean) ** 2).sum()
+
+    if ss_total == 0:
+        return np.nan
+    return ss_between / ss_total
+
+
+def _correlation_pair(df, a, b, types) -> tuple[float, str]:
+    ta, tb = types[a], types[b]
+
+    if ta == 'numeric' and tb == 'numeric':
+        return abs(_pearson(df, a, b)), 'Pearson'
+    if ta == 'categorical' and tb == 'categorical':
+        return _cramers_v(df, a, b), "Cramér's V"
+    cat, num = (a, b) if ta == 'categorical' else (b, a)
+    return _eta_squared(df, cat, num), 'Eta²'
+
+
+def compute_correlation_matrix(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    types = _classify_columns(df)
+    cols = list(types.keys())
+    n = len(cols)
+
+    values = pd.DataFrame(np.eye(n), index=cols, columns=cols)
+    methods = pd.DataFrame('', index=cols, columns=cols, dtype=object)
+    for c in cols:
+        methods.at[c, c] = 'self'
+
+    for i in range(n):
+        for j in range(i + 1, n):
+            a, b = cols[i], cols[j]
+            value, method = _correlation_pair(df, a, b, types)
+            value = round(float(value), 3) if value == value else np.nan
+
+            values.iat[i, j] = value
+            values.iat[j, i] = value
+            methods.iat[i, j] = method
+            methods.iat[j, i] = method
+
+    return values, methods
+
+
+def feature_target_correlation(df: pd.DataFrame, target: str) -> dict | None:
+    if target not in df.columns:
+        return None
+
+    types = _classify_columns(df)
+    if target not in types:
+        return None
+
+    result = {}
+    for col in types:
+        if col == target:
+            continue
+        value, method = _correlation_pair(df, col, target, types)
+        if value == value:
+            result[col] = {'value': round(float(value), 3), 'method': method}
+
+    return result or None
+
+
+#ToDo change for Column Overview
 def get_correlation(df: pd.DataFrame, col) -> list | None:
     ncols = df.select_dtypes(include='number').dropna(axis=1, how='all').columns
     if col in ncols:
@@ -32,8 +167,7 @@ def get_correlation(df: pd.DataFrame, col) -> list | None:
         return list(zip(corr.index, corr))
     return None
 
-
-def correlation_heatmap(df: pd.DataFrame):
+def pearson_correlation_heatmap(df: pd.DataFrame):
     df_numeric = df.select_dtypes(include=['float64', 'int64']).dropna(axis=1, how='all')
     if not df_numeric.empty:
         std = df_numeric.std(ddof=0)
@@ -45,6 +179,139 @@ def correlation_heatmap(df: pd.DataFrame):
     fig.update_layout(title="Correlation Heatmap")
     return fig.to_html(full_html=False, include_plotlyjs=False)
 
+def correlation_heatmap(df: pd.DataFrame, methods: pd.DataFrame):
+    fig = px.imshow(
+        df, text_auto=True,
+        labels=dict(color="Association"),
+        color_continuous_scale="Blues", aspect="auto", height=700,
+        zmin=0, zmax=1,
+    )
+    fig.update_traces(
+        customdata=methods.values,
+        hovertemplate="%{x} ↔ %{y}<br>Association: %{z}<br>Method: %{customdata}<extra></extra>",
+    )
+    fig.update_layout(
+        title="Association Heatmap (mixed-type)",
+        annotations=[dict(
+            text="Absolute association strengths in [0,1]. Methods differ by variable type "
+                 "(hover for detail): Pearson for numeric pairs, Cramér's V for categorical "
+                 "pairs, Eta² for mixed. A 0.7 Pearson and a 0.7 Cramér's V are not directly comparable.",
+            showarrow=False, xref="paper", yref="paper",
+            x=0, y=-0.15, align="left", font=dict(size=11, color="#616D78"),
+        )],
+        margin=dict(b=120),
+    )
+    return fig.to_html(full_html=False, include_plotlyjs=False)
+
+
+def cramers_heatmap(df: pd.DataFrame) -> str | None:
+    """Cramér's V matrix over categorical columns only (0..1)."""
+    cols = [c for c, t in _classify_columns(df).items() if t == 'categorical']
+    if len(cols) < 2:
+        return None
+
+    mat = pd.DataFrame(np.eye(len(cols)), index=cols, columns=cols)
+    for i in range(len(cols)):
+        for j in range(i + 1, len(cols)):
+            val = _cramers_v(df, cols[i], cols[j])
+            val = round(float(val), 3) if val == val else np.nan
+            mat.iat[i, j] = val
+            mat.iat[j, i] = val
+
+    # light -> primary blue (#0F65A0)
+    colorscale = [
+        [0.0, "#EAF4FB"], [0.25, "#A9E1FF"], [0.5, "#65A1E1"],
+        [0.75, "#4082C0"], [1.0, "#0F65A0"],
+    ]
+    z = mat.to_numpy(dtype=float)
+    text_colors = np.where(z > 0.6, "white", "#1A1A1A")
+
+    fig = go.Figure(data=go.Heatmap(
+        z=z, x=cols, y=cols,
+        colorscale=colorscale, zmin=0, zmax=1,
+        colorbar=dict(title="Cramér's V"),
+        hovertemplate="%{x} ↔ %{y}<br>Cramér's V: %{z}<extra></extra>",
+        hoverongaps=False,
+    ))
+    annotations = []
+    for yi in range(len(cols)):
+        for xi in range(len(cols)):
+            v = mat.iat[yi, xi]
+            if v != v:
+                continue
+            annotations.append(dict(
+                x=cols[xi], y=cols[yi], text=f"{v:.3g}",
+                showarrow=False, font=dict(color=text_colors[yi, xi], size=12),
+            ))
+    fig.update_layout(
+        title="Cramér's V (categorical pairs)",
+        height=max(450, 55 * len(cols) + 200),
+        template="plotly_white",
+        xaxis=dict(tickangle=-45),
+        annotations=annotations,
+        plot_bgcolor="#A1ACBD",  # NaN cells appear neutral grey
+    )
+    fig.update_yaxes(autorange="reversed")
+    return fig.to_html(full_html=False, include_plotlyjs=False)
+
+
+def eta_heatmap(df: pd.DataFrame) -> str | None:
+    types = _classify_columns(df)
+    cats = [c for c, t in types.items() if t == 'categorical']
+    nums = [c for c, t in types.items() if t == 'numeric']
+    if not cats or not nums:
+        return None
+
+    mat = pd.DataFrame(np.zeros((len(cats), len(nums))), index=cats, columns=nums)
+    for c in cats:
+        for nu in nums:
+            val = _eta_squared(df, c, nu)
+            mat.at[c, nu] = round(float(val), 3) if val == val else np.nan
+
+    # light -> magenta (#994564)
+    colorscale = [
+        [0.0, "#F2F2F2"], [0.25, "#D27897"], [0.5, "#A83665"],
+        [0.75, "#932263"], [1.0, "#994564"],
+    ]
+    z = mat.to_numpy(dtype=float)
+    text_colors = np.where(z > 0.5, "white", "#1A1A1A")
+
+    fig = go.Figure(data=go.Heatmap(
+        z=z, x=nums, y=cats,
+        colorscale=colorscale, zmin=0, zmax=1,
+        colorbar=dict(title="Eta²"),
+        hovertemplate="%{y} → %{x}<br>Eta²: %{z}<extra></extra>",
+        hoverongaps=False,
+    ))
+    annotations = []
+    for yi in range(len(cats)):
+        for xi in range(len(nums)):
+            v = mat.iat[yi, xi]
+            if v != v:
+                continue
+            annotations.append(dict(
+                x=nums[xi], y=cats[yi], text=f"{v:.3g}",
+                showarrow=False, font=dict(color=text_colors[yi, xi], size=12),
+            ))
+    fig.update_layout(
+        title="Eta² — variance in numeric explained by categorical (directional)",
+        height=max(450, 55 * len(cats) + 200),
+        template="plotly_white",
+        xaxis_title="Numeric", yaxis_title="Categorical",
+        xaxis=dict(tickangle=-45),
+        annotations=annotations,
+        plot_bgcolor="#A1ACBD",
+    )
+    fig.update_yaxes(autorange="reversed")
+    return fig.to_html(full_html=False, include_plotlyjs=False)
+
+"""
+
+Missingness
+
+"""
+def littles_mcar_test(df: pd.DataFrame):
+    return {"Hello":"World"}
 
 def missing_matrix(df: pd.DataFrame):
     missing_values = df.isnull().astype(int)

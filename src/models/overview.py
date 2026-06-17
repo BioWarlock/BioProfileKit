@@ -33,3 +33,4 @@ class ColumnOverview:
     constant: bool | None
     correlation: list[str] | None
     cardinality_dimension_ratio: float | None
+    monotonicity: bool | None
