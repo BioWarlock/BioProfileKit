@@ -6,26 +6,49 @@
     <meta name="description" content="Analysis Overview - BioProfileKit" />
     <meta name="author" content="JLU" />
     <title>Analysis Overview – BioProfileKit</title>
-    <!-- Favicon-->
     <link rel="icon" type="image/x-icon" href="static/assets/favicon.ico" />
-    <!-- Core theme CSS (includes Bootstrap)-->
     <link href="static/css/bootstrap.css" rel="stylesheet" />
     <link href="static/css/cb.css" rel="stylesheet" />
-
     <link rel="stylesheet" href="https://cdn.datatables.net/2.0.7/css/dataTables.bootstrap5.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/3.0.0/css/responsive.bootstrap5.min.css">
+    <style>
+        .section-heading {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: var(--cb-text, #1A1A1A);
+            border-left: 4px solid var(--cb-primary, #0F65A0);
+            padding-left: .65rem;
+            margin-bottom: 1.1rem;
+        }
+        .dataTables_wrapper,
+        .dataTables_wrapper table,
+        .dataTables_wrapper input,
+        .dataTables_wrapper select,
+        .dataTables_wrapper .dataTables_info,
+        .dataTables_wrapper .dataTables_paginate,
+        .dataTables_wrapper .dataTables_filter label,
+        .dataTables_wrapper .dataTables_length label {
+            font-family: inherit;
+            font-size: .875rem;
+        }
+    </style>
 </head>
 <body data-cb-theme="internal">
-<!-- Responsive navbar-->
+
 <nav class="navbar navbar-expand-lg navbar-cb-dark bg-dark">
     <div class="container px-5">
         <a class="navbar-brand" href="index.html">BioProfileKit</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
+                aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
             <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
                 <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
                 <li class="nav-item dropdown">
-                    <a class="nav-link active dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <a class="nav-link active dropdown-toggle" href="#" id="navbarDropdown"
+                       role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         Services
                     </a>
                     <div class="dropdown-menu" aria-labelledby="navbarDropdown">
@@ -34,7 +57,6 @@
                         <a class="dropdown-item" href="general_statistics.html">Multivariate Statistics</a>
                     </div>
                 </li>
-                <!-- Colorblind mode toggle: switches between default and colorblind-friendly palette -->
                 <li class="nav-item ms-2 d-flex align-items-center">
                     <button id="cbToggle" type="button" class="btn btn-cb-navbar btn-sm"
                             aria-pressed="false" title="Toggle colorblind-friendly colour palette">
@@ -45,142 +67,156 @@
         </div>
     </div>
 </nav>
-<!-- Page Content-->
+
 <div id="page-container">
-    <div id="content-wrap">
-        <div class="container px-4 px-lg-5">
-            <!-- Heading Row-->
-            <div class="row gx-4 gx-lg-5 align-items-center my-5">
-                <div class="col-12">
-                    <h1 class="font-weight-light">Overview of Analysis</h1>
-                    <p style="text-align: justify">
-                        Get a compact, numerical summary of all analyses carried out. Visualisations and key figures provide a quick overview of key results and developments - ideal for evaluation at a glance.
-                    </p>
-                </div>
-            </div>
-            <!-- Content Row-->
-            <div class="row gx-4 gx-lg-5">
-                <div class="col-12">
-                    <table class="table table-hover">
-                        <caption>General dataset statistics</caption>
-                        <thead>
-                        </thead>
-                        <tbody>
-                        <TR>
-                            <TD>Filename</TD>
-                            <TD>{{ general.filename }}</TD>
-                        </TR>
-                        <TR>
-                            <TD>Row number</TD>
-                            <TD>{{ general.rows }}</TD>
-                        </TR>
-                        <TR>
-                            <td>Column number</td>
-                            <TD>{{ general.cols }}</TD>
-                        </TR>
-                        <TR>
-                            <td>Missing values</td>
-                            <td>{{ general.nulls }}</td>
-                        </TR>
-                        <TR>
-                            <td>Missing values (%)</td>
-                            <td>{{ general.nulls_percentage }}</td>
-                        </TR>
-                        <TR>
-                            <td>Empty Rows</td>
-                            <td>{{ general.empty_rows }}</td>
-                        </TR>
-                        <TR>
-                            <td>Duplicate rows</td>
-                            <td>{{ general.dup_row }}</td>
-                        </TR>
-                        <TR>
-                            <td>Duplicate columns</td>
-                            <td>{{ general.dup_col }}</td>
-                        </TR>
-                        <TR>
-                            <td>Sample-Feature Ratio</td>
-                            <td>{{ general.ratio }}</td>
-                        </TR>
-                        <TR>
-                            <td>Memory usage</td>
-                            <td>{{ general.memory }}</td>
-                        </TR>
-                        <TR>
-                            <td>Alerts</td>
-                            <td>{{ general.alters }}</td>
-                        </TR>
-                        </tbody>
-                    </table>
-                    <h3>Duplicates</h3>
-                    <div class="table-responsive mb-4">
-                        {{ dups | safe }}
-                    </div>
-                </div>
-            </div>
+  <div id="content-wrap">
+    <div class="container px-4 px-lg-5">
+
+      <!-- Heading -->
+      <div class="row gx-4 gx-lg-5 align-items-center my-5">
+        <div class="col-12">
+          <h1 class="font-weight-light">Overview of Analysis</h1>
+          <p style="text-align:justify;">
+            Get a compact, numerical summary of all analyses carried out. Visualisations and key figures
+            provide a quick overview of key results and developments — ideal for evaluation at a glance.
+          </p>
         </div>
+      </div>
+
+      <div class="row gx-4 gx-lg-5">
+        <div class="col-12">
+
+          {# ================================================================
+             1) GENERAL DATASET STATISTICS
+             ================================================================ #}
+          <p class="section-heading">General Dataset Statistics</p>
+
+          <table class="table table-sm table-hover mb-5" style="max-width: 520px;">
+            <caption class="visually-hidden">General dataset statistics</caption>
+            <tbody>
+              <tr><td>Filename</td>              <td><strong>{{ general.filename }}</strong></td></tr>
+              <tr><td>Rows</td>                  <td>{{ general.rows }}</td></tr>
+              <tr><td>Columns</td>               <td>{{ general.cols }}</td></tr>
+              <tr><td>Missing values</td>         <td>{{ general.nulls }}</td></tr>
+              <tr><td>Missing values (%)</td>     <td>{{ general.nulls_percentage }}</td></tr>
+              <tr><td>Empty rows</td>             <td>{{ general.empty_rows }}</td></tr>
+              <tr><td>Duplicate rows</td>
+                  <td>
+                    {% if general.dup_row > 0 %}
+                      <span class="badge bg-warning text-dark">{{ general.dup_row }}</span>
+                    {% else %}
+                      {{ general.dup_row }}
+                    {% endif %}
+                  </td>
+              </tr>
+              <tr><td>Duplicate columns</td>
+                  <td>
+                    {% if general.dup_col > 0 %}
+                      <span class="badge bg-warning text-dark">{{ general.dup_col }}</span>
+                    {% else %}
+                      {{ general.dup_col }}
+                    {% endif %}
+                  </td>
+              </tr>
+              <tr><td>Sample-Feature Ratio</td>  <td>{{ general.ratio }}</td></tr>
+              <tr><td>Memory usage</td>           <td>{{ general.memory }}</td></tr>
+              <tr><td>Alerts</td>                 <td>{{ general.alerts }}</td></tr>
+            </tbody>
+          </table>
+
+          <hr>
+
+          {# ================================================================
+             2) DUPLICATES
+             ================================================================ #}
+          <p class="section-heading">
+            Duplicates
+            {% if general.dup_row > 0 %}
+              <small class="text-muted fw-normal ms-2" style="font-size:.75em;">
+                {{ general.dup_row }} duplicate row{{ 's' if general.dup_row != 1 else '' }} found
+              </small>
+            {% endif %}
+          </p>
+
+          {% if general.dup_row > 0 %}
+            <div class="table-responsive mb-5">
+              {{ dups | safe }}
+            </div>
+          {% else %}
+            <div class="alert alert-success mb-5">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                   class="me-2" viewBox="0 0 16 16">
+                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477
+                         9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0
+                         1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/>
+              </svg>
+              No duplicate rows detected in this dataset.
+            </div>
+          {% endif %}
+
+        </div>
+      </div>
     </div>
-    <!-- Footer-->
-    <footer class="py-5 bg-dark d-flex flex-column justify-content-center align-items-center" id="footer">
-        <div class="mb-2">
-            <a href="https://github.com/BioWarlock/BioProfileKit">
-                <img src="static/assets/github.svg" alt="BioProfileKit on GitHub" style="filter: brightness(0) invert(1);">
-            </a>
-        </div>
-        <div>
-            <p class="m-0 text-center text-white">Copyright &copy; JLU 2025</p>
-        </div>
-    </footer>
+  </div>
+
+  <footer class="py-5 bg-dark d-flex flex-column justify-content-center align-items-center" id="footer">
+    <div class="mb-2">
+      <a href="https://github.com/BioWarlock/BioProfileKit">
+        <img src="static/assets/github.svg" alt="BioProfileKit on GitHub"
+             style="filter:brightness(0) invert(1);">
+      </a>
+    </div>
+    <p class="m-0 text-center text-white">Copyright &copy; JLU 2025</p>
+  </footer>
 </div>
-<!-- Bootstrap core JS-->
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
-<!-- Core theme JS-->
 <script src="../static/js/scripts.js"></script>
-<!-- Colorblind mode toggle: persists the user's palette choice across pages via localStorage -->
 <script>
-    (function () {
-        const btn = document.getElementById('cbToggle');
-        const body = document.body;
-
-        function applyTheme(theme) {
-            body.dataset.cbTheme = theme;
-            btn.setAttribute('aria-pressed', theme === 'colorblind' ? 'true' : 'false');
-            btn.textContent = theme === 'colorblind' ? 'Standard Mode' : 'Colorblind Mode';
-        }
-
-        const stored = localStorage.getItem('cb-theme');
-        if (stored === 'colorblind') { applyTheme('colorblind'); }
-
-        btn.addEventListener('click', function () {
-            const next = body.dataset.cbTheme === 'colorblind' ? 'internal' : 'colorblind';
-            applyTheme(next);
-            localStorage.setItem('cb-theme', next);
-        });
-    })();
+  (function () {
+    const btn  = document.getElementById('cbToggle');
+    const body = document.body;
+    function applyTheme(t) {
+      body.dataset.cbTheme = t;
+      btn.setAttribute('aria-pressed', t === 'colorblind' ? 'true' : 'false');
+      btn.textContent = t === 'colorblind' ? 'Standard Mode' : 'Colorblind Mode';
+    }
+    const stored = localStorage.getItem('cb-theme');
+    if (stored === 'colorblind') applyTheme('colorblind');
+    btn.addEventListener('click', function () {
+      const next = body.dataset.cbTheme === 'colorblind' ? 'internal' : 'colorblind';
+      applyTheme(next); localStorage.setItem('cb-theme', next);
+    });
+  })();
 </script>
+
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<!-- DataTables -->
 <script src="https://cdn.datatables.net/2.3.1/js/dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/2.3.1/js/dataTables.bootstrap5.min.js"></script>
 <script src="https://cdn.datatables.net/responsive/3.0.4/js/dataTables.responsive.min.js"></script>
 <script src="https://cdn.datatables.net/responsive/3.0.4/js/responsive.bootstrap5.min.js"></script>
 
 <script>
-    $(document).ready(function() {
-        $('#dup_table').DataTable({
-            "paging": true,
-            "searching": true,
-            "ordering": true,
-            "info": false,
-            "lengthChange": false,
-            "responsive": false,
-            "scrollX": 1200,
-            "scroller":true,
-            "scrollCollapse": true,
-            "pageLength":15,
-            stateSave: true
-        });
+  $(document).ready(function () {
+    {% if general.dup_row > 0 %}
+    $('#dup_table').DataTable({
+      paging:       true,
+      searching:    true,
+      ordering:     true,
+      info:         false,
+      lengthChange: false,
+      responsive:   false,
+      scrollX:      1200,
+      scroller:     true,
+      scrollCollapse: true,
+      pageLength:   15,
+      stateSave:    true,
+      language: {
+        search: 'Search:'
+      }
     });
+    {% endif %}
+  });
 </script>
 </body>
 </html>
