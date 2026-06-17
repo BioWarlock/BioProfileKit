@@ -50,5 +50,5 @@ def column_overview(df: pd.DataFrame, col) -> ColumnOverview:
         constant=(df[col].nunique() == 1),
         correlation=get_correlation(df, col),
         cardinality_dimension_ratio=round(df[col].nunique() / len(df), 3),
-        monotonicity= True if df[col].is_monotonic_increasing or df[col].is_monotonic_decreasing else False,
+        monotonicity= True if df[col].is_monotonic_increasing or df[col].is_monotonic_decreasing else False, #ToDo Monotonicity
     )

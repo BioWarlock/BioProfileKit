@@ -11,6 +11,7 @@ from .plot_utils import apply_standard_axes
 def multivariate_analysis(df: pd.DataFrame, target: str) -> MultivariateAnalysis:
     values, methods = compute_correlation_matrix(df)
     feat_target_corr = feature_target_correlation(df, target) if target else None
+    mi = mutual_information(df, target) if target else None
 
     return MultivariateAnalysis(
         correlation_heatmap=correlation_heatmap(values, methods),
@@ -27,7 +28,9 @@ def multivariate_analysis(df: pd.DataFrame, target: str) -> MultivariateAnalysis
         top_associations=top_associations(values, methods),
         feature_target_correlation=feat_target_corr,
         feature_target_plot=feature_target_plot(feat_target_corr) if feat_target_corr else None,
-        mutual_information=None,
+        mutual_information=mi, # ToDo Mutual Information Table
+        mutual_information_plot=mutual_information_plot(mi) if mi else None, # ToDo Mutual Information plot
+        mi_relationship_plots=mi_relationship_plots(df, target, mi) if mi else None, #ToDo das ist eine Liste mit mehreren Plots
         mcar_result=littles_mcar_test(df),
     )
 
@@ -189,7 +192,6 @@ def feature_target_plot(feature_target: dict | None):
         height=max(400, 40 * len(features) + 150),
         legend=dict(title="Method"),
     )
-    fig.show()
     return fig.to_html(full_html=False, include_plotlyjs=False)
 
 #ToDo change for Column Overview
@@ -353,6 +355,122 @@ def top_associations(values, methods, threshold=0.7):
                     "method": methods.iat[i, j],
                 })
     return sorted(pairs, key=lambda p: p["value"], reverse=True) or None
+
+
+def mutual_information(df: pd.DataFrame, target: str) -> dict | None:
+    from sklearn.feature_selection import mutual_info_classif, mutual_info_regression
+
+    if target not in df.columns:
+        return None
+    types = _classify_columns(df)
+    if target not in types:
+        return None
+
+    features = [c for c in types if c != target]
+    if not features:
+        return None
+
+    work = df[features + [target]].dropna()
+    if len(work) < 3:
+        return None
+
+    X = work[features].copy()
+    discrete_features = []
+    for col in features:
+        if types[col] == 'categorical':
+            X[col], _ = X[col].factorize()       # your preferred encoding
+            discrete_features.append(True)
+        else:
+            X[col] = X[col].astype(float)
+            discrete_features.append(False)
+
+    if types[target] == 'categorical':
+        y, _ = work[target].factorize()
+        mi = mutual_info_classif(X, y, discrete_features=discrete_features, random_state=0)
+    else:
+        y = work[target].astype(float)
+        mi = mutual_info_regression(X, y, discrete_features=discrete_features, random_state=0)
+
+    return {feat: {'value': round(float(score), 4)} for feat, score in zip(features, mi)} or None
+
+
+def mutual_information_plot(mi: dict | None):
+    if not mi:
+        return None
+
+    ranked = sorted(mi.items(), key=lambda x: x[1]['value'])
+    features = [f for f, _ in ranked]
+    values = [info['value'] for _, info in ranked]
+
+    fig = go.Figure(go.Bar(
+        x=values, y=features, orientation='h',
+        marker_color="#0F65A0",
+        text=[f"{v:.3f}" for v in values], textposition="outside",
+        hovertemplate="%{y}<br>Mutual Information: %{x:.4f}<extra></extra>",
+    ))
+    fig.update_layout(
+        title="Mutual Information (feature → target, non-linear)",
+        xaxis=dict(title="Mutual Information"),
+        yaxis=dict(title="Feature"),
+        template="plotly_white",
+        bargap=0.3,
+        height=max(400, 40 * len(features) + 150),
+    )
+    fig.show()
+    return fig.to_html(full_html=False, include_plotlyjs=False)
+
+
+def mi_relationship_plots(df: pd.DataFrame, target: str, mi: dict | None, top_n: int = 3):
+    if not mi or target not in df.columns:
+        return None
+
+    types = _classify_columns(df)
+    if target not in types:
+        return None
+
+    top = sorted(mi.items(), key=lambda x: x[1]['value'], reverse=True)[:top_n]
+    target_is_cat = types[target] == 'categorical'
+    plots = []
+    for feature, info in top:
+        work = df[[feature, target]].dropna()
+        if work.empty:
+            continue
+
+        if target_is_cat:
+            # distribution of the feature per target class
+            if types[feature] == 'numeric':
+                fig = px.violin(
+                    work, x=target, y=feature, color=target, box=True, points=False,
+                    color_discrete_sequence=["#0F65A0", "#994564", "#65A1E1", "#A83665"],
+                )
+            else:
+                # categorical feature vs categorical target -> grouped counts
+                ct = work.groupby([feature, target]).size().reset_index(name="count")
+                fig = px.bar(ct, x=feature, y="count", color=target, barmode="group",
+                             color_discrete_sequence=["#0F65A0", "#994564", "#65A1E1", "#A83665"])
+            fig.update_layout(title=f"{feature} by {target}  (MI={info['value']})")
+        else:
+            # numeric target: scatter + LOWESS trend
+            if types[feature] == 'numeric':
+                fig = px.scatter(
+                    work, x=feature, y=target, trendline="lowess",
+                    trendline_color_override="#994564",
+                    color_discrete_sequence=["#0F65A0"], opacity=0.5,
+                )
+                fig.update_traces(marker=dict(size=4), selector=dict(mode="markers"))
+            else:
+                # categorical feature vs numeric target -> box per category
+                fig = px.box(work, x=feature, y=target,
+                             color_discrete_sequence=["#0F65A0"])
+            fig.update_layout(title=f"{feature} vs {target}  (MI={info['value']})")
+
+        fig.update_layout(template="plotly_white", height=400)
+        plots.append({
+            "feature": feature,
+            "value": info['value'],
+            "plot": fig.to_html(full_html=False, include_plotlyjs=False),
+        })
+    return plots or None
 
 """
 

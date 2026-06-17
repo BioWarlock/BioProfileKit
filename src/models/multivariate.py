@@ -15,6 +15,8 @@ class MultivariateAnalysis:
     balance_plot: str | None
     boxplot: str
     scatter_matrix: str
+    mutual_information_plot: str | None
+    mi_relationship_plots: list | None
 
     # Computed metrics
     correlation_matrix: pd.DataFrame  # combined, absolute values
@@ -24,4 +26,4 @@ class MultivariateAnalysis:
     feature_target_correlation: dict | None  # needs target
     feature_target_plot: str | None   # needs target
     mutual_information: dict | None  # needs target
-    mcar_result: dict | None  # replace with finale Littles MCAR
+    mcar_result: dict | None  # ToDo replace with finale Littles MCAR

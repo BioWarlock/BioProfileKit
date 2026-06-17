@@ -44,6 +44,7 @@ dependencies = [
     "importlib_resources==7.1.0",
     "biopython==1.87",
     "weblogo==3.9.0",
+    "scikit-learn==1.9.0"
 ]
 [project.urls]
 Homepage="https://github.com/BioWarlock/BioProfileKit/"
