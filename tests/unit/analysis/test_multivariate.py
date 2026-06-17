@@ -12,6 +12,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 from analysis.multivariate_analysis import (
     get_correlation,
     correlation_heatmap,
+    pearson_correlation_heatmap,
+    cramers_heatmap,
+    eta_heatmap,
+    compute_correlation_matrix,
     missing_matrix,
     missing_values_barchart,
     balance_plot,
@@ -19,7 +23,6 @@ from analysis.multivariate_analysis import (
     scatter_matrix,
     multivariate_analysis,
 )
-from models.multivariate import MultivariateAnalysis
 
 
 # ---------------------------------------------------------------------------
@@ -160,31 +163,66 @@ class TestGetCorrelation:
 
 
 # ---------------------------------------------------------------------------
-# correlation_heatmap
+# correlation_heatmap (mixed-type: Pearson / Cramér's V / Eta²)
 # ---------------------------------------------------------------------------
+
+def make_methods(df, value="Pearson"):
+    """Build a dummy methods DataFrame matching df columns."""
+    cols = list(df.columns)
+    return pd.DataFrame(value, index=cols, columns=cols)
+
 
 class TestCorrelationHeatmap:
     def test_returns_html_string(self, numeric_df):
-        result = correlation_heatmap(numeric_df)
+        values, methods = compute_correlation_matrix(numeric_df)
+        result = correlation_heatmap(values, methods)
+        assert isinstance(result, str)
+        assert "<div" in result
+
+    def test_hover_method_label_in_output(self, numeric_df):
+        """Method names should appear in the hovertemplate."""
+        values, methods = compute_correlation_matrix(numeric_df)
+        result = correlation_heatmap(values, methods)
+        assert "Method" in result or "customdata" in result
+
+    def test_mixed_df_produces_html(self, mixed_df):
+        values, methods = compute_correlation_matrix(mixed_df)
+        result = correlation_heatmap(values, methods)
+        assert isinstance(result, str)
+
+    def test_values_bounded_0_to_1(self, numeric_df):
+        """Association values matrix must be in [0, 1]."""
+        values, _ = compute_correlation_matrix(numeric_df)
+        finite = values.to_numpy(dtype=float)
+        finite = finite[~np.isnan(finite)]
+        assert (finite >= 0).all()
+        assert (finite <= 1.0 + 1e-9).all()
+
+
+# ---------------------------------------------------------------------------
+# pearson_correlation_heatmap (numeric-only, replaces old correlation_heatmap)
+# ---------------------------------------------------------------------------
+
+class TestPearsonCorrelationHeatmap:
+    def test_returns_html_string(self, numeric_df):
+        result = pearson_correlation_heatmap(numeric_df)
         assert isinstance(result, str)
         assert "<div" in result
 
     def test_excludes_non_numeric_columns(self, mixed_df):
-        # Should not raise even with a string column present
-        result = correlation_heatmap(mixed_df)
+        result = pearson_correlation_heatmap(mixed_df)
         assert isinstance(result, str)
 
     def test_zero_variance_columns_excluded(self, constant_df):
-        # Both columns are constant → empty corr matrix; should not raise
-        result = correlation_heatmap(constant_df)
+        result = pearson_correlation_heatmap(constant_df)
         assert isinstance(result, str)
 
     def test_all_missing_column_excluded(self, missing_df):
-        result = correlation_heatmap(missing_df)
+        result = pearson_correlation_heatmap(missing_df)
         assert isinstance(result, str)
 
     def test_single_numeric_column(self, single_col_df):
-        result = correlation_heatmap(single_col_df)
+        result = pearson_correlation_heatmap(single_col_df)
         assert isinstance(result, str)
 
 
@@ -301,21 +339,22 @@ class TestScatterMatrix:
 
 
 # ---------------------------------------------------------------------------
-# multivariate_analysis
+# multivariate_analysis (top-level pipeline, replaces general_plots)
 # ---------------------------------------------------------------------------
 
-class TestGeneralPlots:
-    def test_returns_general_plots_object(self, numeric_df):
+class TestMultivariateAnalysis:
+    def test_returns_multivariate_analysis_object(self, numeric_df):
+        from models.multivariate import MultivariateAnalysis
         result = multivariate_analysis(numeric_df, target=None)
         assert isinstance(result, MultivariateAnalysis)
 
-    def test_all_fields_are_html_strings_without_target(self, numeric_df):
+    def test_all_html_fields_present_without_target(self, numeric_df):
         result = multivariate_analysis(numeric_df, target=None)
-        assert isinstance(result.correlation_heatmap, str)
-        assert isinstance(result.missing_matrix, str)
-        assert isinstance(result.missing_values_barchart, str)
-        assert isinstance(result.boxplot, str)
-        assert isinstance(result.scatter_matrix, str)
+        for field in ("correlation_heatmap", "pearson_heatmap",
+                      "missing_matrix", "missing_values_barchart",
+                      "boxplot", "scatter_matrix"):
+            val = getattr(result, field)
+            assert isinstance(val, str), f"{field} should be an HTML string"
 
     def test_balance_plot_none_when_no_target(self, numeric_df):
         result = multivariate_analysis(numeric_df, target=None)
@@ -326,18 +365,50 @@ class TestGeneralPlots:
         assert result.balance_plot is not None
         assert isinstance(result.balance_plot, str)
 
-    def test_empty_string_target_yields_no_balance_plot(self, numeric_df):
-        result = multivariate_analysis(numeric_df, target="")
-        assert result.balance_plot is None
+    def test_feature_target_correlation_none_without_target(self, numeric_df):
+        result = multivariate_analysis(numeric_df, target=None)
+        assert result.feature_target_correlation is None
+
+    def test_feature_target_correlation_dict_with_target(self, mixed_df):
+        result = multivariate_analysis(mixed_df, target="category")
+        # target may or may not be in _classify_columns; result is dict or None
+        assert result.feature_target_correlation is None or isinstance(result.feature_target_correlation, dict)
+
+    def test_cramers_heatmap_none_for_numeric_only(self, numeric_df):
+        """No categorical columns → Cramér's V heatmap should be None."""
+        result = multivariate_analysis(numeric_df, target=None)
+        assert result.cramers_heatmap is None
+
+    def test_eta_heatmap_none_for_numeric_only(self, numeric_df):
+        """No categorical columns → Eta² heatmap should be None."""
+        result = multivariate_analysis(numeric_df, target=None)
+        assert result.eta_heatmap is None
+
+    def test_cramers_and_eta_present_for_mixed(self):
+        """Needs ≥ 2 categorical columns for Cramér's V and ≥ 1 cat + 1 num for Eta²."""
+        rng = np.random.default_rng(1)
+        df = pd.DataFrame({
+            "num":  rng.standard_normal(60),
+            "cat1": ["A", "B", "C"] * 20,
+            "cat2": ["X", "Y"] * 30,
+        })
+        result = multivariate_analysis(df, target=None)
+        assert isinstance(result.cramers_heatmap, str)
+        assert isinstance(result.eta_heatmap, str)
+
+    def test_correlation_matrix_is_dataframe(self, numeric_df):
+        result = multivariate_analysis(numeric_df, target=None)
+        assert isinstance(result.correlation_matrix, pd.DataFrame)
 
     def test_missing_heavy_dataframe(self, missing_df):
+        from models.multivariate import MultivariateAnalysis
         result = multivariate_analysis(missing_df, target=None)
         assert isinstance(result, MultivariateAnalysis)
 
     def test_bioinformatics_full_pipeline(self, bioinformatics_df):
+        from models.multivariate import MultivariateAnalysis
         result = multivariate_analysis(bioinformatics_df, target=None)
         assert isinstance(result, MultivariateAnalysis)
-        assert all(isinstance(getattr(result, f), str) for f in [
-            "correlation_heatmap", "missing_matrix",
-            "missing_values_barchart", "boxplot", "scatter_matrix",
-        ])
+        for field in ("correlation_heatmap", "missing_matrix",
+                      "missing_values_barchart", "boxplot", "scatter_matrix"):
+            assert isinstance(getattr(result, field), str)

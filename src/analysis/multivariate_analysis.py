@@ -192,13 +192,6 @@ def correlation_heatmap(df: pd.DataFrame, methods: pd.DataFrame):
     )
     fig.update_layout(
         title="Association Heatmap (mixed-type)",
-        annotations=[dict(
-            text="Absolute association strengths in [0,1]. Methods differ by variable type "
-                 "(hover for detail): Pearson for numeric pairs, Cramér's V for categorical "
-                 "pairs, Eta² for mixed. A 0.7 Pearson and a 0.7 Cramér's V are not directly comparable.",
-            showarrow=False, xref="paper", yref="paper",
-            x=0, y=-0.15, align="left", font=dict(size=11, color="#616D78"),
-        )],
         margin=dict(b=120),
     )
     return fig.to_html(full_html=False, include_plotlyjs=False)
