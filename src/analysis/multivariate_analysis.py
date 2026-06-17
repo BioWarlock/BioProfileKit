@@ -24,7 +24,7 @@ def multivariate_analysis(df: pd.DataFrame, target: str) -> MultivariateAnalysis
         scatter_matrix=scatter_matrix(df),
         correlation_matrix=values,
         correlation_methods=methods,
-        top_associations=top_associations(values, methods), #ToDo: Print Tabelle
+        top_associations=top_associations(values, methods),
         feature_target_correlation=feat_target_corr, # ToDo: Print Tabelle neben Plot
         feature_target_plot=feature_target_plot(feat_target_corr) if feat_target_corr else None, # ToDo: der Plot
         mutual_information=None,

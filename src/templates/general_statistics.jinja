@@ -79,6 +79,13 @@
                                             type="button" role="tab">Missing Mechanisms</button>
                                 </li>
                         {% endif %}
+                        {% if plots.mcar_result %}
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="missingTab4btn"
+                                            data-bs-toggle="tab" data-bs-target="#missingTab4Target"
+                                            type="button" role="tab">Little&rsquo;s MCAR Test</button>
+                                </li>
+                        {% endif %}
                         </ul>
                         <div class="tab-content" id="objectTabContent">
                             <div class="tab-pane fade show active" id="missingTab1Target" role="tabpanel" aria-labelledby="missingTab1btn">
@@ -153,9 +160,181 @@
                             </div>
                         </div>
                     {% endif %}
+                        {% if plots.mcar_result %}
+                        <div class="tab-pane fade" id="missingTab4Target" role="tabpanel" aria-labelledby="missingTab4btn">
+                            <div class="w-100 mt-3 mb-5">
+                                {% if plots.mcar_result is mapping and plots.mcar_result.keys() | list == ['Hello'] %}
+                                    {# Placeholder result from littles_mcar_test stub #}
+                                    <div class="alert alert-info">
+                                        <strong>Little&rsquo;s MCAR Test</strong> is not yet fully implemented.
+                                        Results will appear here once the statistical test is complete.
+                                    </div>
+                                {% else %}
+                                    <div class="table-responsive mb-4" style="max-height: 400px; overflow-y: auto;">
+                                        <table class="table table-sm table-striped w-100">
+                                            <caption>Little&rsquo;s MCAR test result for the full dataset</caption>
+                                            <thead class="sticky-top bg-light">
+                                            <tr>
+                                                <th>Metric</th>
+                                                <th>Value</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            {% for key, value in plots.mcar_result.items() %}
+                                                <tr>
+                                                    <td><strong>{{ key }}</strong></td>
+                                                    <td>{{ value }}</td>
+                                                </tr>
+                                            {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="alert alert-light mt-3">
+                                        <div class="small text-muted">
+                                            <strong>Little&rsquo;s MCAR Test:</strong> Tests whether data is Missing Completely At Random.
+                                            A significant p-value <i>(p &lt; 0.05)</i> suggests the data is <em>not</em> MCAR —
+                                            missingness may depend on observed or unobserved values.
+                                            <hr>
+                                            MNAR (Missing Not At Random) cannot be detected from the observed data alone
+                                            and may require domain knowledge.
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
                         </div>
                     </div>
                 </div>
+                <hr>
+                <div class="col-12">
+                    <div class="w-100">
+                        <h5 class="mb-1">Strong Associations
+                            <small class="text-muted fw-normal ms-1" style="font-size:0.8em;">threshold &ge; 0.7</small>
+                        </h5>
+                        <p class="text-muted mb-3" style="font-size:0.85em;">
+                            Column pairs with an association strength &ge; 0.7 across all applicable methods.
+                            Method is determined automatically by column type (Pearson / Cramér&rsquo;s&nbsp;V / Eta&sup2;).
+                            A 0.7 Pearson and a 0.7 Cramér’s V are not directly comparable.
+                        </p>
+                        {% if plots.top_associations %}
+                            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                <table class="table table-sm table-striped w-100">
+                                    <thead class="sticky-top bg-light">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Variable 1</th>
+                                        <th>Variable 2</th>
+                                        <th>Strength</th>
+                                        <th style="min-width:160px;">Distribution</th>
+                                        <th>Method</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {% for pair in plots.top_associations %}
+                                        {% set pct = (pair.value * 100) | round(1) %}
+                                        <tr>
+                                            <td class="text-muted">{{ loop.index }}</td>
+                                            <td class="font-monospace">{{ pair.var1 }}</td>
+                                            <td class="font-monospace">{{ pair.var2 }}</td>
+                                            <td>
+                                                <strong>{{ "%.3f"|format(pair.value) }}</strong>
+                                            </td>
+                                            <td>
+                                                <div class="progress" style="height:14px;">
+                                                    <div class="progress-bar
+                                                        {% if pair.value >= 0.9 %}bg-danger
+                                                        {% elif pair.value >= 0.8 %}bg-warning
+                                                        {% else %}bg-primary{% endif %}"
+                                                         role="progressbar"
+                                                         style="width:{{ pct }}%"
+                                                         aria-valuenow="{{ pct }}" aria-valuemin="0" aria-valuemax="100">
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="badge
+                                                    {% if pair.method == 'Pearson' %}bg-secondary
+                                                    {% elif pair.method == "Cramér's V" %}bg-info text-dark
+                                                    {% else %}bg-secondary{% endif %}"
+                                                      style="font-size:0.75em;">
+                                                    {{ pair.method }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-success">
+                                No column pairs exceed the association threshold of 0.7 — no strong associations detected.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if plots.feature_target_plot or plots.feature_target_correlation %}
+                <hr>
+                    <div class="col-12">
+                        <h5 class="mb-3">Feature–Target Association</h5>
+                        <div class="row">
+                            {% if plots.feature_target_plot %}
+                                <div class="col-lg-7">
+                                    <div class="plot-container mb-4" style="max-height: fit-content; overflow: scroll;">
+                                        <figure role="img" aria-label="Horizontal bar chart showing association strength of each feature with the target column">
+                                            {{ plots.feature_target_plot | safe }}
+                                        </figure>
+                                    </div>
+                                </div>
+                            {% endif %}
+                            {% if plots.feature_target_correlation %}
+                                <div class="col-lg-5">
+                                    <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                                        <table class="table table-sm table-striped w-100">
+                                            <thead class="sticky-top bg-light">
+                                            <tr>
+                                                <th>Feature</th>
+                                                <th>Strength</th>
+                                                <th>Method</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            {% for feature, info in plots.feature_target_correlation.items() | sort(attribute='1.value', reverse=true) %}
+                                                <tr>
+                                                    <td class="font-monospace">{{ feature }}</td>
+                                                    <td>
+                                                        <strong>{{ "%.3f"|format(info.value) }}</strong>
+                                                        <div class="progress mt-1" style="height:8px;">
+                                                            <div class="progress-bar
+                                                                {% if info.value >= 0.7 %}bg-danger
+                                                                {% elif info.value >= 0.3 %}bg-warning
+                                                                {% else %}bg-secondary{% endif %}"
+                                                                 role="progressbar"
+                                                                 style="width:{{ (info.value * 100) | round(1) }}%">
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge
+                                                            {% if info.method == 'Pearson' %}bg-secondary
+                                                            {% elif info.method == "Cramér's V" %}bg-info text-dark
+                                                            {% else %}bg-secondary{% endif %}"
+                                                              style="font-size:0.75em;">
+                                                            {{ info.method }}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+
                 {% if plots.balance_plot %}
                 <hr>
                     <div class="col-12">
