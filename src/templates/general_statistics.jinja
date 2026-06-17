@@ -191,11 +191,115 @@
                 <hr>
                 <div class="col-12">
                     <div class="w-100">
-                        <div class="plot-container mb-4" style="max-height: fit-content; overflow: scroll;">
-                            <figure role="img" aria-label="Correlation heatmap showing Pearson correlation coefficients between numeric columns">
-                                {{ plots.correlation_heatmap | safe }}
-                            </figure>
-                        </div>
+                        <h5 class="mb-3">Correlation Plots</h5>
+
+                        <ul class="nav nav-tabs" id="corrPlotTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="corrPearsonBtn"
+                                        data-bs-toggle="tab" data-bs-target="#corrPearsonTarget"
+                                        type="button" role="tab" aria-selected="true">
+                                    Pearson
+                                    <span class="badge bg-secondary ms-1" style="font-size:0.7em;">numeric</span>
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="corrCramersBtn"
+                                        data-bs-toggle="tab" data-bs-target="#corrCramersTarget"
+                                        type="button" role="tab" aria-selected="false">
+                                    Cramér&rsquo;s&nbsp;V
+                                    <span class="badge bg-secondary ms-1" style="font-size:0.7em;">categorical</span>
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="corrEtaBtn"
+                                        data-bs-toggle="tab" data-bs-target="#corrEtaTarget"
+                                        type="button" role="tab" aria-selected="false">
+                                    Eta&sup2;
+                                    <span class="badge bg-secondary ms-1" style="font-size:0.7em;">mixed</span>
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="corrAssocBtn"
+                                        data-bs-toggle="tab" data-bs-target="#corrAssocTarget"
+                                        type="button" role="tab" aria-selected="false">
+                                    Association Heatmap
+                                    <span class="badge bg-secondary ms-1" style="font-size:0.7em;">all types</span>
+                                </button>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content" id="corrPlotContent">
+
+                            {# ── Association Heatmap (combined) ── #}
+                            <div class="tab-pane fade" id="corrAssocTarget"
+                                 role="tabpanel" aria-labelledby="corrAssocBtn">
+                                <p class="text-muted mt-3 mb-2" style="font-size: 0.85em;">
+                                    Absolute association strengths in [0,&thinsp;1]. Methods differ by variable type (hover for detail):
+                                    Pearson for numeric pairs, Cramér&rsquo;s&nbsp;V for categorical pairs, Eta&sup2; for mixed.
+                                    A&nbsp;0.7&nbsp;Pearson and a&nbsp;0.7&nbsp;Cramér&rsquo;s&nbsp;V are not directly comparable.
+                                </p>
+                                {% if plots.correlation_heatmap %}
+                                    <div class="plot-container mb-4" style="max-height: fit-content; overflow: scroll;">
+                                        <figure role="img" aria-label="Combined association heatmap using Pearson, Cramér's V and Eta squared depending on column type">
+                                            {{ plots.correlation_heatmap | safe }}
+                                        </figure>
+                                    </div>
+                                {% else %}
+                                    <div class="alert alert-secondary mt-3">
+                                        Association heatmap not available.
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            {# ── Pearson ── #}
+                            <div class="tab-pane fade show active" id="corrPearsonTarget"
+                                 role="tabpanel" aria-labelledby="corrPearsonBtn">
+                                {% if plots.pearson_heatmap %}
+                                    <div class="plot-container mb-4 mt-2" style="max-height: fit-content; overflow: scroll;">
+                                        <figure role="img" aria-label="Pearson correlation heatmap for numeric column pairs">
+                                            {{ plots.pearson_heatmap | safe }}
+                                        </figure>
+                                    </div>
+                                {% else %}
+                                    <div class="alert alert-secondary mt-3">
+                                        No numeric column pairs with non-zero variance found — Pearson heatmap not available.
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            {# ── Cramér's V ── #}
+                            <div class="tab-pane fade" id="corrCramersTarget"
+                                 role="tabpanel" aria-labelledby="corrCramersBtn">
+                                {% if plots.cramers_heatmap %}
+                                    <div class="plot-container mb-4 mt-2" style="max-height: fit-content; overflow: scroll;">
+                                        <figure role="img" aria-label="Cramér's V heatmap for categorical column pairs">
+                                            {{ plots.cramers_heatmap | safe }}
+                                        </figure>
+                                    </div>
+                                {% else %}
+                                    <div class="alert alert-secondary mt-3">
+                                        At least two categorical columns are required — Cramér&rsquo;s&nbsp;V heatmap not available.
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            {# ── Eta² ── #}
+                            <div class="tab-pane fade" id="corrEtaTarget"
+                                 role="tabpanel" aria-labelledby="corrEtaBtn">
+                                {% if plots.eta_heatmap %}
+                                    <div class="plot-container mb-4 mt-2" style="max-height: fit-content; overflow: scroll;">
+                                        <figure role="img" aria-label="Eta squared heatmap showing variance in numeric columns explained by categorical columns">
+                                            {{ plots.eta_heatmap | safe }}
+                                        </figure>
+                                    </div>
+                                {% else %}
+                                    <div class="alert alert-secondary mt-3">
+                                        At least one categorical and one numeric column are required — Eta&sup2; heatmap not available.
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                        </div>{# /tab-content #}
                     </div>
                 </div>
             </div>
