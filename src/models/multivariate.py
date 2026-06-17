@@ -19,6 +19,7 @@ class MultivariateAnalysis:
     # Computed metrics
     correlation_matrix: pd.DataFrame  # combined, absolute values
     correlation_methods: pd.DataFrame  # method used per pair
+    top_associations: list | None
     feature_target_correlation: dict | None  # needs target
     mutual_information: dict | None  # needs target
     mcar_result: dict | None  # replace with finale Littles MCAR

@@ -23,6 +23,7 @@ def multivariate_analysis(df: pd.DataFrame, target: str) -> MultivariateAnalysis
         scatter_matrix=scatter_matrix(df),
         correlation_matrix=values,
         correlation_methods=methods,
+        top_associations=top_associations(values, methods),
         feature_target_correlation=feature_target_correlation(df, target) if target else None,
         mutual_information=None,
         mcar_result=littles_mcar_test(df),
@@ -147,7 +148,6 @@ def feature_target_correlation(df: pd.DataFrame, target: str) -> dict | None:
         value, method = _correlation_pair(df, col, target, types)
         if value == value:
             result[col] = {'value': round(float(value), 3), 'method': method}
-
     return result or None
 
 
@@ -297,6 +297,21 @@ def eta_heatmap(df: pd.DataFrame) -> str | None:
     )
     fig.update_yaxes(autorange="reversed")
     return fig.to_html(full_html=False, include_plotlyjs=False)
+
+def top_associations(values, methods, threshold=0.7):
+    pairs = []
+    cols = list(values.columns)
+    for i in range(len(cols)):
+        for j in range(i + 1, len(cols)):
+            v = values.iat[i, j]
+            if v == v and v >= threshold:
+                pairs.append({
+                    "var1": cols[i],
+                    "var2": cols[j],
+                    "value": round(float(v), 3),
+                    "method": methods.iat[i, j],
+                })
+    return sorted(pairs, key=lambda p: p["value"], reverse=True) or None
 
 """
 
