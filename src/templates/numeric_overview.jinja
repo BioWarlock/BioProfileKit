@@ -127,8 +127,133 @@
           <hr>
 
           {# ================================================================
-             2) DUPLICATES
+             2) QUALITY ASSESSMENT REPORT
              ================================================================ #}
+          {% if quality %}
+          <p class="section-heading">Quality Assessment Report</p>
+
+          {# ── Overall banner ── #}
+          {% if quality.overall == 'ready' %}
+            {% set banner_class = 'success' %}
+            {% set banner_icon  = 'M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z' %}
+            {% set banner_label = 'Ready' %}
+          {% elif quality.overall == 'caution' %}
+            {% set banner_class = 'warning' %}
+            {% set banner_icon  = 'M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z' %}
+            {% set banner_label = 'Ready with Caution' %}
+          {% else %}
+            {% set banner_class = 'danger' %}
+            {% set banner_icon  = 'M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z' %}
+            {% set banner_label = 'Not Ready' %}
+          {% endif %}
+
+          <div class="alert alert-{{ banner_class }} d-flex align-items-center gap-3 mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
+                 viewBox="0 0 16 16" aria-hidden="true" style="flex-shrink:0;">
+              <path d="{{ banner_icon }}"/>
+            </svg>
+            <div>
+              <strong style="font-size:1.05rem;">{{ banner_label }}</strong>
+              <span class="ms-3 text-muted" style="font-size:.875rem;">
+                {{ quality.passed }} passed &nbsp;·&nbsp;
+                {{ quality.warnings }} warning{{ 's' if quality.warnings != 1 else '' }} &nbsp;·&nbsp;
+                {{ quality.failed }} failed &nbsp;&nbsp;({{ quality.total }} checks total)
+              </span>
+            </div>
+          </div>
+
+          {# ── Category cards ── #}
+          <div class="row g-4 mb-5">
+            {% for cat in quality.categories %}
+              {# category header colour #}
+              {% if cat.status == 'fail' %}
+                {% set cat_color = 'danger' %}
+                {% set cat_icon  = 'M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z' %}
+              {% elif cat.status == 'warn' %}
+                {% set cat_color = 'warning' %}
+                {% set cat_icon  = 'M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z' %}
+              {% else %}
+                {% set cat_color = 'success' %}
+                {% set cat_icon  = 'M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z' %}
+              {% endif %}
+
+              <div class="col-12">
+                <div class="card border-{{ cat_color }} shadow-sm">
+
+                  {# card header #}
+                  <div class="card-header bg-{{ cat_color }} {% if cat_color == 'warning' %}text-dark{% else %}text-white{% endif %} d-flex align-items-center gap-2 py-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor"
+                         viewBox="0 0 16 16" aria-hidden="true">
+                      <path d="{{ cat_icon }}"/>
+                    </svg>
+                    <strong style="font-size:.95rem; letter-spacing:.03em;">{{ cat.name }}</strong>
+                    {# mini pass/warn/fail summary #}
+                    {% set n_pass = cat.checks | selectattr('status','equalto','pass') | list | length %}
+                    {% set n_warn = cat.checks | selectattr('status','equalto','warn') | list | length %}
+                    {% set n_fail = cat.checks | selectattr('status','equalto','fail') | list | length %}
+                    <span class="ms-auto d-flex gap-1" style="font-size:.78rem;">
+                      {% if n_pass %}<span class="badge bg-light text-success">{{ n_pass }}&nbsp;✓</span>{% endif %}
+                      {% if n_warn %}<span class="badge bg-light text-warning-emphasis">{{ n_warn }}&nbsp;⚠</span>{% endif %}
+                      {% if n_fail %}<span class="badge bg-light text-danger">{{ n_fail }}&nbsp;✗</span>{% endif %}
+                    </span>
+                  </div>
+
+                  {# check rows #}
+                  <div class="card-body p-0">
+                    <table class="table table-sm mb-0" style="font-size:.875rem;">
+                      <tbody>
+                      {% for check in cat.checks %}
+                        {# row background #}
+                        {% if check.status == 'fail' %}
+                          {% set row_class = 'table-danger' %}
+                          {% set dot_color = 'text-danger' %}
+                          {% set dot       = '✗' %}
+                        {% elif check.status == 'warn' %}
+                          {% set row_class = 'table-warning' %}
+                          {% set dot_color = 'text-warning-emphasis' %}
+                          {% set dot       = '⚠' %}
+                        {% else %}
+                          {% set row_class = '' %}
+                          {% set dot_color = 'text-success' %}
+                          {% set dot       = '✓' %}
+                        {% endif %}
+
+                        <tr class="{{ row_class }}">
+                          {# status icon #}
+                          <td style="width:2rem; text-align:center; vertical-align:middle;">
+                            <span class="{{ dot_color }}" style="font-size:1rem;" aria-label="{{ check.status }}">
+                              {{ dot }}
+                            </span>
+                          </td>
+                          {# check name #}
+                          <td style="width:22%; font-weight:600; vertical-align:middle;">
+                            {{ check.name }}
+                          </td>
+                          {# message – truncate long ones with a title tooltip #}
+                          <td style="vertical-align:middle; color:#4a4a4a;"
+                              title="{{ check.message }}">
+                            {{ check.message | truncate(140, True, '…') }}
+                          </td>
+                          {# optional deep-link #}
+                          <td style="width:3rem; text-align:right; vertical-align:middle;">
+                            {% if check.detail_link %}
+                              <a href="{{ check.detail_link }}" class="text-muted"
+                                 title="Go to details" style="font-size:.8rem;">↗</a>
+                            {% endif %}
+                          </td>
+                        </tr>
+                      {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+          {% endif %}{# /quality #}
+
+          <hr>
           <p class="section-heading">
             Duplicates
             {% if general.dup_row > 0 %}

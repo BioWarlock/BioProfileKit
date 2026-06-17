@@ -100,10 +100,10 @@ def cli(input: str, tax: bool = False, func: str = None,
         categorical_columns(df, col) if col not in exclude_cols else None
         for col in cat_columns
     ]
-    readiness = quality_assessment(general, column_overviews, numeric_overviews,
+    quality = quality_assessment(general, column_overviews, numeric_overviews,
                                    categorical_overviews, plots)
-    print_quality_report(readiness)
+    print_quality_report(quality)
     output_path = Path(input_path.stem + "_renders")
     print(colored('Writing report …', 'green'))
     write_report(output_path, general, plots, duplicates_table,
-                 column_overviews, numeric_overviews, categorical_overviews, top_n)
+                 column_overviews, numeric_overviews, categorical_overviews, top_n, quality)

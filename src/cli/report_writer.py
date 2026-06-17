@@ -10,13 +10,13 @@ env = Environment(loader=FileSystemLoader(str(TEMPLATE_DIR)), autoescape=True)
 
 
 def write_report(output_path: Path, general, plots, duplicates_table,
-                 column_overviews, numeric_overviews, categorical_overviews, top_n):
+                 column_overviews, numeric_overviews, categorical_overviews, top_n, quality):
     output_path.mkdir(parents=True, exist_ok=True)
     shutil.copytree(str(STATIC_DIR), str(output_path / "static"), dirs_exist_ok=True)
 
     _render_to_file(output_path / "index.html", 'LandingPage.jinja')
     _render_to_file(output_path / "numeric_data.html", 'numeric_overview.jinja',
-                    general=general, dups=duplicates_table)
+                    general=general, dups=duplicates_table, quality=quality)
     _render_to_file(output_path / "columns.html", 'columns.jinja',
                     columns=column_overviews, overview=numeric_overviews,
                     categorical=categorical_overviews, top_n=top_n)
