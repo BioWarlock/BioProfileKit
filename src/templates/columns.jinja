@@ -326,6 +326,12 @@
                                         <span class="badge bg-danger me-2">High Correlation</span>
                                     {% endif %}
                                 {% endif %}
+                                {% if col.monotonicity %}
+                                    <span class="badge bg-secondary me-2"
+                                          title="Values are strictly monotonically increasing or decreasing — may indicate an index or time-ordered column">
+                                        Monotonic
+                                    </span>
+                                {% endif %}
 
                                 <!-- TODO: Add missing badges - Skewness, Duplicates, Diff Sequence Length, Biological Naming, Diff Units -->
                                 {# ── DNA/RNA quality badges ── #}
@@ -513,6 +519,10 @@
                                                     {{ corr.0.replace('_', ' ') | capitalize }}
                                                 </a>: {{ corr.1 }}<br>
                                             {% endfor %}
+                                        {% endif %}
+                                        {% if col.monotonicity %}
+                                            <strong>Monotonicity:</strong>
+                                            <span class="text-muted">strictly ordered (↑ or ↓) — consider excluding from association analysis</span><br>
                                         {% endif %}
                                     </div>
                                 </div>

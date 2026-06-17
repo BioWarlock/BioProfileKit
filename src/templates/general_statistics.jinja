@@ -335,6 +335,138 @@
                     </div>
                 {% endif %}
 
+                {% if plots.mutual_information or plots.mutual_information_plot or plots.mi_relationship_plots %}
+                <hr>
+                    <div class="col-12">
+                        <h5 class="mb-1">Mutual Information
+                            <small class="text-muted fw-normal ms-1" style="font-size:0.8em;">feature → target, non-linear</small>
+                        </h5>
+                        <p class="text-muted mb-3" style="font-size:0.85em;">
+                            Mutual information measures non-linear statistical dependency between each feature and the target.
+                            Unlike correlation, it captures any kind of relationship — not just linear ones.
+                            Values are non-negative and unbounded; higher means more information shared.
+                        </p>
+
+                        <ul class="nav nav-tabs" id="miTabs" role="tablist">
+                            {% if plots.mutual_information_plot %}
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="miPlotBtn"
+                                            data-bs-toggle="tab" data-bs-target="#miPlotTarget"
+                                            type="button" role="tab" aria-selected="true">
+                                        Ranking
+                                    </button>
+                                </li>
+                            {% endif %}
+                            {% if plots.mutual_information %}
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link {% if not plots.mutual_information_plot %}active{% endif %}"
+                                            id="miTableBtn"
+                                            data-bs-toggle="tab" data-bs-target="#miTableTarget"
+                                            type="button" role="tab"
+                                            aria-selected="{{ 'true' if not plots.mutual_information_plot else 'false' }}">
+                                        Table
+                                    </button>
+                                </li>
+                            {% endif %}
+                            {% if plots.mi_relationship_plots %}
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="miRelBtn"
+                                            data-bs-toggle="tab" data-bs-target="#miRelTarget"
+                                            type="button" role="tab" aria-selected="false">
+                                        Top Relationships
+                                        <span class="badge bg-secondary ms-1" style="font-size:0.7em;">
+                                            Top {{ plots.mi_relationship_plots | length }}
+                                        </span>
+                                    </button>
+                                </li>
+                            {% endif %}
+                        </ul>
+
+                        <div class="tab-content" id="miTabContent">
+
+                            {# ── Ranking plot ── #}
+                            {% if plots.mutual_information_plot %}
+                                <div class="tab-pane fade show active" id="miPlotTarget"
+                                     role="tabpanel" aria-labelledby="miPlotBtn">
+                                    <div class="plot-container mb-4 mt-2" style="max-height: fit-content; overflow: scroll;">
+                                        <figure role="img" aria-label="Horizontal bar chart of mutual information scores per feature">
+                                            {{ plots.mutual_information_plot | safe }}
+                                        </figure>
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            {# ── Table ── #}
+                            {% if plots.mutual_information %}
+                                <div class="tab-pane fade {% if not plots.mutual_information_plot %}show active{% endif %}"
+                                     id="miTableTarget" role="tabpanel" aria-labelledby="miTableBtn">
+                                    <div class="table-responsive mt-3" style="max-height: 450px; overflow-y: auto;">
+                                        <table class="table table-sm table-striped w-100">
+                                            <thead class="sticky-top bg-light">
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Feature</th>
+                                                <th>MI Score</th>
+                                                <th style="min-width:160px;">Relative Strength</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            {% set max_mi = plots.mutual_information.values() | map(attribute='value') | max %}
+                                            {% for feature, info in plots.mutual_information.items() | sort(attribute='1.value', reverse=true) %}
+                                                {% set pct = ((info.value / max_mi) * 100) | round(1) if max_mi > 0 else 0 %}
+                                                <tr>
+                                                    <td class="text-muted">{{ loop.index }}</td>
+                                                    <td class="font-monospace">{{ feature }}</td>
+                                                    <td><strong>{{ "%.4f"|format(info.value) }}</strong></td>
+                                                    <td>
+                                                        <div class="progress" style="height:14px;">
+                                                            <div class="progress-bar bg-primary"
+                                                                 role="progressbar"
+                                                                 style="width:{{ pct }}%"
+                                                                 aria-valuenow="{{ pct }}" aria-valuemin="0" aria-valuemax="100">
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            {# ── Top Relationship plots ── #}
+                            {% if plots.mi_relationship_plots %}
+                                <div class="tab-pane fade" id="miRelTarget"
+                                     role="tabpanel" aria-labelledby="miRelBtn">
+                                    <p class="text-muted mt-3 mb-2" style="font-size:0.85em;">
+                                        Pairwise relationship plots for the top {{ plots.mi_relationship_plots | length }} features
+                                        by mutual information score. Plot type adapts automatically to column types.
+                                    </p>
+                                    <div class="row mt-2">
+                                        {% for item in plots.mi_relationship_plots %}
+                                            <div class="col-12 mb-4">
+                                                <div class="d-flex align-items-center mb-1">
+                                                    <span class="font-monospace fw-bold me-2">{{ item.feature }}</span>
+                                                    <span class="badge bg-secondary" style="font-size:0.75em;">
+                                                        MI = {{ "%.4f"|format(item.value) }}
+                                                    </span>
+                                                </div>
+                                                <div class="plot-container" style="max-height: fit-content; overflow: scroll;">
+                                                    <figure role="img" aria-label="Relationship plot between {{ item.feature }} and target">
+                                                        {{ item.plot | safe }}
+                                                    </figure>
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                        </div>{# /tab-content #}
+                    </div>
+                {% endif %}
+
                 {% if plots.balance_plot %}
                 <hr>
                     <div class="col-12">

@@ -28,9 +28,9 @@ def multivariate_analysis(df: pd.DataFrame, target: str) -> MultivariateAnalysis
         top_associations=top_associations(values, methods),
         feature_target_correlation=feat_target_corr,
         feature_target_plot=feature_target_plot(feat_target_corr) if feat_target_corr else None,
-        mutual_information=mi, # ToDo Mutual Information Table
-        mutual_information_plot=mutual_information_plot(mi) if mi else None, # ToDo Mutual Information plot
-        mi_relationship_plots=mi_relationship_plots(df, target, mi) if mi else None, #ToDo das ist eine Liste mit mehreren Plots
+        mutual_information=mi,
+        mutual_information_plot=mutual_information_plot(mi) if mi else None,
+        mi_relationship_plots=mi_relationship_plots(df, target, mi) if mi else None,
         mcar_result=littles_mcar_test(df),
     )
 
