@@ -10,6 +10,7 @@ from .plot_utils import apply_standard_axes
 
 def multivariate_analysis(df: pd.DataFrame, target: str) -> MultivariateAnalysis:
     values, methods = compute_correlation_matrix(df)
+    feat_target_corr = feature_target_correlation(df, target) if target else None
 
     return MultivariateAnalysis(
         correlation_heatmap=correlation_heatmap(values, methods),
@@ -23,8 +24,9 @@ def multivariate_analysis(df: pd.DataFrame, target: str) -> MultivariateAnalysis
         scatter_matrix=scatter_matrix(df),
         correlation_matrix=values,
         correlation_methods=methods,
-        top_associations=top_associations(values, methods),
-        feature_target_correlation=feature_target_correlation(df, target) if target else None,
+        top_associations=top_associations(values, methods), #ToDo: Print Tabelle
+        feature_target_correlation=feat_target_corr, # ToDo: Print Tabelle neben Plot
+        feature_target_plot=feature_target_plot(feat_target_corr) if feat_target_corr else None, # ToDo: der Plot
         mutual_information=None,
         mcar_result=littles_mcar_test(df),
     )
@@ -150,6 +152,45 @@ def feature_target_correlation(df: pd.DataFrame, target: str) -> dict | None:
             result[col] = {'value': round(float(value), 3), 'method': method}
     return result or None
 
+def feature_target_plot(feature_target: dict | None):
+    if not feature_target:
+        return None
+
+    ranked = sorted(feature_target.items(), key=lambda x: x[1]['value'])
+    features = [f for f, _ in ranked]
+    valuevec = [info['value'] for _, info in ranked]
+    methodvec = [info['method'] for _, info in ranked]
+
+    method_colors = {
+        "Pearson": "#0F65A0",
+        "Cramér's V": "#65A1E1",
+        "Eta squared": "#994564",
+    }
+    bar_colors = [method_colors.get(m, "#A1ACBD") for m in methodvec]
+
+    fig = go.Figure()
+    seen = set()
+    for f, v, m, c in zip(features, valuevec, methodvec, bar_colors):
+        fig.add_trace(go.Bar(
+            x=[v], y=[f], orientation='h',
+            marker_color=c, name=m,
+            legendgroup=m, showlegend=m not in seen,
+            text=[f"{v:.3f}"], textposition="outside",
+            hovertemplate=f"{f}<br>Association: {v:.3f}<br>Method: {m}<extra></extra>",
+        ))
+        seen.add(m)
+
+    fig.update_layout(
+        title="Feature–Target Association",
+        xaxis=dict(title="Association strength", range=[0, 1.05]),
+        yaxis=dict(title="Feature"),
+        template="plotly_white",
+        bargap=0.3,
+        height=max(400, 40 * len(features) + 150),
+        legend=dict(title="Method"),
+    )
+    fig.show()
+    return fig.to_html(full_html=False, include_plotlyjs=False)
 
 #ToDo change for Column Overview
 def get_correlation(df: pd.DataFrame, col) -> list | None:
