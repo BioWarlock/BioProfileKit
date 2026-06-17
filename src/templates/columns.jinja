@@ -756,7 +756,7 @@
                                                                         {% for rank, freq in tax.rank_distribution.items() | sort(attribute='1', reverse=true) %}
                                                                             {% set pct = (freq * 100) | round(1) %}
                                                                             <tr>
-                                                                                <td class="font-monospace">{{ rank if rank else '—' }}</td>
+                                                                                <td>{{ rank if rank else '—' }}</td>
                                                                                 <td>{{ pct }}%</td>
                                                                                 <td>
                                                                                     <div class="progress" style="height:14px;">
@@ -794,7 +794,7 @@
                                                                         {% for entry in tax.taxonomy %}
                                                                             <tr>
                                                                                 <td class="text-muted">{{ loop.index }}</td>
-                                                                                <td class="font-monospace">{{ entry }}</td>
+                                                                                <td>{{ entry }}</td>
                                                                             </tr>
                                                                         {% endfor %}
                                                                         </tbody>
@@ -820,8 +820,8 @@
                                                                         <tbody>
                                                                         {% for used, current in tax.outdated_names.items() %}
                                                                             <tr>
-                                                                                <td class="font-monospace text-warning-emphasis">{{ used }}</td>
-                                                                                <td class="font-monospace fst-italic">{{ current }}</td>
+                                                                                <td class="text-warning-emphasis">{{ used }}</td>
+                                                                                <td class="fst-italic">{{ current }}</td>
                                                                             </tr>
                                                                         {% endfor %}
                                                                         </tbody>
@@ -850,7 +850,7 @@
                                                                             {% for tid in tax.taxid | sort %}
                                                                                 <tr>
                                                                                     <td class="text-muted">{{ loop.index }}</td>
-                                                                                    <td class="font-monospace">{{ tid }}</td>
+                                                                                    <td">{{ tid }}</td>
                                                                                 </tr>
                                                                             {% endfor %}
                                                                             </tbody>
@@ -1267,7 +1267,7 @@
                                                                 <tr {% if n_count > 0 %}class="table-warning"{% endif %}>
                                                                     <td>{{ i + 1 }}</td>
                                                                     <td>
-                                                                        <span class="font-monospace text-break" style="font-size: 0.85em;">
+                                                                        <span class="text-break" style="font-size: 0.85em;">
                                                                             {% set seq = col.dna_rna_data.sequence[i] %}
                                                                             {% if seq|length > 50 %}
                                                                                 {{ seq[:25] }}<span class="text-muted">...</span>{{ seq[-25:] }}
@@ -1571,7 +1571,7 @@
                                                             {% set total_nucleotides = all_nucleotides.values()|sum %}
                                                             {% for base, cnt in all_nucleotides.items()|sort(attribute='1', reverse=true) %}
                                                             <tr>
-                                                                <td class="font-monospace">{{ base }}</td>
+                                                                <td>{{ base }}</td>
                                                                 <td colspan="2">{{ cnt }}</td>
                                                                 <td>{{ "%.2f"|format((cnt / total_nucleotides) * 100) }}%</td>
                                                             </tr>
@@ -1677,7 +1677,7 @@
                                                                                     <tbody>
                                                                                     {% for kmer, count in col.dna_rna_data.k_mers[i] %}
                                                                                         <tr>
-                                                                                            <td class="font-monospace">{{ kmer }}</td>
+                                                                                            <td>{{ kmer }}</td>
                                                                                             <td>{{ count }}</td>
                                                                                         </tr>
                                                                                     {% endfor %}
@@ -1787,7 +1787,7 @@
                                                                 <tr>
                                                                     <td>{{ i + 1 }}</td>
                                                                     <td>
-                                                                        <span class="font-monospace text-break" style="font-size: 0.85em;">
+                                                                        <span class="text-break" style="font-size: 0.85em;">
                                                                             {% set seq = col.protein_data.sequence[i] %}
                                                                             {% if seq|length > 50 %}
                                                                                 {{ seq[:25] }}<span class="text-muted">...</span>{{ seq[-25:] }}
@@ -1809,7 +1809,7 @@
                                                                             {% if value != 0 %}
                                                                                 {% set percentage = value * 100 %}
                                                                                 <div class="mb-1">
-                                                                                    <span class="font-monospace fw-bold">{{ aa_names.get(key, 'Unk') }}</span>
+                                                                                    <span class="fw-bold">{{ aa_names.get(key, 'Unk') }}</span>
                                                                                     <span class="ms-2">{{ "%.2f"|format(percentage) }} %</span>
                                                                                     <div class="progress" style="height: 16px;">
                                                                                         <div class="progress-bar bg-primary" role="progressbar"
@@ -2046,7 +2046,7 @@
                                                                 {% for aa, count in all_amino_acids.items()|sort(attribute='1', reverse=true) %}
                                                                     {% set percentage = (count / total_amino_acids) * 100 %}
                                                                     <tr>
-                                                                        <td class="font-monospace fw-bold">{{ aa }}</td>
+                                                                        <td class="fw-bold">{{ aa }}</td>
                                                                         <td>{{ aa_names.get(aa, 'Unk') }}</td>
                                                                         <td>{{ count }}</td>
                                                                         <td>{{ "%.2f"|format(percentage) }}%</td>
@@ -2271,7 +2271,7 @@
                                                                                     <tbody>
                                                                                     {% for kmer, count in col.protein_data.k_mers[i] %}
                                                                                         <tr>
-                                                                                            <td class="font-monospace">{{ kmer }}</td>
+                                                                                            <td>{{ kmer }}</td>
                                                                                             <td>{{ count }}</td>
                                                                                         </tr>
                                                                                     {% endfor %}

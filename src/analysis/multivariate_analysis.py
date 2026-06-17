@@ -32,6 +32,7 @@ def multivariate_analysis(df: pd.DataFrame, target: str) -> MultivariateAnalysis
         mutual_information_plot=mutual_information_plot(mi) if mi else None,
         mi_relationship_plots=mi_relationship_plots(df, target, mi) if mi else None,
         mcar_result=littles_mcar_test(df),
+        target_name=target if target else None,
     )
 
 def _classify_columns(df: pd.DataFrame) -> dict:

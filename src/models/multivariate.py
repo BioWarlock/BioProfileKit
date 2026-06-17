@@ -27,3 +27,4 @@ class MultivariateAnalysis:
     feature_target_plot: str | None   # needs target
     mutual_information: dict | None  # needs target
     mcar_result: dict | None  # ToDo replace with finale Littles MCAR
+    target_name: str | None = None

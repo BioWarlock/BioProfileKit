@@ -199,7 +199,7 @@
                     <tbody>
                     {% for col_name, info in plots.missing_mechanisms.items() %}
                     <tr>
-                      <td class="font-monospace">{{ col_name }}</td>
+                      <td>{{ col_name }}</td>
                       <td>{{ info.count }}</td>
                       <td>
                         {% if info.mechanism == 'MAR' %}
@@ -210,7 +210,7 @@
                       </td>
                       <td>{{ info.p_value }}</td>
                       <td>{{ info.test if info.test else '—' }}</td>
-                      <td class="font-monospace">{{ info.related_col if info.related_col else '—' }}</td>
+                      <td>{{ info.related_col if info.related_col else '—' }}</td>
                     </tr>
                     {% endfor %}
                     </tbody>
@@ -351,8 +351,8 @@
                         {% for pair in plots.top_associations %}
                           {% set pct = (pair.value * 100) | round(1) %}
                           <tr>
-                            <td class="font-monospace">{{ pair.var1 }}</td>
-                            <td class="font-monospace">{{ pair.var2 }}</td>
+                            <td>{{ pair.var1 }}</td>
+                            <td>{{ pair.var2 }}</td>
                             <td class="strength-cell" data-order="{{ pair.value }}">
                               <strong>{{ "%.3f"|format(pair.value) }}</strong>
                               <div class="strength-bar">
@@ -424,7 +424,12 @@
                 or plots.mi_relationship_plots or plots.balance_plot %}
 
           <div class="gs-section" data-section="target">
-            <p class="section-heading">Target</p>
+            <p class="section-heading">
+              Target
+              {% if plots.target_name %}
+                <small class="text-muted fw-normal ms-2" style="font-size:.75em;">{{ plots.target_name }}</small>
+              {% endif %}
+            </p>
 
             {# ── Feature–Target Association ── #}
             {% if plots.feature_target_plot or plots.feature_target_correlation %}
@@ -451,7 +456,7 @@
                     <tbody>
                     {% for feature, info in plots.feature_target_correlation.items() | sort(attribute='1.value', reverse=true) %}
                     <tr>
-                      <td class="font-monospace">{{ feature }}</td>
+                      <td>{{ feature }}</td>
                       <td class="strength-cell" data-order="{{ info.value }}">
                         <strong>{{ "%.3f"|format(info.value) }}</strong>
                         <div class="strength-bar">
@@ -535,14 +540,14 @@
                     <thead>
                     <tr>
                       <th>Feature</th>
-                      <th>MI Score</th>
+                      <th style="text-align: left !important">MI Score</th>
                     </tr>
                     </thead>
                     <tbody>
                     {% for feature, info in plots.mutual_information.items() | sort(attribute='1.value', reverse=true) %}
                     <tr>
-                      <td class="font-monospace">{{ feature }}</td>
-                      <td data-order="{{ info.value }}">{{ "%.4f"|format(info.value) }}</td>
+                      <td>{{ feature }}</td>
+                      <td style="text-align: left !important" data-order="{{ info.value }}">{{ "%.4f"|format(info.value) }}</td>
                     </tr>
                     {% endfor %}
                     </tbody>
@@ -561,7 +566,7 @@
                   {% for item in plots.mi_relationship_plots %}
                   <div class="col-12 mb-4">
                     <div class="d-flex align-items-center mb-1">
-                      <span class="font-monospace fw-bold me-2">{{ item.feature }}</span>
+                      <span class="fw-bold me-2">{{ item.feature }}</span>
                       <span class="badge bg-secondary" style="font-size:.75em;">MI = {{ "%.4f"|format(item.value) }}</span>
                     </div>
                     <div class="plot-container" style="max-height:fit-content;overflow:scroll;">
