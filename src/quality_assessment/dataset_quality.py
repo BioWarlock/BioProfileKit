@@ -23,7 +23,7 @@ def _check_sample_size(general) -> QualityCheck:
     return QualityCheck(
         name="Sample Size vs Feature Count", status=status,
         message=f"{ratio:.1f} rows per feature "
-                f"({general.rows} rows / {general.cols} columns; ≥{MIN_ROWS_PER_FEATURE_WARN} recommended)",
+                f"({general.rows} rows / {general.cols} columns",
         detail_link="#overview",
     )
 
