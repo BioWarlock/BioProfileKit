@@ -78,85 +78,100 @@
              ================================================================ #}
           <p class="section-heading">General Dataset Statistics</p>
 
-          <table class="table table-sm table-hover mb-5" style="max-width: 520px;">
-            <caption class="visually-hidden">General dataset statistics</caption>
-            <tbody>
-              <tr><td>Filename</td>              <td><strong>{{ general.filename }}</strong></td></tr>
-              <tr><td>Rows</td>                  <td>{{ general.rows }}</td></tr>
-              <tr><td>Columns</td>               <td>{{ general.cols }}</td></tr>
-              <tr><td>Missing values</td>         <td>{{ general.nulls }}</td></tr>
-              <tr><td>Missing values (%)</td>     <td>{{ general.nulls_percentage }}</td></tr>
-              <tr><td>Empty rows</td>             <td>{{ general.empty_rows }}</td></tr>
-              <tr><td>Duplicate rows</td>
-                  <td>
-                    {% if general.dup_row > 0 %}
-                      <span class="badge bg-warning text-dark">{{ general.dup_row }}</span>
-                    {% else %}
-                      {{ general.dup_row }}
-                    {% endif %}
-                  </td>
-              </tr>
-              <tr><td>Duplicate columns</td>
-                  <td>
-                    {% if general.dup_col > 0 %}
-                      <span class="badge bg-warning text-dark">{{ general.dup_col }}</span>
-                    {% else %}
-                      {{ general.dup_col }}
-                    {% endif %}
-                  </td>
-              </tr>
-              <tr><td>Sample-Feature Ratio</td>  <td>{{ general.ratio }}</td></tr>
-              <tr><td>Memory usage</td>           <td>{{ general.memory }}</td></tr>
-              <tr><td>Alerts</td>                 <td>{{ general.alerts }}</td></tr>
-            </tbody>
-          </table>
+          <div class="row gx-4 mb-4">
 
-          {# ── Column type breakdown ── #}
-          <h6 class="sub-heading mb-2 mt-4">Column Types</h6>
-          <table class="table table-sm table-hover mb-3" style="max-width: 520px;">
-            <tbody>
-              {% if general.n_number %}
-              <tr><td>Numeric</td>        <td>{{ general.n_number }}</td></tr>
-              {% endif %}
-              {% if general.n_categorical %}
-              <tr><td>Categorical</td>    <td>{{ general.n_categorical }}</td></tr>
-              {% endif %}
-              {% if general.n_dna %}
-              <tr><td>DNA sequences</td>  <td>{{ general.n_dna }}</td></tr>
-              {% endif %}
-              {% if general.n_rna %}
-              <tr><td>RNA sequences</td>  <td>{{ general.n_rna }}</td></tr>
-              {% endif %}
-              {% if general.n_protein %}
-              <tr><td>Protein sequences</td> <td>{{ general.n_protein }}</td></tr>
-              {% endif %}
-              {% if general.n_taxonomy %}
-              <tr><td>Taxonomy</td>       <td>{{ general.n_taxonomy }}</td></tr>
-              {% endif %}
-              {% if general.n_unit %}
-              <tr><td>Lab measurements</td> <td>{{ general.n_unit }}</td></tr>
-              {% endif %}
-              {% if general.n_functional %}
-              <tr><td>Functional annotation</td> <td>{{ general.n_functional }}</td></tr>
-              {% endif %}
-              {% if general.n_empty %}
-              <tr>
-                <td>Empty (all-null)</td>
-                <td><span class="badge bg-warning text-dark">{{ general.n_empty }}</span></td>
-              </tr>
-              {% endif %}
-            </tbody>
-          </table>
+            {# ── Left: Dataset overview ── #}
+            <div class="col-lg-7">
+              <h6 class="text-uppercase text-muted fw-semibold mb-2" style="font-size:.7rem; letter-spacing:.08em;">
+                  Dataset Overview
+              </h6>
+              <table class="table table-sm table-hover mb-3">
+                <caption class="visually-hidden">General dataset statistics</caption>
+                <tbody>
+                  <tr><td>Filename</td>              <td><strong>{{ general.filename }}</strong></td></tr>
+                  <tr><td>Rows</td>                  <td>{{ general.rows }}</td></tr>
+                  <tr><td>Columns</td>               <td>{{ general.cols }}</td></tr>
+                  <tr><td>Missing values</td>         <td>{{ general.nulls }}</td></tr>
+                  <tr><td>Missing values (%)</td>     <td>{{ general.nulls_percentage }}</td></tr>
+                  <tr><td>Empty rows</td>             <td>{{ general.empty_rows }}</td></tr>
+                  <tr><td>Duplicate rows</td>
+                      <td>
+                        {% if general.dup_row > 0 %}
+                          <span class="badge bg-warning text-dark">{{ general.dup_row }}</span>
+                        {% else %}
+                          {{ general.dup_row }}
+                        {% endif %}
+                      </td>
+                  </tr>
+                  <tr><td>Duplicate columns</td>
+                      <td>
+                        {% if general.dup_col > 0 %}
+                          <span class="badge bg-warning text-dark">{{ general.dup_col }}</span>
+                        {% else %}
+                          {{ general.dup_col }}
+                        {% endif %}
+                      </td>
+                  </tr>
+                  <tr><td>Sample-Feature Ratio</td>  <td>{{ general.ratio }}</td></tr>
+                  <tr><td>Memory usage</td>           <td>{{ general.memory }}</td></tr>
+                  <tr><td>Alerts</td>                 <td>{{ general.alerts }}</td></tr>
+                </tbody>
+              </table>
+            </div>
 
-          {# ── Taxonomy not checked notice ── #}
-          {% if general.n_taxonomy == 0 %}
-          <div class="alert alert-light border py-2 mb-4" style="font-size:.875rem; max-width:520px;">
-            <strong>Taxonomy:</strong>
-            <span class="text-muted">Not checked —
-              run with <code>--tax</code> to enable taxonomic validation.
-            </span>
-          </div>
-          {% endif %}
+            {# ── Right: Column type breakdown ── #}
+            <div class="col-lg-5">
+              <h6 class="text-uppercase text-muted fw-semibold mb-2" style="font-size:.7rem; letter-spacing:.08em;">
+                  Column Types
+              </h6>
+              <table class="table table-sm table-hover mb-3">
+                <caption class="visually-hidden">Column type breakdown</caption>
+                <tbody>
+                  {% if general.n_number %}
+                  <tr><td>Numeric</td>               <td>{{ general.n_number }}</td></tr>
+                  {% endif %}
+                  {% if general.n_categorical %}
+                  <tr><td>Categorical</td>            <td>{{ general.n_categorical }}</td></tr>
+                  {% endif %}
+                  {% if general.n_dna %}
+                  <tr><td>DNA sequences</td>          <td>{{ general.n_dna }}</td></tr>
+                  {% endif %}
+                  {% if general.n_rna %}
+                  <tr><td>RNA sequences</td>          <td>{{ general.n_rna }}</td></tr>
+                  {% endif %}
+                  {% if general.n_protein %}
+                  <tr><td>Protein sequences</td>      <td>{{ general.n_protein }}</td></tr>
+                  {% endif %}
+                  {% if general.n_taxonomy %}
+                  <tr><td>Taxonomy</td>               <td>{{ general.n_taxonomy }}</td></tr>
+                  {% endif %}
+                  {% if general.n_unit %}
+                  <tr><td>Lab measurements</td>       <td>{{ general.n_unit }}</td></tr>
+                  {% endif %}
+                  {% if general.n_functional %}
+                  <tr><td>Functional annotation</td>  <td>{{ general.n_functional }}</td></tr>
+                  {% endif %}
+                  {% if general.n_empty %}
+                  <tr>
+                    <td>Empty (all-null)</td>
+                    <td><span class="badge bg-warning text-dark">{{ general.n_empty }}</span></td>
+                  </tr>
+                  {% endif %}
+                </tbody>
+              </table>
+
+              {# Only shown when taxonomy candidates exist but --tax was not used #}
+              {% if general.n_taxonomy == 0 and general.n_taxonomy_candidates is defined and general.n_taxonomy_candidates > 0 %}
+              <div class="alert alert-light border py-2" style="font-size:.875rem;">
+                <strong>Taxonomy:</strong>
+                <span class="text-muted">Not checked —
+                  run with <code>--tax</code> to enable taxonomic validation.
+                </span>
+              </div>
+              {% endif %}
+            </div>
+
+          </div>{# /row #}
 
           <hr>
 

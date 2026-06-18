@@ -136,6 +136,10 @@ def cli(input: str, tax: bool = False, func: str = None,
                              if getattr(col, 'taxonomy', None) and col.taxonomy.is_taxonomy)
     general.n_unit = sum(1 for col in column_overviews if col.measurement_data is not None)
     general.n_functional = sum(1 for col in column_overviews if getattr(col, 'annotation', None))
+    general.n_taxonomy_candidates = sum(
+        1 for col in column_overviews
+        if getattr(col, 'taxonomy_candidate', False)
+    )
     
     output_path = Path(input_path.stem + "_renders")
     done = print_step("Writing report")
