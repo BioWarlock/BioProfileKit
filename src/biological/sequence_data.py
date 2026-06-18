@@ -8,7 +8,6 @@ from urllib.error import URLError, HTTPError
 
 from Bio import motifs
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
-#from weblogo import *
 import numpy as np
 import pandas as pd
 import peptides

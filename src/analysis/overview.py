@@ -26,8 +26,8 @@ def overview(df: pd.DataFrame, file) -> DatasetSummary:
 
 def column_overview(df: pd.DataFrame, col) -> ColumnOverview:
     seq_type, invalid = check_sequence(df, col)
-    if seq_type != "None":
-        print(f"Column: {col:10s} is of type: {seq_type:10s} with invalid sequences: {invalid}.")
+    #if seq_type != "None":
+    #    print(f"Column: {col:10s} is of type: {seq_type:10s} with invalid sequences: {invalid}.")
     mixed = check_mixed_types(df, col) if seq_type == "None" else None
     if mixed is not None:
         suspect = mixed[1]

@@ -19,12 +19,11 @@ def detect_outliers(values: np.ndarray) -> Optional[Outliers]:
 
     if iqr <= 0:
         return None
-    # Adjusted Boxplot (Hubert & Vandervieren, 2008)
+    # Adjusted IQR (Hubert & Vandervieren, 2008)
     """
     Adjusted implementation adapted from robpy (v.0.0.6) 
     Source: https://robpy.readthedocs.io/en/latest/_modules/robpy/univariate/adjusted_boxplot.html
     """
-    #print("Adjusted IQR")
     mc = fast_medcouple(values)
 
     if mc >= 0:

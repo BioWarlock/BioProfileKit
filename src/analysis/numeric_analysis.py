@@ -12,8 +12,6 @@ def _safe_round(val, decimals=2):
 
 def numeric_columns(df: pd.DataFrame, col) -> NumericColumns:
     series = df[col].dropna()
-    print("Column: ", col)
-    res = detect_outliers(series.to_numpy(dtype=np.double))
 
     if series.empty:
         coefficient_of_variation = np.nan

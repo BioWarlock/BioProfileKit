@@ -1,3 +1,5 @@
+from termcolor import colored
+
 from models.quality import QualityCategory, QualityAssessment
 from quality_assessment.biological_quality import _check_sequence_validity, _check_sequence_redundancy, \
     _check_taxonomy_validity, _check_unit_validity
@@ -60,8 +62,8 @@ def quality_assessment(general, column_overviews, numeric_overviews, categorical
 
 
 def print_quality_report(quality: QualityAssessment) -> None:
-    symbols = {"pass": "[PASS]", "warn": "[WARN]", "fail": "[FAIL]"}
-    overall_label = {"ready": "NO QUALITY ISSUES", "caution": "MINOR QUALITY ISSUES", "not_ready": "MAJOR QUALITY ISSUES"}
+    symbols = {"pass": colored("[PASS]", 'green'), "warn": colored("[WARN]", 'yellow'), "fail": colored("[FAIL]", 'red')}
+    overall_label = {"ready": colored("NO QUALITY ISSUES", 'green'), "caution": colored("MINOR QUALITY ISSUES", 'yellow'), "not_ready": colored("MAJOR QUALITY ISSUES", 'red')}
 
     print("\n" + "=" * 64)
     print("QUALITY ASSESSMENT".center(64))

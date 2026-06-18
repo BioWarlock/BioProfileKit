@@ -103,10 +103,12 @@ def _eta_squared(df: pd.DataFrame, cat: str, num: str) -> float:
     if len(pair) < 2:
         return np.nan
 
-    groups = pair.groupby(cat)[num]
     grand_mean = pair[num].mean()
+    agg = pair.groupby(cat)[num].agg(['count', 'mean'])
+    counts = agg['count'].to_numpy()
+    means = agg['mean'].to_numpy()
 
-    ss_between = sum(len(g) * (g.mean() - grand_mean) ** 2 for _, g in groups)
+    ss_between = np.sum(counts * (means - grand_mean) ** 2)
     ss_total = ((pair[num] - grand_mean) ** 2).sum()
 
     if ss_total == 0:
