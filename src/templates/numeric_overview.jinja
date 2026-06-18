@@ -111,6 +111,53 @@
             </tbody>
           </table>
 
+          {# ── Column type breakdown ── #}
+          <h6 class="sub-heading mb-2 mt-4">Column Types</h6>
+          <table class="table table-sm table-hover mb-3" style="max-width: 520px;">
+            <tbody>
+              {% if general.n_number %}
+              <tr><td>Numeric</td>        <td>{{ general.n_number }}</td></tr>
+              {% endif %}
+              {% if general.n_categorical %}
+              <tr><td>Categorical</td>    <td>{{ general.n_categorical }}</td></tr>
+              {% endif %}
+              {% if general.n_dna %}
+              <tr><td>DNA sequences</td>  <td>{{ general.n_dna }}</td></tr>
+              {% endif %}
+              {% if general.n_rna %}
+              <tr><td>RNA sequences</td>  <td>{{ general.n_rna }}</td></tr>
+              {% endif %}
+              {% if general.n_protein %}
+              <tr><td>Protein sequences</td> <td>{{ general.n_protein }}</td></tr>
+              {% endif %}
+              {% if general.n_taxonomy %}
+              <tr><td>Taxonomy</td>       <td>{{ general.n_taxonomy }}</td></tr>
+              {% endif %}
+              {% if general.n_unit %}
+              <tr><td>Lab measurements</td> <td>{{ general.n_unit }}</td></tr>
+              {% endif %}
+              {% if general.n_functional %}
+              <tr><td>Functional annotation</td> <td>{{ general.n_functional }}</td></tr>
+              {% endif %}
+              {% if general.n_empty %}
+              <tr>
+                <td>Empty (all-null)</td>
+                <td><span class="badge bg-warning text-dark">{{ general.n_empty }}</span></td>
+              </tr>
+              {% endif %}
+            </tbody>
+          </table>
+
+          {# ── Taxonomy not checked notice ── #}
+          {% if general.n_taxonomy == 0 %}
+          <div class="alert alert-light border py-2 mb-4" style="font-size:.875rem; max-width:520px;">
+            <strong>Taxonomy:</strong>
+            <span class="text-muted">Not checked —
+              run with <code>--tax</code> to enable taxonomic validation.
+            </span>
+          </div>
+          {% endif %}
+
           <hr>
 
           {# ================================================================
@@ -216,9 +263,20 @@
                           <td style="width:22%; font-weight:600; vertical-align:middle;">
                             {{ check.name }}
                           </td>
-                          {# message – full text, no truncation #}
+                          {# message – render comma-separated items as a list #}
                           <td style="vertical-align:middle; color:#4a4a4a;">
-                            {{ check.message }}
+                            {%- if ': ' in check.message and ', ' in check.message.split(': ', 1)[1] %}
+                              {%- set prefix = check.message.split(': ', 1)[0] %}
+                              {%- set items  = check.message.split(': ', 1)[1].split(', ') %}
+                              <span style="font-weight:500;">{{ prefix }}:</span>
+                              <ul class="mb-0 mt-1 ps-3" style="font-size:.85rem;">
+                                {%- for item in items %}
+                                  <li>{{ item }}</li>
+                                {%- endfor %}
+                              </ul>
+                            {%- else %}
+                              {{ check.message }}
+                            {%- endif %}
                           </td>
                           {# optional deep-link #}
                           <td style="width:3rem; text-align:right; vertical-align:middle;">
