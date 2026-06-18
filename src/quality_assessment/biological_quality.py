@@ -37,7 +37,7 @@ def _check_sequence_validity(column_overviews) -> QualityCheck:
     status = _worst(statuses) if statuses else "pass"
     return QualityCheck(name="Sequence Validity", status=status,
                         message="; ".join(notes) if notes else "All sequences valid",
-                        detail_link="#sequences")
+                        detail_link="#columns")
 
 
 def _check_sequence_redundancy(column_overviews) -> QualityCheck:
@@ -62,7 +62,7 @@ def _check_sequence_redundancy(column_overviews) -> QualityCheck:
     status = _worst(statuses) if statuses else "pass"
     return QualityCheck(name="Sequence Redundancy (Reverse Complement)", status=status,
                         message="; ".join(notes) if notes else "No significant reverse-complement redundancy",
-                        detail_link="#sequences")
+                        detail_link="#columns")
 
 
 def _check_taxonomy_validity(column_overviews) -> QualityCheck:
@@ -80,7 +80,7 @@ def _check_taxonomy_validity(column_overviews) -> QualityCheck:
     status = _worst(statuses) if statuses else "pass"
     return QualityCheck(name="Taxonomy Validity", status=status,
                         message="; ".join(notes) if notes else "Taxonomy valid",
-                        detail_link="#taxonomy")
+                        detail_link="#columns")
 
 
 def _check_unit_validity(column_overviews) -> QualityCheck:
@@ -101,4 +101,4 @@ def _check_unit_validity(column_overviews) -> QualityCheck:
     status = _worst(statuses) if statuses else "pass"
     return QualityCheck(name="Unit Validity", status=status,
                         message="; ".join(notes) if notes else "Unit valid",
-                        detail_link="#unit")
+                        detail_link="#columns")

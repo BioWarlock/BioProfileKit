@@ -8,12 +8,29 @@ TEMPLATE_DIR = files("templates").joinpath()
 STATIC_DIR = files("static").joinpath()
 env = Environment(loader=FileSystemLoader(str(TEMPLATE_DIR)), autoescape=True)
 
+PAGE_MAP = {
+    "overview":      "numeric_data.html",
+    "columns":       "columns.html",
+    "multivariate":  "general_statistics.html",
+}
+
+def _resolve_detail_links(quality):
+    if quality is None:
+        return
+    for category in quality.categories:
+        for check in category.checks:
+            if not check.detail_link:
+                continue
+            anchor = check.detail_link.lstrip("#")
+            check.detail_link = PAGE_MAP.get(anchor)
 
 def write_report(output_path: Path, general, plots, duplicates_table,
                  column_overviews, numeric_overviews, categorical_overviews,
                  top_n, quality=None):
     output_path.mkdir(parents=True, exist_ok=True)
     shutil.copytree(str(STATIC_DIR), str(output_path / "static"), dirs_exist_ok=True)
+
+    _resolve_detail_links(quality)
 
     _render_to_file(output_path / "index.html", 'LandingPage.jinja')
     _render_to_file(output_path / "numeric_data.html", 'numeric_overview.jinja',
