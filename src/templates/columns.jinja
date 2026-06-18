@@ -55,23 +55,10 @@
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
             <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
                 <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        Services
-                    </a>
-                    <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                        <a class="dropdown-item" href="numeric_data.html">Overview of Analysis</a>
-                        <a class="dropdown-item" aria-current="page" href="columns.html">Column Analysis</a>
-                        <a class="dropdown-item" href="general_statistics.html">Multivariate Statistics</a>
-                    </div>
-                </li>
-                <!-- Colorblind mode toggle: switches between default and colorblind-friendly palette -->
-                <li class="nav-item ms-2 d-flex align-items-center">
-                    <button id="cbToggle" type="button" class="btn btn-cb-navbar btn-sm"
-                            aria-pressed="false" title="Toggle colorblind-friendly colour palette">
-                        Colorblind Mode
-                    </button>
-                </li>
+                <li class="nav-item"><a class="nav-link" href="numeric_data.html">Analysis Overview</a></li>
+                <li class="nav-item"><a class="nav-link active" aria-current="page" href="columns.html">Column Analysis</a></li>
+                <li class="nav-item"><a class="nav-link" href="general_statistics.html">Multivariate Statistics</a></li>
+
             </ul>
         </div>
     </div>
@@ -502,6 +489,11 @@
                                             {% if col.taxonomy.outdated_names %}
                                                 <strong>Outdated names:</strong> {{ col.taxonomy.outdated_names | length }}<br>
                                             {% endif %}
+                                        {% elif col.taxonomy is defined and col.taxonomy is none %}
+                                            <strong>Taxonomy:</strong>
+                                            <span class="text-muted">Not checked
+                                                <small>(run with <code>--tax</code> to enable)</small>
+                                            </span><br>
                                         {% endif %}
                                         {% if col.annotation and col.annotation.is_annotation %}
                                             {% if col.annotation.valid_annotation is string %}
@@ -529,8 +521,8 @@
 
                                 <div class="row w-100">
                                     {% if col.describe_plot %}
-                                        <div class="plot-container mb-4" style="max-height: fit-content; overflow: scroll;">
-                                            <figure role="img" aria-label="Overview plot for column {{ col.name }}">
+                                        <div class="plot-container mb-4 w-100" style="max-height: fit-content; overflow-x: auto;">
+                                            <figure role="img" aria-label="Overview plot for column {{ col.name }}" style="width:100%;">
                                                 {{ col.describe_plot | safe }}
                                             </figure>
                                         </div>
@@ -584,6 +576,14 @@
                                                     {% else %}
                                                         <span class="badge bg-success ms-1" style="font-size:.7em;">Valid</span>
                                                     {% endif %}
+                                                </button>
+                                            </li>
+                                        {% elif col.taxonomy is defined and col.taxonomy is none %}
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link disabled" type="button" role="tab"
+                                                        title="Taxonomy analysis not enabled — run with --tax">
+                                                    Taxonomy
+                                                    <span class="badge bg-secondary ms-1" style="font-size:.7em;">–</span>
                                                 </button>
                                             </li>
                                         {% endif %}
@@ -850,7 +850,7 @@
                                                                             {% for tid in tax.taxid | sort %}
                                                                                 <tr>
                                                                                     <td class="text-muted">{{ loop.index }}</td>
-                                                                                    <td">{{ tid }}</td>
+                                                                                    <td>{{ tid }}</td>
                                                                                 </tr>
                                                                             {% endfor %}
                                                                             </tbody>
@@ -2672,25 +2672,38 @@
 
 <!-- Colorblind mode toggle: persists the user's palette choice across pages via localStorage -->
 <script>
-    (function () {
-        const btn = document.getElementById('cbToggle');
-        const body = document.body;
-
-        function applyTheme(theme) {
-            body.dataset.cbTheme = theme;
-            btn.setAttribute('aria-pressed', theme === 'colorblind' ? 'true' : 'false');
-            btn.textContent = theme === 'colorblind' ? 'Standard Mode' : 'Colorblind Mode';
-        }
-
-        const stored = localStorage.getItem('cb-theme');
-        if (stored === 'colorblind') { applyTheme('colorblind'); }
-
-        btn.addEventListener('click', function () {
-            const next = body.dataset.cbTheme === 'colorblind' ? 'internal' : 'colorblind';
-            applyTheme(next);
-            localStorage.setItem('cb-theme', next);
-        });
-    })();
+    document.addEventListener('DOMContentLoaded', function () {
+    const pill  = document.getElementById('cbPill');
+    const label = document.getElementById('cbLabel');
+    const body  = document.body;
+    function applyTheme(t) {
+      body.dataset.cbTheme = t;
+      label.textContent = t === 'colorblind' ? 'Standard Mode' : 'Colorblind Mode';
+      pill.style.outline = t === 'colorblind' ? '2px solid #7DC3E8' : 'none';
+    }
+    const stored = localStorage.getItem('cb-theme');
+    if (stored === 'colorblind') applyTheme('colorblind');
+    pill.addEventListener('click', function () {
+      const next = body.dataset.cbTheme === 'colorblind' ? 'internal' : 'colorblind';
+      applyTheme(next); localStorage.setItem('cb-theme', next);
+    });
+  });
 </script>
+
+<!-- Colorblind mode pill (fixed, bottom-right) -->
+<div id="cbPill" style="
+    position:fixed; bottom:1.25rem; right:1.25rem; z-index:1050;
+    display:flex; align-items:center; gap:.45rem;
+    background:rgba(30,30,30,.82); backdrop-filter:blur(6px);
+    border-radius:2rem; padding:.35rem .85rem .35rem .6rem;
+    box-shadow:0 2px 8px rgba(0,0,0,.25); cursor:pointer;
+    user-select:none; transition:opacity .2s;" title="Toggle colorblind-friendly palette">
+  <!-- eye icon -->
+  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="#ccc" viewBox="0 0 16 16" aria-hidden="true">
+    <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
+    <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
+  </svg>
+  <span id="cbLabel" style="font-size:.78rem; color:#ddd; white-space:nowrap;">Colorblind Mode</span>
+</div>
 </body>
 </html>
