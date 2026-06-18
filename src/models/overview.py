@@ -15,7 +15,6 @@ class DatasetSummary:
     ratio: float
     memory: float
     alerts: int
-    #ToDo Added for General Dataset Statistics Table
     n_number: int = 0
     n_dna: int = 0
     n_rna: int = 0
@@ -47,3 +46,4 @@ class ColumnOverview:
     monotonicity: bool | None
     taxonomy: Optional = None
     measurement_data: Optional = None
+    taxonomy_candidate: bool = False

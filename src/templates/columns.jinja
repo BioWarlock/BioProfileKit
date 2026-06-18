@@ -168,8 +168,11 @@
                                     <button class="btn btn-sm cbf-warning"   data-quality="rcduplicates"  title="Reverse-complement duplicate sequences detected">RC Duplicates</button>
                                     <button class="btn btn-sm cbf-warning"   data-quality="lowcomplexity" title="Low sequence complexity (Shannon entropy < 50%) — possible repeats or poly-A tails">Low Complexity</button>
                                     <!-- Biological metadata -->
-                                    <button class="btn btn-sm cbf-danger"    data-quality="taxonomyinvalid"    title="Taxonomy identifiers failed validation">Taxonomy Invalid</button>
-                                    <button class="btn btn-sm cbf-danger"    data-quality="annotationinvalid"  title="Functional annotation failed controlled vocabulary check">Annotation Invalid</button>
+                                    <button class="btn btn-sm cbf-danger"    data-quality="taxonomyinvalid"      title="Taxonomy identifiers failed validation">Taxonomy Invalid</button>
+                                    <button class="btn btn-sm cbf-success"   data-quality="taxonomyvalid"        title="Taxonomy validated successfully">Taxonomy Valid</button>
+                                    <button class="btn btn-sm cbf-warning"   data-quality="taxonomynotchecked"   title="Taxonomy candidate column detected but not validated — run with --tax">Taxonomy Not Checked</button>
+                                    <button class="btn btn-sm cbf-secondary" data-quality="taxonomy"             title="All columns with taxonomy (valid, invalid or unchecked)">Taxonomy (All)</button>
+                                    <button class="btn btn-sm cbf-danger"    data-quality="annotationinvalid"    title="Functional annotation failed controlled vocabulary check">Annotation Invalid</button>
                                     <!-- Data anomalies -->
                                     <button class="btn btn-sm cbf-warning"   data-quality="dataanomalies" title="Suspect or anomalous values detected in this column">Data Anomalies</button>
                                 </div>
@@ -206,7 +209,7 @@
             <div id="columns-container">
                 {% for col in columns %}
                     {# fns = filter namespace — separate from badge ns #}
-                    {% set fns = namespace(has_inf='no',is_sparse='no',has_outliers='no',imbalanced='no',nzv='no',rare='no',ambiguous_bases='no',rc_duplicates='no',low_complexity='no',mixed_values='no',data_anomalies='no',taxonomy_invalid='no',annotation_invalid='no') %}
+                    {% set fns = namespace(has_inf='no',is_sparse='no',has_outliers='no',imbalanced='no',nzv='no',rare='no',ambiguous_bases='no',rc_duplicates='no',low_complexity='no',mixed_values='no',data_anomalies='no',taxonomy_invalid='no',taxonomy_valid='no',taxonomy_not_checked='no',annotation_invalid='no') %}
                     {% for ov in overview %}{% if ov.name == col.name %}
                         {% set _n = col.number if col.number and col.number > 0 else 1 %}
                         {% if ov.infinity is defined and ov.infinity > 0 %}{% set fns.has_inf = 'yes' %}{% endif %}
@@ -230,6 +233,8 @@
                     {% if col.measurement_data and col.measurement_data.with_measurement %}{% set fns.mixed_values = 'yes' %}{% endif %}
                     {% if col.suspect_values is not none and not (col.invalid_seqs and col.invalid_seqs|length > 0) %}{% set fns.data_anomalies = 'yes' %}{% endif %}
                     {% if col.taxonomy and col.taxonomy.is_taxonomy and col.taxonomy.taxonomy is not string %}{% set fns.taxonomy_invalid = 'yes' %}{% endif %}
+                    {% if col.taxonomy and col.taxonomy.is_taxonomy and col.taxonomy.taxonomy is string %}{% set fns.taxonomy_valid = 'yes' %}{% endif %}
+                    {% if col.taxonomy is defined and col.taxonomy is none and col.taxonomy_candidate %}{% set fns.taxonomy_not_checked = 'yes' %}{% endif %}
                     {% if col.annotation and col.annotation.is_annotation and col.taxonomy.valid_annotation is not string %}{% set fns.annotation_invalid = 'yes' %}{% endif %}
                     <div class="card row mt-3 column-item" data-index="{{ loop.index0 }}"
                          data-name="{{ col.name | lower }}"
@@ -251,6 +256,8 @@
                          data-mixedvalues="{{ fns.mixed_values }}"
                          data-dataanomalies="{{ fns.data_anomalies }}"
                          data-taxonomyinvalid="{{ fns.taxonomy_invalid }}"
+                         data-taxonomyvalid="{{ fns.taxonomy_valid }}"
+                         data-taxonomynotchecked="{{ fns.taxonomy_not_checked }}"
                          data-annotationinvalid="{{ fns.annotation_invalid }}"
                          style="display: {% if loop.index0 < items_per_page %}block{% else %}none{% endif %};">
                         <div class="card-header d-inline-flex gap-1 mb-2">
@@ -262,7 +269,11 @@
                             </button>
                             <div class="m-2 d-flex">
                                 {% if col.taxonomy and col.taxonomy.is_taxonomy and col.taxonomy.taxonomy is not string %}
-                                    <span class="badge bg-danger me-2">Taxonomy invalid</span>
+                                    <span class="badge bg-danger me-2">Taxonomy Invalid</span>
+                                {% elif col.taxonomy and col.taxonomy.is_taxonomy and col.taxonomy.taxonomy is string %}
+                                    <span class="badge bg-success me-2">Taxonomy Valid</span>
+                                {% elif col.taxonomy is defined and col.taxonomy is none and col.taxonomy_candidate %}
+                                    <span class="badge bg-warning text-dark me-2" title="Run with --tax to validate">Taxonomy Not Checked</span>
                                 {% endif %}
                                 {% if col.annotation and col.annotation.is_annotation and col.taxonomy.valid_annotation is not string %}
                                     <span class="badge bg-danger me-2">Annotation invalid</span>
@@ -489,6 +500,11 @@
                                             {% if col.taxonomy.outdated_names %}
                                                 <strong>Outdated names:</strong> {{ col.taxonomy.outdated_names | length }}<br>
                                             {% endif %}
+                                        {% elif col.taxonomy is defined and col.taxonomy is none %}
+                                            <strong>Taxonomy:</strong>
+                                            <span class="text-muted">Not checked
+                                                <small>(run with <code>--tax</code> to enable)</small>
+                                            </span><br>
                                         {% endif %}
                                         {% if col.annotation and col.annotation.is_annotation %}
                                             {% if col.annotation.valid_annotation is string %}
@@ -571,6 +587,14 @@
                                                     {% else %}
                                                         <span class="badge bg-success ms-1" style="font-size:.7em;">Valid</span>
                                                     {% endif %}
+                                                </button>
+                                            </li>
+                                        {% elif col.taxonomy is defined and col.taxonomy is none %}
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link disabled" type="button" role="tab"
+                                                        title="Taxonomy analysis not enabled — run with --tax">
+                                                    Taxonomy
+                                                    <span class="badge bg-secondary ms-1" style="font-size:.7em;">–</span>
                                                 </button>
                                             </li>
                                         {% endif %}
@@ -2543,6 +2567,18 @@
             'taxonomyinvalid','annotationinvalid','dataanomalies'
         ];
 
+        // Composite filters: one button matches if ANY of the listed flags is 'yes'
+        const COMPOSITE_QUALITY = {
+            'taxonomy': ['taxonomyinvalid', 'taxonomyvalid', 'taxonomynotchecked'],
+        };
+
+        function matchesQuality(card, q) {
+            if (COMPOSITE_QUALITY[q]) {
+                return COMPOSITE_QUALITY[q].some(f => card.dataset[f] === 'yes');
+            }
+            return card.dataset[q] === 'yes';
+        }
+
         let activeType      = 'all';
         let activeQualities = new Set();
         let filterLogic     = 'or';
@@ -2581,10 +2617,10 @@
                 }
                 if (show && activeQualities.size > 0) {
                     if (filterLogic === 'and') {
-                        for (const q of activeQualities) { if (card.dataset[q] !== 'yes') { show = false; break; } }
+                        for (const q of activeQualities) { if (!matchesQuality(card, q)) { show = false; break; } }
                     } else {
                         let any = false;
-                        for (const q of activeQualities) { if (card.dataset[q] === 'yes') { any = true; break; } }
+                        for (const q of activeQualities) { if (matchesQuality(card, q)) { any = true; break; } }
                         if (!any) show = false;
                     }
                 }
