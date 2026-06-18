@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from scipy.sparse import coo_matrix
 from scipy.stats import chi2_contingency
 
 from models.multivariate import MultivariateAnalysis
@@ -9,6 +10,7 @@ from .plot_utils import apply_standard_axes
 
 
 def multivariate_analysis(df: pd.DataFrame, target: str) -> MultivariateAnalysis:
+    types = _classify_columns(df)
     values, methods = compute_correlation_matrix(df)
     feat_target_corr = feature_target_correlation(df, target) if target else None
     mi = mutual_information(df, target) if target else None
@@ -16,8 +18,8 @@ def multivariate_analysis(df: pd.DataFrame, target: str) -> MultivariateAnalysis
     return MultivariateAnalysis(
         correlation_heatmap=correlation_heatmap(values, methods),
         pearson_heatmap=pearson_correlation_heatmap(df),
-        cramers_heatmap=cramers_heatmap(df),
-        eta_heatmap=eta_heatmap(df),
+        cramers_heatmap=cramers_heatmap(values, types),
+        eta_heatmap=eta_heatmap(values, types),
         missing_matrix=missing_matrix(df),
         missing_values_barchart=missing_values_barchart(df),
         balance_plot=balance_plot(df, target) if target else None,
@@ -36,11 +38,6 @@ def multivariate_analysis(df: pd.DataFrame, target: str) -> MultivariateAnalysis
     )
 
 def _classify_columns(df: pd.DataFrame) -> dict:
-    """Return {column: 'numeric' | 'categorical'} for usable columns.
-
-    Drops constant numeric columns and single-value categoricals, since they
-    carry no association signal.
-    """
     num = df.select_dtypes(include='number')
     num_std = num.std(ddof=0)
     numeric = num_std[num_std > 0].index
@@ -50,6 +47,7 @@ def _classify_columns(df: pd.DataFrame) -> dict:
     categorical = cat_nunique[cat_nunique > 1].index
 
     return {**{c: 'numeric' for c in numeric}, **{c: 'categorical' for c in categorical}}
+
 """
 Correlation
 """
@@ -67,14 +65,26 @@ def _cramers_v(df: pd.DataFrame, a: str, b: str) -> float:
     if pair.empty:
         return np.nan
 
-    confusion = pd.crosstab(pair[a], pair[b])
-    if confusion.shape[0] < 2 or confusion.shape[1] < 2:
+    a_codes, _ = pair[a].factorize()
+    b_codes, _ = pair[b].factorize()
+    if len(a_codes) == 0 or len(b_codes) == 0:
+        return np.nan
+    r = int(a_codes.max()) + 1
+    k = int(b_codes.max()) + 1
+    if r < 2 or k < 2:
         return np.nan
 
-    chi2 = chi2_contingency(confusion)[0]
-    n = confusion.to_numpy().sum()
+    n = len(pair)
+    obs = coo_matrix((np.ones(n), (a_codes, b_codes)), shape=(r, k)).tocsr()
+    row_sum = np.asarray(obs.sum(axis=1)).ravel()
+    col_sum = np.asarray(obs.sum(axis=0)).ravel()
+
+    coo = obs.tocoo()
+    expected = row_sum[coo.row] * col_sum[coo.col] / n
+    chi2 = np.sum(coo.data ** 2 / expected) - n
+
     phi2 = chi2 / n
-    r, k = confusion.shape
+    r, k = obs.shape
 
     # Bergsma-Bias Correction
     phi2corr = max(0.0, phi2 - ((k - 1) * (r - 1)) / (n - 1))
@@ -241,19 +251,13 @@ def correlation_heatmap(df: pd.DataFrame, methods: pd.DataFrame):
     return fig.to_html(full_html=False, include_plotlyjs=False)
 
 
-def cramers_heatmap(df: pd.DataFrame) -> str | None:
+def cramers_heatmap(df: pd.DataFrame, types: dict) -> str | None:
     """Cramér's V matrix over categorical columns only (0..1)."""
-    cols = [c for c, t in _classify_columns(df).items() if t == 'categorical']
+    cols = [c for c, t in types.items() if t == 'categorical' and c in df.index]
     if len(cols) < 2:
         return None
 
-    mat = pd.DataFrame(np.eye(len(cols)), index=cols, columns=cols)
-    for i in range(len(cols)):
-        for j in range(i + 1, len(cols)):
-            val = _cramers_v(df, cols[i], cols[j])
-            val = round(float(val), 3) if val == val else np.nan
-            mat.iat[i, j] = val
-            mat.iat[j, i] = val
+    mat = df.loc[cols, cols]
 
     # light -> primary blue (#0F65A0)
     colorscale = [
@@ -282,28 +286,24 @@ def cramers_heatmap(df: pd.DataFrame) -> str | None:
             ))
     fig.update_layout(
         title="Cramér's V (categorical pairs)",
+        autosize=True,
         height=max(450, 55 * len(cols) + 200),
         template="plotly_white",
         xaxis=dict(tickangle=-45),
         annotations=annotations,
-        plot_bgcolor="#A1ACBD",  # NaN cells appear neutral grey
+        plot_bgcolor="#A1ACBD",
     )
     fig.update_yaxes(autorange="reversed")
-    return fig.to_html(full_html=False, include_plotlyjs=False)
+    return fig.to_html(full_html=False, include_plotlyjs=False, config={"responsive": True})
 
 
-def eta_heatmap(df: pd.DataFrame) -> str | None:
-    types = _classify_columns(df)
-    cats = [c for c, t in types.items() if t == 'categorical']
-    nums = [c for c, t in types.items() if t == 'numeric']
+def eta_heatmap(df: pd.DataFrame, types: dict) -> str | None:
+    cats = [c for c, t in types.items() if t == 'categorical' and c in df.index]
+    nums = [c for c, t in types.items() if t == 'numeric' and c in df.index]
     if not cats or not nums:
         return None
 
-    mat = pd.DataFrame(np.zeros((len(cats), len(nums))), index=cats, columns=nums)
-    for c in cats:
-        for nu in nums:
-            val = _eta_squared(df, c, nu)
-            mat.at[c, nu] = round(float(val), 3) if val == val else np.nan
+    mat = df.loc[cats, nums]
 
     # light -> magenta (#994564)
     colorscale = [
@@ -332,6 +332,7 @@ def eta_heatmap(df: pd.DataFrame) -> str | None:
             ))
     fig.update_layout(
         title="Eta² — variance in numeric explained by categorical (directional)",
+        autosize=True,
         height=max(450, 55 * len(cats) + 200),
         template="plotly_white",
         xaxis_title="Numeric", yaxis_title="Categorical",
@@ -340,7 +341,7 @@ def eta_heatmap(df: pd.DataFrame) -> str | None:
         plot_bgcolor="#A1ACBD",
     )
     fig.update_yaxes(autorange="reversed")
-    return fig.to_html(full_html=False, include_plotlyjs=False)
+    return fig.to_html(full_html=False, include_plotlyjs=False, config={"responsive": True})
 
 def top_associations(values, methods, threshold=0.7):
     pairs = []
@@ -379,7 +380,7 @@ def mutual_information(df: pd.DataFrame, target: str) -> dict | None:
     discrete_features = []
     for col in features:
         if types[col] == 'categorical':
-            X[col], _ = X[col].factorize()       # your preferred encoding
+            X[col], _ = X[col].factorize()
             discrete_features.append(True)
         else:
             X[col] = X[col].astype(float)

@@ -7,5 +7,5 @@ if __name__ == '__main__':
    # cli(['-i', "data/iedb_sub.tsv", "--tax"])
     #cli(['-i', 'data/winequality-white.csv'])
 #    cli(['-i', "data/proteinGroups.tsv"])
-    #cli(['-i', 'data/bakrep_sagalactiae.tsv'])
-    cli(['-i', 'data/iedb_test.tsv', '-tc', 'bind_class'])
+    cli(['-i', 'data/bakrep_sagalactiae.tsv'])
+    #cli(['-i', 'data/iedb_test.tsv', '-tc', 'bind_class'])

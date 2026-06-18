@@ -18,24 +18,31 @@ def _missing_rate(col):
     return mp / 100.0 if mp > 1 else mp
 
 
-def _check_missing(column_overviews) -> QualityCheck:
-    flagged = []
-    worst = "pass"
+def _check_missing(column_overviews) -> list[QualityCheck]:
+    flagged, empty, worst = [], [], "pass"
     for c in column_overviews:
         rate = _missing_rate(c)
-        if rate > MISSING_COL_FAIL:
+        if rate >= 1.0:
+            empty.append(c.name)
+        elif rate > MISSING_COL_FAIL:
             flagged.append((c.name, rate)); worst = "fail"
         elif rate > MISSING_COL_WARN:
             flagged.append((c.name, rate))
             worst = "fail" if worst == "fail" else "warn"
-    if not flagged:
-        return QualityCheck(name="Missing Values", status="pass",
-                            message="No column above 30% missing", detail_link="#multivariate")
-    flagged.sort(key=lambda x: x[1], reverse=True)
-    listed = ", ".join(f"{n} ({r * 100:.0f}%)" for n, r in flagged)
-    return QualityCheck(name="Missing Values", status=worst,
-                        message=f"Columns above 30% missing: {listed}", detail_link="#multivariate")
 
+    checks = []
+    if flagged:
+        flagged.sort(key=lambda x: x[1], reverse=True)
+        listed = ", ".join(f"{n} ({r*100:.0f}%)" for n, r in flagged)
+        checks.append(QualityCheck("Missing Values", worst,
+                      f"Columns above 30% missing: {listed}", "#multivariate"))
+    if empty:
+        checks.append(QualityCheck("Empty Column", "fail",
+                      f"Empty column(s): {', '.join(empty)}", "#multivariate"))
+    if not checks:
+        checks.append(QualityCheck("Missing Values", "pass",
+                      "No column above 30% missing", "#multivariate"))
+    return checks
 
 def _check_variance(column_overviews, categorical_overviews) -> QualityCheck:
     constant_cols = [c.name for c in column_overviews if c.constant]

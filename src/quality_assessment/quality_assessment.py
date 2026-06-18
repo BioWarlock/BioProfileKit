@@ -20,7 +20,7 @@ def quality_assessment(general, column_overviews, numeric_overviews, categorical
         _check_empty_rows(general),
     ]
     column_quality = [
-        _check_missing(column_overviews),
+        *_check_missing(column_overviews),
         _check_variance(column_overviews, categorical_overviews),
         _check_high_cardinality(column_overviews),
         _check_mixed_types(column_overviews),
@@ -61,7 +61,7 @@ def quality_assessment(general, column_overviews, numeric_overviews, categorical
 
 def print_quality_report(quality: QualityAssessment) -> None:
     symbols = {"pass": "[PASS]", "warn": "[WARN]", "fail": "[FAIL]"}
-    overall_label = {"ready": "READY", "caution": "READY WITH CAUTION", "not_ready": "NOT READY"}
+    overall_label = {"ready": "NO QUALITY ISSUES", "caution": "MINOR QUALITY ISSUES", "not_ready": "MAJOR QUALITY ISSUES"}
 
     print("\n" + "=" * 64)
     print("QUALITY ASSESSMENT".center(64))

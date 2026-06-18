@@ -3,12 +3,12 @@ import tempfile
 from collections import defaultdict, Counter
 from itertools import chain
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, List, Dict
 from urllib.error import URLError, HTTPError
 
 from Bio import motifs
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
-from weblogo import *
+#from weblogo import *
 import numpy as np
 import pandas as pd
 import peptides
@@ -207,13 +207,16 @@ def _reverse_complement_duplicates(all_seqs: pd.Series) -> Tuple[float,set]:
     return (round(redundant / len(seq_set) * 100, 2) if len(seq_set) > 0 else 0.0), redundant_seqs
 
 def _normalized_shanon_entropy(seq: str) -> np.float64:
-    if len(seq) == 0:
+    n = len(seq)
+    if n == 0:
         return np.float64(0.0)
-    counts = np.array(list(Counter(seq).values()))
-    max_entropy = np.log2(min(len(seq), len(counts))) # ToDo or 4?
+    counts = np.fromiter(Counter(seq).values(), dtype=np.float64)
+    max_entropy = np.log2(min(n, len(counts)))  # ToDo or 4?
     if max_entropy == 0:
         return np.float64(0.0)
-    return np.round(entropy(counts, base=2) / max_entropy * 100, 2).astype(np.float64)
+    p = counts / n
+    h = -np.sum(p * np.log2(p))
+    return np.float64(round(float(h / max_entropy * 100), 2))
 
 def _dinucleotide_oe(df: pd.DataFrame) -> Tuple[SequenceMetricSummary, SequenceMetricSummary]:
     seqs = df["sequence"]

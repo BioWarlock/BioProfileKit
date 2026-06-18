@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from typing import Tuple
 
-import numpy as np
 import pandas as pd
 
 @dataclass
@@ -93,13 +92,19 @@ def is_taxid(col: pd.Series, valid_tax_ids: set, threshold: float = 0.9) -> set 
 
 
 def is_taxonomy(col: pd.Series, valid_names: set, name_to_rank: dict, name_to_scientific: dict, threshold: float = 0.8) -> dict | None:
-    is_valid = col.isin(valid_names)
+    col_obj = col.astype(object)
+    uniques = pd.unique(col_obj.dropna())
+    valid_unique = {u for u in uniques if u in valid_names}
+
+    is_valid = col_obj.isin(valid_unique)
     validity_rate = is_valid.sum() / len(col)
 
-    cleaned_names = col
+    cleaned_names = col_obj
     if validity_rate < threshold:
-        cleaned_names = col.astype(str).str.extract(r'^([^(]+)')[0].str.strip()
-        is_valid_cleaned = cleaned_names.isin(valid_names)
+        cleaned_names = col_obj.astype(str).str.extract(r'^([^(]+)')[0].str.strip()
+        cleaned_uniques = pd.unique(cleaned_names.dropna())
+        valid_cleaned_unique = {u for u in cleaned_uniques if u in valid_names}
+        is_valid_cleaned = cleaned_names.isin(valid_cleaned_unique)
         validity_rate_cleaned = is_valid_cleaned.sum() / len(col)
 
         if validity_rate_cleaned > validity_rate:
@@ -144,7 +149,8 @@ def rank_distribution(col: pd.Series, name_to_rank: dict, threshold: float = 0.0
 
 def find_outdated_names(col: pd.Series, valid_names: set, name_to_scientific: dict) -> dict:
     cleaned = col.astype(str).str.strip()
-    valid_used = cleaned[cleaned.isin(valid_names)].unique()
+    uniques = pd.unique(cleaned.dropna())
+    valid_used = [u for u in uniques if u in valid_names]
 
     outdated = {}
     for name in valid_used:
