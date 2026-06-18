@@ -13,6 +13,8 @@ def apply_standard_axes(fig, tick_angle=None):
 #ToDo: Check if we want to keep nan in count plot.
 def plot_overview(col):
     col = col.dropna()
+    if col.nunique() == 1:
+        return " " #ToDo find better solution
     if col.dtype in ('str', 'string'):
         truncated = col.apply(lambda x: str(x)[:20] + '…' if len(str(x)) > 20 else str(x))
     if col.dtype != 'object':
@@ -23,7 +25,7 @@ def plot_overview(col):
         else:
             fig = px.histogram(x=col, color_discrete_sequence=['#0F65A0'], nbins=bins)
             apply_standard_axes(fig)
-        fig.update_layout(bargap=0.4, plot_bgcolor='white', xaxis_title=col.name,yaxis_title='Count')
+        fig.update_layout(bargap=0.4, plot_bgcolor='white', xaxis_title=col.name,yaxis_title='Count', autosize=True)
         fig.layout.xaxis.automargin = True
         return fig.to_html(full_html=False, include_plotlyjs=False)
     return None
