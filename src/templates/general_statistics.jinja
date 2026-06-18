@@ -643,6 +643,19 @@
 <script src="https://cdn.datatables.net/responsive/3.0.4/js/responsive.bootstrap5.min.js"></script>
 
 <script>
+/* ── Plotly resize on tab activation ──
+   Plotly computes width = 0 when a tab-pane is hidden (display:none).
+   Bootstrap fires 'shown.bs.tab' after the pane becomes visible —
+   at that point we can read the real container width and relayout.
+   Note: Plotly uses class 'plotly-graph-div', not 'js-plotly-plot'. */
+document.addEventListener('shown.bs.tab', function (e) {
+  const pane = document.querySelector(e.target.getAttribute('data-bs-target'));
+  if (!pane) return;
+  pane.querySelectorAll('.plotly-graph-div').forEach(function (plot) {
+    Plotly.relayout(plot, { autosize: true });
+  });
+});
+
 $(document).ready(function () {
 
   /* ── DataTables ── */
