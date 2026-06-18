@@ -248,6 +248,7 @@ def correlation_heatmap(df: pd.DataFrame, methods: pd.DataFrame):
     )
     fig.update_layout(
         title="Association Heatmap (mixed-type)",
+        plot_bgcolor="#FFFFFF",
         margin=dict(b=120),
     )
     return fig.to_html(full_html=False, include_plotlyjs=False)
@@ -261,41 +262,27 @@ def cramers_heatmap(df: pd.DataFrame, types: dict) -> str | None:
 
     mat = df.loc[cols, cols]
 
-    # light -> primary blue (#0F65A0)
     colorscale = [
         [0.0, "#EAF4FB"], [0.25, "#A9E1FF"], [0.5, "#65A1E1"],
         [0.75, "#4082C0"], [1.0, "#0F65A0"],
     ]
-    z = mat.to_numpy(dtype=float)
-    text_colors = np.where(z > 0.6, "white", "#1A1A1A")
 
-    fig = go.Figure(data=go.Heatmap(
-        z=z, x=cols, y=cols,
-        colorscale=colorscale, zmin=0, zmax=1,
-        colorbar=dict(title="Cramér's V"),
+    fig = px.imshow(
+        mat, text_auto=".3g",
+        labels=dict(color="Cramér's V"),
+        color_continuous_scale=colorscale, aspect="auto",
+        height=700, zmin=0, zmax=1,
+    )
+    fig.update_traces(
         hovertemplate="%{x} ↔ %{y}<br>Cramér's V: %{z}<extra></extra>",
-        hoverongaps=False,
-    ))
-    annotations = []
-    for yi in range(len(cols)):
-        for xi in range(len(cols)):
-            v = mat.iat[yi, xi]
-            if v != v:
-                continue
-            annotations.append(dict(
-                x=cols[xi], y=cols[yi], text=f"{v:.3g}",
-                showarrow=False, font=dict(color=text_colors[yi, xi], size=12),
-            ))
+    )
     fig.update_layout(
         title="Cramér's V (categorical pairs)",
         autosize=True,
-        height=max(450, 55 * len(cols) + 200),
-        template="plotly_white",
         xaxis=dict(tickangle=-45),
-        annotations=annotations,
-        plot_bgcolor="#A1ACBD",
+        plot_bgcolor="#FFFFFF",
+        margin=dict(b=120),
     )
-    fig.update_yaxes(autorange="reversed")
     return fig.to_html(full_html=False, include_plotlyjs=False, config={"responsive": True})
 
 
@@ -307,42 +294,27 @@ def eta_heatmap(df: pd.DataFrame, types: dict) -> str | None:
 
     mat = df.loc[cats, nums]
 
-    # light -> magenta (#994564)
     colorscale = [
-        [0.0, "#F2F2F2"], [0.25, "#D27897"], [0.5, "#A83665"],
-        [0.75, "#932263"], [1.0, "#994564"],
+        [0.0, "#F7E9F0"], [0.25, "#D27897"], [0.5, "#A83665"],
+        [0.75, "#994564"], [1.0, "#932263"],
     ]
-    z = mat.to_numpy(dtype=float)
-    text_colors = np.where(z > 0.5, "white", "#1A1A1A")
 
-    fig = go.Figure(data=go.Heatmap(
-        z=z, x=nums, y=cats,
-        colorscale=colorscale, zmin=0, zmax=1,
-        colorbar=dict(title="Eta²"),
-        hovertemplate="%{y} → %{x}<br>Eta²: %{z}<extra></extra>",
-        hoverongaps=False,
-    ))
-    annotations = []
-    for yi in range(len(cats)):
-        for xi in range(len(nums)):
-            v = mat.iat[yi, xi]
-            if v != v:
-                continue
-            annotations.append(dict(
-                x=nums[xi], y=cats[yi], text=f"{v:.3g}",
-                showarrow=False, font=dict(color=text_colors[yi, xi], size=12),
-            ))
+    fig = px.imshow(
+        mat, text_auto=".3g",
+        labels=dict(color="Eta²", x="Numeric", y="Categorical"),
+        color_continuous_scale=colorscale, aspect="auto",
+        height=700, zmin=0, zmax=1,
+    )
+    fig.update_traces(
+        hovertemplate="%{y} (cat) → %{x} (num)<br>Eta²: %{z}<extra></extra>",
+    )
     fig.update_layout(
         title="Eta² — variance in numeric explained by categorical (directional)",
         autosize=True,
-        height=max(450, 55 * len(cats) + 200),
-        template="plotly_white",
-        xaxis_title="Numeric", yaxis_title="Categorical",
         xaxis=dict(tickangle=-45),
-        annotations=annotations,
-        plot_bgcolor="#A1ACBD",
+        plot_bgcolor="#FFFFFF",
+        margin=dict(b=120),
     )
-    fig.update_yaxes(autorange="reversed")
     return fig.to_html(full_html=False, include_plotlyjs=False, config={"responsive": True})
 
 def top_associations(values, methods, threshold=0.7):
