@@ -126,6 +126,17 @@ def cli(input: str, tax: bool = False, func: str = None,
     done()
     print_quality_report(quality)
 
+    general.n_number = len(numeric_cols)
+    general.n_categorical = len(cat_columns)
+    general.n_empty = len(empty_cols)
+    general.n_dna = sum(1 for col in column_overviews if col.sequence == 'dna')
+    general.n_rna = sum(1 for col in column_overviews if col.sequence == 'rna')
+    general.n_protein = sum(1 for col in column_overviews if col.sequence == 'protein')
+    general.n_taxonomy = sum(1 for col in column_overviews
+                             if getattr(col, 'taxonomy', None) and col.taxonomy.is_taxonomy)
+    general.n_unit = sum(1 for col in column_overviews if col.measurement_data is not None)
+    general.n_functional = sum(1 for col in column_overviews if getattr(col, 'annotation', None))
+    
     output_path = Path(input_path.stem + "_renders")
     done = print_step("Writing report")
     write_report(output_path, general, plots, duplicates_table,

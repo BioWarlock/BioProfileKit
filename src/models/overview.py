@@ -15,6 +15,16 @@ class DatasetSummary:
     ratio: float
     memory: float
     alerts: int
+    #ToDo Added for General Dataset Statistics Table
+    n_number: int = 0
+    n_dna: int = 0
+    n_rna: int = 0
+    n_protein: int = 0
+    n_taxonomy: int = 0
+    n_unit: int = 0
+    n_functional: int = 0
+    n_categorical: int = 0
+    n_empty: int = 0
 
 
 @dataclass
