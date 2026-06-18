@@ -10,7 +10,8 @@ env = Environment(loader=FileSystemLoader(str(TEMPLATE_DIR)), autoescape=True)
 
 
 def write_report(output_path: Path, general, plots, duplicates_table,
-                 column_overviews, numeric_overviews, categorical_overviews, top_n, quality):
+                 column_overviews, numeric_overviews, categorical_overviews,
+                 top_n, quality=None):
     output_path.mkdir(parents=True, exist_ok=True)
     shutil.copytree(str(STATIC_DIR), str(output_path / "static"), dirs_exist_ok=True)
 

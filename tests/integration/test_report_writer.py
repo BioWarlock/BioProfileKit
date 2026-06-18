@@ -38,7 +38,7 @@ STATIC_PATCH = "cli.report_writer.STATIC_DIR"
 def invoke_write_report(tmp_path, general="general", plots="plots",
                         dups="<table></table>", column_overviews=None,
                         numeric_overviews=None, categorical_overviews=None,
-                        top_n=20):
+                        top_n=20, quality=None):
     """Call write_report with mocked env and static dir."""
     output = tmp_path / "report"
     with patch(ENV_PATCH, TEST_ENV), \
@@ -55,6 +55,7 @@ def invoke_write_report(tmp_path, general="general", plots="plots",
             numeric_overviews=numeric_overviews or [],
             categorical_overviews=categorical_overviews or [],
             top_n=top_n,
+            quality=quality,
         )
     return output
 
