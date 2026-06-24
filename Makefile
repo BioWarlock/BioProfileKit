@@ -19,8 +19,8 @@ install:
 
 clean:
 	rm -rf build/ dist/ */*.egg-info/
-	find . -name ".so" -delete
-	find . -name ".c" -delete
+	find src/cython_wrapper -name "*.so" -delete
+	find src/cython_wrapper -name "*.c" -delete
 	find . -name "__pycache__" -type d -exec rm -rf {} +
 
 reinstall: clean install

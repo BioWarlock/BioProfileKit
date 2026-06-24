@@ -15,6 +15,7 @@ from biological.functional_annotation import annotation_flags
 from biological.measurement_data import measurement_columns
 from biological.sequence_data import dna_rna_columns, protein_columns
 from biological.taxonomy import taxonomy_flags, build_lookups
+from cli.report_json import write_result_json
 from cli.report_writer import write_report
 from cli.utils import _fmt_duration, print_step, info
 from data_utils.file_reader import read_file, parse_parquet
@@ -143,8 +144,14 @@ def cli(input: str, tax: bool = False, func: str = None,
     
     output_path = Path(input_path.stem + "_renders")
     done = print_step("Writing report")
+    ctx = click.get_current_context()
+    parameters = {k: v for k, v in ctx.params.items() if k != "input"}
+    parameters["input_file"] = Path(input).name
+
     write_report(output_path, general, plots, duplicates_table,
                  column_overviews, numeric_overviews, categorical_overviews, top_n, quality)
+    write_result_json(output_path / "results.json", general, column_overviews,
+                      numeric_overviews, categorical_overviews, plots, quality, empty_cols, parameters)
     done(f"→ {output_path}/")
 
     total = _fmt_duration(time.perf_counter() - run_start)

@@ -1,4 +1,5 @@
 import io
+import os
 import pathlib
 import zipfile
 from pathlib import Path
@@ -10,7 +11,10 @@ from goatools.obo_parser import GODag
 import time
 from pathlib import Path
 
-CACHE_DIR = Path.cwd() / ".bioprofilekit" / "taxonomy" #ToDo change to Home?
+BPK_CACHE_ROOT = Path(os.environ.get("BPK_CACHE_DIR", Path.cwd() / ".bioprofilekit"))
+
+CACHE_DIR = BPK_CACHE_ROOT / "taxonomy"
+#CACHE_DIR = Path.cwd() / ".bioprofilekit" / "taxonomy" #ToDo change to Home --> Backend
 CACHE_TIL_DAYS = 30
 TAXONOMY_FILE = "taxonomy_raw.parquet"
 TAXONOMY_VOCAB = "taxonomy_vocab.parquet"
