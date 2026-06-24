@@ -19,6 +19,7 @@ from cli.app import cli
 # Mock targets
 # ---------------------------------------------------------------------------
 WRITE_REPORT   = "cli.app.write_report"
+WRITE_JSON     = "cli.app.write_result_json"
 GENERAL_PLOTS  = "cli.app.multivariate_analysis"
 DNA_RNA_COLS   = "cli.app.dna_rna_columns"
 PROTEIN_COLS   = "cli.app.protein_columns"
@@ -84,6 +85,7 @@ def base_mocks():
     """Context managers for all heavy external dependencies."""
     return [
         patch(WRITE_REPORT),
+        patch(WRITE_JSON),
         patch(GENERAL_PLOTS, return_value=MagicMock(balance_plot=None)),
         patch(MEASUREMENT, return_value=None),
     ]
@@ -109,6 +111,7 @@ class TestCLIBasicInvocation:
 
     def test_successful_run_exits_zero(self, runner, csv_file):
         with patch(WRITE_REPORT), \
+             patch(WRITE_JSON), \
              patch(GENERAL_PLOTS, return_value=MagicMock(balance_plot=None)), \
              patch(MEASUREMENT, return_value=None):
             result = runner.invoke(cli, ["-i", str(csv_file)])
@@ -116,6 +119,7 @@ class TestCLIBasicInvocation:
 
     def test_output_mentions_filename(self, runner, csv_file):
         with patch(WRITE_REPORT), \
+             patch(WRITE_JSON), \
              patch(GENERAL_PLOTS, return_value=MagicMock(balance_plot=None)), \
              patch(MEASUREMENT, return_value=None):
             result = runner.invoke(cli, ["-i", str(csv_file)])
@@ -123,6 +127,7 @@ class TestCLIBasicInvocation:
 
     def test_output_mentions_column_count(self, runner, csv_file):
         with patch(WRITE_REPORT), \
+             patch(WRITE_JSON), \
              patch(GENERAL_PLOTS, return_value=MagicMock(balance_plot=None)), \
              patch(MEASUREMENT, return_value=None):
             result = runner.invoke(cli, ["-i", str(csv_file)])
@@ -136,6 +141,7 @@ class TestCLIBasicInvocation:
 class TestCLIFileFormats:
     def test_reads_csv(self, runner, csv_file):
         with patch(WRITE_REPORT), \
+             patch(WRITE_JSON), \
              patch(GENERAL_PLOTS, return_value=MagicMock(balance_plot=None)), \
              patch(MEASUREMENT, return_value=None):
             result = runner.invoke(cli, ["-i", str(csv_file)])
@@ -143,6 +149,7 @@ class TestCLIFileFormats:
 
     def test_reads_tsv(self, runner, tsv_file):
         with patch(WRITE_REPORT), \
+             patch(WRITE_JSON), \
              patch(GENERAL_PLOTS, return_value=MagicMock(balance_plot=None)), \
              patch(MEASUREMENT, return_value=None):
             result = runner.invoke(cli, ["-i", str(tsv_file)])
@@ -153,6 +160,7 @@ class TestCLIFileFormats:
         p = tmp_path / "test.parquet"
         df.to_parquet(p, engine="pyarrow")
         with patch(WRITE_REPORT), \
+             patch(WRITE_JSON), \
              patch(GENERAL_PLOTS, return_value=MagicMock(balance_plot=None)), \
              patch(MEASUREMENT, return_value=None):
             result = runner.invoke(cli, ["-i", str(p)])
@@ -166,6 +174,7 @@ class TestCLIFileFormats:
 class TestCLIOptions:
     def test_kmer_option_accepted(self, runner, csv_file):
         with patch(WRITE_REPORT), \
+             patch(WRITE_JSON), \
              patch(GENERAL_PLOTS, return_value=MagicMock(balance_plot=None)), \
              patch(MEASUREMENT, return_value=None):
             result = runner.invoke(cli, ["-i", str(csv_file), "-k", "4"])
@@ -173,6 +182,7 @@ class TestCLIOptions:
 
     def test_top_n_option_accepted(self, runner, csv_file):
         with patch(WRITE_REPORT), \
+             patch(WRITE_JSON), \
              patch(GENERAL_PLOTS, return_value=MagicMock(balance_plot=None)), \
              patch(MEASUREMENT, return_value=None):
             result = runner.invoke(cli, ["-i", str(csv_file), "-n", "10"])
@@ -180,6 +190,7 @@ class TestCLIOptions:
 
     def test_target_column_passed_to_general_plots(self, runner, csv_file):
         with patch(WRITE_REPORT), \
+             patch(WRITE_JSON), \
              patch(GENERAL_PLOTS, return_value=MagicMock(balance_plot=None)) as mock_gp, \
              patch(MEASUREMENT, return_value=None):
             runner.invoke(cli, ["-i", str(csv_file), "-tc", "organism"])
@@ -192,6 +203,7 @@ class TestCLIOptions:
         mock_annotation = MagicMock()
         mock_annotation.return_value = MagicMock()
         with patch(WRITE_REPORT), \
+             patch(WRITE_JSON), \
              patch(GENERAL_PLOTS, return_value=MagicMock(balance_plot=None)), \
              patch(MEASUREMENT, return_value=None), \
              patch(ANNOTATION, return_value=mock_annotation):
@@ -200,6 +212,7 @@ class TestCLIOptions:
 
     def test_func_go_option_accepted(self, runner, csv_file):
         with patch(WRITE_REPORT), \
+             patch(WRITE_JSON), \
              patch(GENERAL_PLOTS, return_value=MagicMock(balance_plot=None)), \
              patch(MEASUREMENT, return_value=None), \
              patch(ANNOTATION, return_value=MagicMock()):
@@ -213,6 +226,7 @@ class TestCLIOptions:
     def test_tax_flag_triggers_get_tax_ids(self, runner, csv_file):
         mock_tax_df = pd.DataFrame({"tax_id": ["9606", "511145"]})
         with patch(WRITE_REPORT), \
+             patch(WRITE_JSON), \
              patch(GENERAL_PLOTS, return_value=MagicMock(balance_plot=None)), \
              patch(MEASUREMENT, return_value=None), \
              patch(GET_TAX_IDS, return_value=mock_tax_df) as mock_tax, \
@@ -222,6 +236,7 @@ class TestCLIOptions:
 
     def test_no_tax_flag_skips_get_tax_ids(self, runner, csv_file):
         with patch(WRITE_REPORT), \
+             patch(WRITE_JSON), \
              patch(GENERAL_PLOTS, return_value=MagicMock(balance_plot=None)), \
              patch(MEASUREMENT, return_value=None), \
              patch(GET_TAX_IDS) as mock_tax:
@@ -236,6 +251,7 @@ class TestCLIOptions:
 class TestWriteReportCall:
     def test_write_report_called_once(self, runner, csv_file):
         with patch(WRITE_REPORT) as mock_wr, \
+             patch(WRITE_JSON), \
              patch(GENERAL_PLOTS, return_value=MagicMock(balance_plot=None)), \
              patch(MEASUREMENT, return_value=None):
             runner.invoke(cli, ["-i", str(csv_file)])
@@ -243,6 +259,7 @@ class TestWriteReportCall:
 
     def test_write_report_receives_top_n(self, runner, csv_file):
         with patch(WRITE_REPORT) as mock_wr, \
+             patch(WRITE_JSON), \
              patch(GENERAL_PLOTS, return_value=MagicMock(balance_plot=None)), \
              patch(MEASUREMENT, return_value=None):
             runner.invoke(cli, ["-i", str(csv_file), "-n", "15"])
@@ -251,6 +268,7 @@ class TestWriteReportCall:
 
     def test_output_path_is_stem_plus_renders(self, runner, csv_file):
         with patch(WRITE_REPORT) as mock_wr, \
+             patch(WRITE_JSON), \
              patch(GENERAL_PLOTS, return_value=MagicMock(balance_plot=None)), \
              patch(MEASUREMENT, return_value=None):
             runner.invoke(cli, ["-i", str(csv_file)])
@@ -260,6 +278,7 @@ class TestWriteReportCall:
     def test_write_report_receives_numeric_overviews(self, runner, csv_file):
         """Numeric columns (gc_content, count) should produce numeric overviews."""
         with patch(WRITE_REPORT) as mock_wr, \
+             patch(WRITE_JSON), \
              patch(GENERAL_PLOTS, return_value=MagicMock(balance_plot=None)), \
              patch(MEASUREMENT, return_value=None):
             runner.invoke(cli, ["-i", str(csv_file)])
@@ -271,6 +290,7 @@ class TestWriteReportCall:
 
     def test_write_report_receives_duplicate_table_html(self, runner, csv_file):
         with patch(WRITE_REPORT) as mock_wr, \
+             patch(WRITE_JSON), \
              patch(GENERAL_PLOTS, return_value=MagicMock(balance_plot=None)), \
              patch(MEASUREMENT, return_value=None):
             runner.invoke(cli, ["-i", str(csv_file)])
@@ -294,6 +314,7 @@ class TestSequenceColumnIntegration:
 
         mock_dna = MagicMock()
         with patch(WRITE_REPORT), \
+             patch(WRITE_JSON), \
              patch(GENERAL_PLOTS, return_value=MagicMock(balance_plot=None)), \
              patch(MEASUREMENT, return_value=None), \
              patch(DNA_RNA_COLS, return_value=mock_dna) as mock_fn:
@@ -310,6 +331,7 @@ class TestSequenceColumnIntegration:
         p.write_text("\n".join(lines), encoding="utf-8")
 
         with patch(WRITE_REPORT), \
+             patch(WRITE_JSON), \
              patch(GENERAL_PLOTS, return_value=MagicMock(balance_plot=None)), \
              patch(MEASUREMENT, return_value=None), \
              patch(DNA_RNA_COLS, return_value=MagicMock()) as mock_fn:
@@ -326,6 +348,7 @@ class TestSequenceColumnIntegration:
 class TestDuplicateDetection:
     def test_no_duplicates_produces_empty_table(self, runner, csv_file):
         with patch(WRITE_REPORT) as mock_wr, \
+             patch(WRITE_JSON), \
              patch(GENERAL_PLOTS, return_value=MagicMock(balance_plot=None)), \
              patch(MEASUREMENT, return_value=None):
             runner.invoke(cli, ["-i", str(csv_file)])
@@ -339,6 +362,7 @@ class TestDuplicateDetection:
         p = tmp_path / "dup.csv"
         p.write_text(content, encoding="utf-8")
         with patch(WRITE_REPORT) as mock_wr, \
+             patch(WRITE_JSON), \
              patch(GENERAL_PLOTS, return_value=MagicMock(balance_plot=None)), \
              patch(MEASUREMENT, return_value=None):
             runner.invoke(cli, ["-i", str(p)])
@@ -358,6 +382,7 @@ class TestCLIEdgeCases:
         p = tmp_path / "nulls.csv"
         p.write_text(content, encoding="utf-8")
         with patch(WRITE_REPORT), \
+             patch(WRITE_JSON), \
              patch(GENERAL_PLOTS, return_value=MagicMock(balance_plot=None)), \
              patch(MEASUREMENT, return_value=None):
             result = runner.invoke(cli, ["-i", str(p)])
@@ -368,6 +393,7 @@ class TestCLIEdgeCases:
         p = tmp_path / "single.csv"
         p.write_text(content, encoding="utf-8")
         with patch(WRITE_REPORT), \
+             patch(WRITE_JSON), \
              patch(GENERAL_PLOTS, return_value=MagicMock(balance_plot=None)), \
              patch(MEASUREMENT, return_value=None):
             result = runner.invoke(cli, ["-i", str(p)])
@@ -378,6 +404,7 @@ class TestCLIEdgeCases:
         p = tmp_path / "numeric.csv"
         p.write_text("\n".join(lines), encoding="utf-8")
         with patch(WRITE_REPORT), \
+             patch(WRITE_JSON), \
              patch(GENERAL_PLOTS, return_value=MagicMock(balance_plot=None)), \
              patch(MEASUREMENT, return_value=None):
             result = runner.invoke(cli, ["-i", str(p)])
@@ -390,6 +417,7 @@ class TestCLIEdgeCases:
         p = tmp_path / "cat.csv"
         p.write_text(content, encoding="utf-8")
         with patch(WRITE_REPORT), \
+             patch(WRITE_JSON), \
              patch(GENERAL_PLOTS, return_value=MagicMock(balance_plot=None)), \
              patch(MEASUREMENT, return_value=None):
             result = runner.invoke(cli, ["-i", str(p)])
@@ -398,6 +426,7 @@ class TestCLIEdgeCases:
     def test_func_without_tax_flag_still_runs(self, runner, csv_file):
         """--func without --tax: tax_df is None, annotation should still be attempted."""
         with patch(WRITE_REPORT), \
+             patch(WRITE_JSON), \
              patch(GENERAL_PLOTS, return_value=MagicMock(balance_plot=None)), \
              patch(MEASUREMENT, return_value=None), \
              patch(ANNOTATION, return_value=MagicMock()):
@@ -412,6 +441,7 @@ class TestCLIEdgeCases:
         p = tmp_path / "dna.csv"
         p.write_text("\n".join(lines), encoding="utf-8")
         with patch(WRITE_REPORT), \
+             patch(WRITE_JSON), \
              patch(GENERAL_PLOTS, return_value=MagicMock(balance_plot=None)), \
              patch(MEASUREMENT, return_value=None), \
              patch(DNA_RNA_COLS, return_value=MagicMock()) as mock_fn:
@@ -424,6 +454,7 @@ class TestCLIEdgeCases:
 
     def test_default_top_n_is_20(self, runner, csv_file):
         with patch(WRITE_REPORT) as mock_wr, \
+             patch(WRITE_JSON), \
              patch(GENERAL_PLOTS, return_value=MagicMock(balance_plot=None)), \
              patch(MEASUREMENT, return_value=None):
             runner.invoke(cli, ["-i", str(csv_file)])
