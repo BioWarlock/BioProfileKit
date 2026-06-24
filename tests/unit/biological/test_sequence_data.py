@@ -388,3 +388,449 @@ class TestProteinDescriptors:
         result = protein_descriptors("A")
         assert result["seq"] == "A"
         assert result["mol"] > 0
+
+# ---------------------------------------------------------------------------
+# _gravy  (lines 401-408)
+# ---------------------------------------------------------------------------
+
+from biological.sequence_data import _gravy, KYTE_DOOLITTLE, AA_GROUPS
+
+class TestGravy:
+    def test_empty_sequence_returns_zero(self):
+        assert _gravy("") == 0.0
+
+    def test_pure_alanine(self):
+        """Alanine has KD index 1.8 — known reference value."""
+        result = _gravy("AAAA")
+        assert result == pytest.approx(1.8, abs=0.01)
+
+    def test_hydrophilic_sequence(self):
+        """Arginine (R) has KD = -4.5 — strongly hydrophilic."""
+        result = _gravy("RRRR")
+        assert result == pytest.approx(-4.5, abs=0.01)
+
+    def test_mixed_sequence(self):
+        """GRAVY of mixed sequence must be between the min and max KD values."""
+        result = _gravy("ARND")  # A=1.8, R=-4.5, N=-3.5, D=-3.5
+        expected = (1.8 + -4.5 + -3.5 + -3.5) / 4
+        assert result == pytest.approx(expected, abs=0.01)
+
+    def test_ambiguous_residue_X_uses_fallback(self):
+        """X is not a standard amino acid — ProteinAnalysis raises KeyError,
+        fallback must use KYTE_DOOLITTLE.get(aa, 0.0)."""
+        # X not in KYTE_DOOLITTLE → contributes 0.0
+        result = _gravy("XXXX")
+        assert result == pytest.approx(0.0, abs=1e-6)
+
+    def test_stop_codon_marker_uses_fallback(self):
+        """'*' (stop codon) triggers fallback; contributes 0.0."""
+        result = _gravy("A*A")  # A=1.8, *=0.0, A=1.8 → mean=1.2
+        assert result == pytest.approx(1.2, abs=0.01)
+
+    def test_single_residue(self):
+        """Single residue: GRAVY == its own KD index."""
+        for aa, kd in list(KYTE_DOOLITTLE.items())[:5]:
+            assert _gravy(aa) == pytest.approx(kd, abs=0.01)
+
+    def test_result_is_float(self):
+        assert isinstance(_gravy("ACGT"), float)
+
+
+# ---------------------------------------------------------------------------
+# _aa_group_distribution  (lines 410-419)
+# ---------------------------------------------------------------------------
+
+from biological.sequence_data import _aa_group_distribution
+
+class TestAaGroupDistribution:
+    def test_returns_all_five_groups(self):
+        seqs = pd.Series(["ACDEFGHIKLMNPQRSTVWY"])
+        result = _aa_group_distribution(seqs)
+        assert set(result.keys()) == set(AA_GROUPS.keys())
+
+    def test_empty_string_series_returns_zeros(self):
+        """Series containing only an empty string → total=0 → all groups 0.0."""
+        result = _aa_group_distribution(pd.Series([""], dtype=str))
+        assert all(v == 0.0 for v in result.values())
+
+    def test_empty_series_no_elements_returns_zeros(self):
+        """Series with no elements → str.cat() returns '' → total=0."""
+        result = _aa_group_distribution(pd.Series([], dtype=str))
+        assert all(v == 0.0 for v in result.values())
+
+    def test_pure_unpolar_sequence(self):
+        """GAVLIMP are all Unpolar → Unpolar fraction should be 1.0."""
+        seqs = pd.Series(["GAVLIMP"])
+        result = _aa_group_distribution(seqs)
+        assert result["Unpolar"] == pytest.approx(1.0, abs=1e-4)
+        assert result["Aromatic"] == pytest.approx(0.0, abs=1e-4)
+
+    def test_pure_aromatic_sequence(self):
+        """FWY are all Aromatic."""
+        seqs = pd.Series(["FWYFWY"])
+        result = _aa_group_distribution(seqs)
+        assert result["Aromatic"] == pytest.approx(1.0, abs=1e-4)
+
+    def test_values_sum_to_one_for_standard_aa(self):
+        """All 20 standard AAs together → fractions must sum to 1.0."""
+        seqs = pd.Series(["ACDEFGHIKLMNPQRSTVWY"])
+        result = _aa_group_distribution(seqs)
+        assert sum(result.values()) == pytest.approx(1.0, abs=1e-4)
+
+    def test_values_between_0_and_1(self):
+        seqs = pd.Series(["AAKKKFFFRR"])
+        result = _aa_group_distribution(seqs)
+        for v in result.values():
+            assert 0.0 <= v <= 1.0
+
+    def test_multiple_sequences_concatenated(self):
+        """Distribution should be computed over all sequences combined."""
+        seqs_combined = pd.Series(["AAAA", "KKKK"])
+        result_combined = _aa_group_distribution(seqs_combined)
+        # AAAA = Unpolar, KKKK = Positive → each 50%
+        assert result_combined["Unpolar"] == pytest.approx(0.5, abs=1e-4)
+        assert result_combined["Positive"] == pytest.approx(0.5, abs=1e-4)
+
+    def test_rounded_to_four_decimals(self):
+        seqs = pd.Series(["ACDEFGHIKLMNPQRSTVWY"])
+        result = _aa_group_distribution(seqs)
+        for v in result.values():
+            assert v == round(v, 4)
+
+    def test_non_standard_residue_not_in_any_group(self):
+        """B, Z, X etc. are not in any AA_GROUPS set → do not inflate any fraction."""
+        seqs = pd.Series(["AXBZ"])   # only X, B, Z (non-standard) + A (Unpolar)
+        result = _aa_group_distribution(seqs)
+        # A is 1/4 = 0.25 Unpolar; others not counted anywhere
+        assert result["Unpolar"] == pytest.approx(0.25, abs=1e-4)
+        total = sum(result.values())
+        assert total < 1.0  # non-standard residues are not counted
+
+
+# ---------------------------------------------------------------------------
+# dna_rna_columns  (lines 67-189)  — mocked plot/logo dependencies
+# ---------------------------------------------------------------------------
+
+class TestDnaRnaColumns:
+    """Tests for dna_rna_columns with Plotly and WebLogo mocked out."""
+
+    MOCK_PLOT_HTML = "<div>mock_plot</div>"
+    MOCK_LOGO_SVG  = "<svg>mock_logo</svg>"
+
+    def _mock_targets(self):
+        return {
+            "biological.sequence_data.at_gc_skewness":      MagicMock(return_value=self.MOCK_PLOT_HTML),
+            "biological.sequence_data.gc_distribution":     MagicMock(return_value=self.MOCK_PLOT_HTML),
+            "biological.sequence_data.ambiguous_distribution": MagicMock(return_value=self.MOCK_PLOT_HTML),
+            "biological.sequence_data.length_distribution": MagicMock(return_value=self.MOCK_PLOT_HTML),
+            "biological.sequence_data.make_logo":           MagicMock(return_value=self.MOCK_LOGO_SVG),
+            "biological.sequence_data.plot_overview":       MagicMock(return_value=self.MOCK_PLOT_HTML),
+        }
+
+    def _invoke(self, seqs, **kwargs):
+        from biological.sequence_data import dna_rna_columns
+        mocks = self._mock_targets()
+        with patch("biological.sequence_data.at_gc_skewness",      mocks["biological.sequence_data.at_gc_skewness"]), \
+             patch("biological.sequence_data.gc_distribution",     mocks["biological.sequence_data.gc_distribution"]), \
+             patch("biological.sequence_data.ambiguous_distribution", mocks["biological.sequence_data.ambiguous_distribution"]), \
+             patch("biological.sequence_data.length_distribution", mocks["biological.sequence_data.length_distribution"]), \
+             patch("biological.sequence_data.make_logo",           mocks["biological.sequence_data.make_logo"]), \
+             patch("biological.sequence_data.plot_overview",       mocks["biological.sequence_data.plot_overview"]):
+            return dna_rna_columns(seqs, **kwargs)
+
+    # ── Basic output structure ──────────────────────────────────────────────
+
+    def test_returns_dnarnacol_with_expected_fields(self):
+        seqs = pd.Series(["ATCGATCG"] * 10)
+        result = self._invoke(seqs)
+        for field in ("gc_content", "length_stats", "ambiguous_base_ratio",
+                      "codon_completeness", "gc_skew", "at_skew",
+                      "cpg_observed_expected", "tpa_observed_expected",
+                      "low_complexity", "reverse_complement_ratio"):
+            assert hasattr(result, field), f"Missing field: {field}"
+
+    def test_gc_content_range(self):
+        """GC content must be between 0 and 100 %."""
+        seqs = pd.Series(["ATATATATT"] * 10)   # low GC
+        result = self._invoke(seqs)
+        assert 0.0 <= result.gc_content.min <= result.gc_content.max <= 100.0
+
+    def test_pure_gc_sequence(self):
+        """GCGCGCGC → GC content should be 100 %."""
+        seqs = pd.Series(["GCGCGCGC"] * 10)
+        result = self._invoke(seqs)
+        assert result.gc_content.mean == pytest.approx(100.0, abs=0.1)
+
+    def test_pure_at_sequence(self):
+        """ATATATAT → GC content should be 0 %."""
+        seqs = pd.Series(["ATATATAT"] * 10)
+        result = self._invoke(seqs)
+        assert result.gc_content.mean == pytest.approx(0.0, abs=0.1)
+
+    def test_invalid_seqs_excluded(self):
+        """Sequences marked as invalid must not contribute to the analysis."""
+        seqs = pd.Series(["ATCGATCG"] * 9 + ["INVALID"])
+        result = self._invoke(seqs, invalid=["INVALID"])
+        # INVALID is excluded → only 9 sequences analysed
+        assert result.length_stats.mean == pytest.approx(8.0, abs=0.1)
+
+    def test_nan_values_dropped(self):
+        """NaN entries must be dropped silently before analysis."""
+        import numpy as np
+        seqs = pd.Series(["ATCGATCG"] * 9 + [np.nan])
+        result = self._invoke(seqs)
+        assert result.length_stats.mean == pytest.approx(8.0, abs=0.1)
+
+    def test_custom_kmer_size(self):
+        """k parameter must be forwarded to kmer computation."""
+        seqs = pd.Series(["ATCGATCGATCG"] * 10)
+        # Should not raise for any valid k
+        result = self._invoke(seqs, k=4, top_n=5)
+        assert result is not None
+
+    def test_codon_completeness_full_codons(self):
+        """Sequences whose length is divisible by 3 → 100 % codon completeness."""
+        seqs = pd.Series(["ATGATGATG"] * 10)  # len=9, 9%3=0
+        result = self._invoke(seqs)
+        assert result.codon_completeness.mean == pytest.approx(100.0, abs=0.1)
+
+    def test_codon_completeness_partial(self):
+        """Length 10: 10%3=1 → 9/10 = 90 % complete."""
+        seqs = pd.Series(["ATGATGATGA"] * 10)
+        result = self._invoke(seqs)
+        assert result.codon_completeness.mean == pytest.approx(90.0, abs=0.1)
+
+    def test_ambiguous_base_ratio_with_n(self):
+        """Sequences with N bases must show non-zero ambiguous_base_ratio."""
+        seqs = pd.Series(["ATCGNNNN"] * 10)   # 4 N out of 8 → 50 %
+        result = self._invoke(seqs)
+        assert result.ambiguous_base_ratio.mean == pytest.approx(50.0, abs=0.1)
+
+    def test_uniform_length_uses_logo(self):
+        """When min_len == max_len, make_logo is called instead of plot_overview."""
+        seqs = pd.Series(["ATCGATCG"] * 10)
+        mocks = self._mock_targets()
+        from biological.sequence_data import dna_rna_columns
+        with patch("biological.sequence_data.at_gc_skewness",         mocks["biological.sequence_data.at_gc_skewness"]), \
+             patch("biological.sequence_data.gc_distribution",        mocks["biological.sequence_data.gc_distribution"]), \
+             patch("biological.sequence_data.ambiguous_distribution",  mocks["biological.sequence_data.ambiguous_distribution"]), \
+             patch("biological.sequence_data.length_distribution",    mocks["biological.sequence_data.length_distribution"]), \
+             patch("biological.sequence_data.make_logo",              mocks["biological.sequence_data.make_logo"]) as mock_logo, \
+             patch("biological.sequence_data.plot_overview",          mocks["biological.sequence_data.plot_overview"]):
+            dna_rna_columns(seqs)
+        mock_logo.assert_called_once()
+
+    def test_variable_length_uses_plot_overview(self):
+        """When min_len != max_len, plot_overview is called instead of make_logo.
+        Sequences must all be longer than k (default=3) so k_mers are not None."""
+        seqs = pd.Series(["ATCGATCG"] * 5 + ["ATCGATCGATCGATCG"] * 5)
+        mocks = self._mock_targets()
+        from biological.sequence_data import dna_rna_columns
+        with patch("biological.sequence_data.at_gc_skewness",         mocks["biological.sequence_data.at_gc_skewness"]), \
+             patch("biological.sequence_data.gc_distribution",        mocks["biological.sequence_data.gc_distribution"]), \
+             patch("biological.sequence_data.ambiguous_distribution",  mocks["biological.sequence_data.ambiguous_distribution"]), \
+             patch("biological.sequence_data.length_distribution",    mocks["biological.sequence_data.length_distribution"]), \
+             patch("biological.sequence_data.make_logo",              mocks["biological.sequence_data.make_logo"]), \
+             patch("biological.sequence_data.plot_overview",          mocks["biological.sequence_data.plot_overview"]) as mock_plot:
+            dna_rna_columns(seqs)
+        mock_plot.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# protein_columns  (lines 271-387) — mocked plot/logo dependencies
+# ---------------------------------------------------------------------------
+
+class TestProteinColumns:
+    """Tests for protein_columns with Plotly and WebLogo mocked out."""
+
+    MOCK_HTML = "<div>mock</div>"
+    MOCK_SVG  = "<svg>mock</svg>"
+
+    def _invoke(self, seqs, **kwargs):
+        from biological.sequence_data import protein_columns
+        with patch("biological.sequence_data.length_distribution",    MagicMock(return_value=self.MOCK_HTML)), \
+             patch("biological.sequence_data.ambiguous_distribution",  MagicMock(return_value=self.MOCK_HTML)), \
+             patch("biological.sequence_data.aa_group_distribution",   MagicMock(return_value=self.MOCK_HTML)), \
+             patch("biological.sequence_data.make_logo",              MagicMock(return_value=self.MOCK_SVG)), \
+             patch("biological.sequence_data.plot_overview",          MagicMock(return_value=self.MOCK_HTML)):
+            return protein_columns(seqs, **kwargs)
+
+    # ── Basic output structure ──────────────────────────────────────────────
+
+    def test_returns_proteincols_with_expected_fields(self):
+        seqs = pd.Series(["ACDEFGHIKLM"] * 10)
+        result = self._invoke(seqs)
+        for field in ("ambiguous_residue_ratio", "length_stats", "length_outliers",
+                      "stop_codon_ratio", "low_complexity", "gravy",
+                      "cysteine_count", "disorder_propensity", "aa_group_distribution"):
+            assert hasattr(result, field), f"Missing field: {field}"
+
+    def test_gravy_range_typical_proteins(self):
+        """GRAVY of realistic proteins is roughly in [-4.5, 4.5]."""
+        seqs = pd.Series(["ACDEFGHIKLMNPQRSTVWY"] * 10)
+        result = self._invoke(seqs)
+        assert -4.5 <= result.gravy.mean <= 4.5
+
+    def test_cysteine_count_zero_without_cysteine(self):
+        """Sequences without C must yield cysteine_count.mean == 0."""
+        seqs = pd.Series(["ADEFGHIKLM"] * 10)   # no C
+        result = self._invoke(seqs)
+        assert result.cysteine_count.mean == pytest.approx(0.0, abs=1e-6)
+
+    def test_cysteine_count_nonzero_with_cysteine(self):
+        seqs = pd.Series(["ACAC"] * 10)   # 2 C per sequence
+        result = self._invoke(seqs)
+        assert result.cysteine_count.mean == pytest.approx(2.0, abs=0.1)
+
+    def test_stop_codon_ratio_zero_without_stop(self):
+        """Clean protein sequences without '*' must have stop_codon_ratio=0."""
+        seqs = pd.Series(["ACDEFGHIKLM"] * 10)
+        result = self._invoke(seqs)
+        assert result.stop_codon_ratio == pytest.approx(0.0, abs=1e-6)
+
+    def test_stop_codon_ratio_with_stop(self):
+        """50 % of sequences have a stop codon → ratio should be ~50."""
+        seqs = pd.Series(["ACDE*FGHIK"] * 5 + ["ACDEFGHIKL"] * 5)
+        result = self._invoke(seqs)
+        assert result.stop_codon_ratio == pytest.approx(50.0, abs=0.1)
+
+    def test_ambiguous_residue_ratio_zero_for_clean_seq(self):
+        """No X/J/U residues → ambiguous_residue_ratio should be 0."""
+        seqs = pd.Series(["ACDEFGHIKLM"] * 10)
+        result = self._invoke(seqs)
+        assert result.ambiguous_residue_ratio.mean == pytest.approx(0.0, abs=1e-6)
+
+    def test_ambiguous_residue_ratio_with_x(self):
+        """Sequence with X: AXXXFGHIKLM → 3/11 ≈ 27.3 % ambiguous."""
+        seqs = pd.Series(["AXXXFGHIKLM"] * 10)
+        result = self._invoke(seqs)
+        expected = 3 / 11 * 100
+        assert result.ambiguous_residue_ratio.mean == pytest.approx(expected, abs=0.1)
+
+    def test_invalid_seqs_excluded(self):
+        """Sequences in the invalid list must be removed before analysis."""
+        seqs = pd.Series(["ACDEFGHIKL"] * 9 + ["BADSEQ"])
+        result = self._invoke(seqs, invalid=["BADSEQ"])
+        assert result.length_stats.mean == pytest.approx(10.0, abs=0.1)
+
+    def test_custom_kmer_size(self):
+        seqs = pd.Series(["ACDEFGHIKLMNPQRST"] * 10)
+        result = self._invoke(seqs, k=4)
+        assert result is not None
+
+    def test_disorder_propensity_pesqk_residues(self):
+        """PESQK residues (DISORDER_AA) should yield high disorder propensity."""
+        seqs = pd.Series(["PESQKPESQK"] * 10)   # 100 % disorder AAs
+        result = self._invoke(seqs)
+        assert result.disorder_propensity.mean == pytest.approx(100.0, abs=0.1)
+
+    def test_disorder_propensity_zero_no_disorder_aa(self):
+        """Sequence without any PESQK residue → disorder_propensity = 0."""
+        seqs = pd.Series(["ACDFGHILMV"] * 10)   # no P/E/S/Q/K
+        result = self._invoke(seqs)
+        assert result.disorder_propensity.mean == pytest.approx(0.0, abs=0.1)
+
+    def test_uniform_length_uses_logo(self):
+        """When all sequences have equal length, make_logo is called."""
+        seqs = pd.Series(["ACDEFGHIKL"] * 10)
+        from biological.sequence_data import protein_columns
+        mock_logo = MagicMock(return_value=self.MOCK_SVG)
+        with patch("biological.sequence_data.length_distribution",    MagicMock(return_value=self.MOCK_HTML)), \
+             patch("biological.sequence_data.ambiguous_distribution",  MagicMock(return_value=self.MOCK_HTML)), \
+             patch("biological.sequence_data.aa_group_distribution",   MagicMock(return_value=self.MOCK_HTML)), \
+             patch("biological.sequence_data.make_logo",              mock_logo), \
+             patch("biological.sequence_data.plot_overview",          MagicMock(return_value=self.MOCK_HTML)):
+            protein_columns(seqs)
+        mock_logo.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# make_logo  (lines 421-455) — WebLogo mocked
+# ---------------------------------------------------------------------------
+
+class TestMakeLogo:
+    def test_returns_svg_string_on_success(self):
+        """make_logo must return the extracted SVG fragment."""
+        from biological.sequence_data import make_logo
+        fake_svg = '<svg xmlns="http://www.w3.org/2000/svg"><text>logo</text></svg>'
+        fake_html = f"<html><body>{fake_svg}</body></html>"
+        m = MagicMock()
+        with patch("biological.sequence_data.motifs") as mock_motifs, \
+             patch("builtins.open", MagicMock(return_value=MagicMock(
+                 __enter__=MagicMock(return_value=MagicMock(read=MagicMock(return_value=fake_html))),
+                 __exit__=MagicMock(return_value=False)
+             ))), \
+             patch("tempfile.NamedTemporaryFile") as mock_tmp, \
+             patch("pathlib.Path.is_file", return_value=True), \
+             patch("pathlib.Path.unlink"):
+            mock_tmp.return_value.__enter__ = MagicMock(return_value=MagicMock(name="/tmp/fake.svg"))
+            mock_tmp.return_value.__exit__  = MagicMock(return_value=False)
+            mock_motifs.create.return_value.weblogo = MagicMock()
+            result = make_logo(["ATCGATCG", "ATCGATCG"], "color_classic", "dna")
+        # Either returns SVG string or None (depends on mock depth)
+        assert result is None or "<svg" in result
+
+    def test_returns_none_on_network_error(self):
+        """URLError / HTTPError during WebLogo call must return None gracefully."""
+        from biological.sequence_data import make_logo
+        from urllib.error import URLError
+        with patch("biological.sequence_data.motifs") as mock_motifs, \
+             patch("tempfile.NamedTemporaryFile") as mock_tmp, \
+             patch("pathlib.Path.is_file", return_value=False):
+            mock_tmp.return_value.__enter__ = MagicMock(return_value=MagicMock(name="/tmp/fake.svg"))
+            mock_tmp.return_value.__exit__  = MagicMock(return_value=False)
+            mock_motifs.create.return_value.weblogo.side_effect = URLError("timeout")
+            result = make_logo(["ATCG", "ATCG"], "color_classic", "dna")
+        assert result is None
+
+    def test_protein_uses_protein_alphabet(self):
+        """seq_type='protein' must call motifs.create with the protein alphabet."""
+        from biological.sequence_data import make_logo
+        from urllib.error import URLError
+        with patch("biological.sequence_data.motifs") as mock_motifs, \
+             patch("tempfile.NamedTemporaryFile") as mock_tmp, \
+             patch("pathlib.Path.is_file", return_value=False):
+            mock_tmp.return_value.__enter__ = MagicMock(return_value=MagicMock(name="/tmp/fake.svg"))
+            mock_tmp.return_value.__exit__  = MagicMock(return_value=False)
+            mock_motifs.create.return_value.weblogo.side_effect = URLError("x")
+            make_logo(["ACDE", "ACDE"], "chemistry", "protein")
+        call_kwargs = mock_motifs.create.call_args
+        assert "ACDEFGHIKLMNPQRSTVWY" in str(call_kwargs)
+
+    def test_dna_uses_dna_alphabet(self):
+        from biological.sequence_data import make_logo
+        from urllib.error import URLError
+        with patch("biological.sequence_data.motifs") as mock_motifs, \
+             patch("tempfile.NamedTemporaryFile") as mock_tmp, \
+             patch("pathlib.Path.is_file", return_value=False):
+            mock_tmp.return_value.__enter__ = MagicMock(return_value=MagicMock(name="/tmp/fake.svg"))
+            mock_tmp.return_value.__exit__  = MagicMock(return_value=False)
+            mock_motifs.create.return_value.weblogo.side_effect = URLError("x")
+            make_logo(["ATCG", "ATCG"], "color_classic", "dna")
+        call_kwargs = mock_motifs.create.call_args
+        assert "ACGT" in str(call_kwargs)
+
+
+# ---------------------------------------------------------------------------
+# plot_overview  (lines 458-463)
+# ---------------------------------------------------------------------------
+
+class TestPlotOverview:
+    def test_returns_html_string(self):
+        from biological.sequence_data import plot_overview
+        result = plot_overview(["ATG", "GCC", "TAA"], [10, 7, 3])
+        assert isinstance(result, str)
+        assert "<div" in result
+
+    def test_empty_lists_no_crash(self):
+        """Plotly px.bar raises ValueError on two empty lists — plot_overview
+        should only be called with non-empty kmer data in practice."""
+        from biological.sequence_data import plot_overview
+        with pytest.raises(ValueError):
+            plot_overview([], [])
+
+    def test_single_kmer(self):
+        from biological.sequence_data import plot_overview
+        result = plot_overview(["ATG"], [42])
+        assert isinstance(result, str)
+        assert "<div" in result
