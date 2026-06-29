@@ -2,8 +2,8 @@
 requires = [
     "setuptools==82.0.0",
     "wheel>=0.44.0",
-    "cython>=3.2.1",
-    "numpy>=2.4.2"
+    "cython>=3.2.5",
+    "numpy>=2.4.6"
 ]
 build-backend = "setuptools.build_meta"
 
@@ -16,10 +16,9 @@ authors = [
     {name = "Sonja Diedrich", email = "sonja.diedrich@computational.bio.uni-giessen.de"},
     {name = "Maria Hansen", email = "maria.hansen@computational.bio.uni-giessen.de"}
 ]
-#license = "MIT"
-#license-files = ["LICENSE"]
+license = {file = "LICENSE"}
 requires-python = ">=3.13"
-keywords = ["bioinformatics", "data-analysis", "proteomics"]
+keywords = ["bioinformatics", "data-analysis", "proteomics", "EDA"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
@@ -29,22 +28,23 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 dependencies = [
-    "cython==3.2.4",
-    "click>=8.3.1",
+    "cython==3.2.5",
+    "click>=8.3.3",
     "Jinja2==3.1.6",
-    "numpy==2.4.2",
-    "pandas==3.0.1",
-    "plotly==6.5.2",
+    "numpy==2.4.6",
+    "pandas==3.0.3",
+    "plotly==6.8.0",
     "scipy==1.17.1",
     "termcolor==3.3.0",
-    "pyarrow==23.0.0",
+    "pyarrow==24.0.0",
     "peptides==0.5.0",
     "iteration_utilities==0.13.0",
-    "requests==2.32.5",
-    "goatools==1.5.2",
-    "importlib_resources==6.5.2",
-    "biopython==1.86",
+    "requests==2.34.2",
+    "goatools==1.6.5",
+    "importlib_resources==7.1.0",
+    "biopython==1.87",
     "weblogo==3.9.0",
+    "scikit-learn==1.9.0"
 ]
 [project.urls]
 Homepage="https://github.com/BioWarlock/BioProfileKit/"
@@ -52,6 +52,10 @@ Repository="https://github.com/BioWarlock/BioProfileKit/"
 
 [project.optional-dependencies]
 cli = ["click"]
+dev = [
+    "pytest>=9.1.0",
+    "pytest-cov>=6.0.0",
+]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -60,7 +64,8 @@ include-package-data = true
 
 [tool.setuptools.package-data]
 "static" = ["static/**/*"]
-"templates"= ["*.jinja"]
+"templates" = ["*.jinja"]
+#"cython" = ["*.pyx"]
 
 [tool.setuptools.exclude-package-data]
 "*" = [
@@ -69,5 +74,26 @@ include-package-data = true
     "*.egg-info"
 ]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "--tb=short -q"
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["src/cython_wrapper/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]
+show_missing = true
+skip_empty = true
+
 [project.scripts]
-bioprofilekit = "app:cli"
+bioprofilekit = "cli.app:cli"
+
+[pytest]
+strict = true

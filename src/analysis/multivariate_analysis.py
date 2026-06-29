@@ -1,0 +1,528 @@
+import numpy as np
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+from scipy.sparse import coo_matrix
+from scipy.stats import chi2_contingency
+
+from models.multivariate import MultivariateAnalysis
+from .plot_utils import apply_standard_axes
+
+
+def multivariate_analysis(df: pd.DataFrame, target: str) -> MultivariateAnalysis:
+    types = _classify_columns(df)
+    values, methods = compute_correlation_matrix(df)
+    feat_target_corr = feature_target_correlation(df, target) if target else None
+    mi = mutual_information(df, target) if target else None
+
+    return MultivariateAnalysis(
+        correlation_heatmap=correlation_heatmap(values, methods),
+        pearson_heatmap=pearson_correlation_heatmap(df),
+        cramers_heatmap=cramers_heatmap(values, types),
+        eta_heatmap=eta_heatmap(values, types),
+        missing_matrix=missing_matrix(df),
+        missing_values_barchart=missing_values_barchart(df),
+        balance_plot=balance_plot(df, target) if target else None,
+        boxplot=boxplot(df),
+        scatter_matrix=scatter_matrix(df),
+        correlation_matrix=values,
+        correlation_methods=methods,
+        top_associations=top_associations(values, methods),
+        feature_target_correlation=feat_target_corr,
+        feature_target_plot=feature_target_plot(feat_target_corr) if feat_target_corr else None,
+        mutual_information=mi,
+        mutual_information_plot=mutual_information_plot(mi) if mi else None,
+        mi_relationship_plots=mi_relationship_plots(df, target, mi) if mi else None,
+        mcar_result=littles_mcar_test(df),
+        target_name=target if target else None,
+    )
+
+def _classify_columns(df: pd.DataFrame) -> dict:
+    num = df.select_dtypes(include='number')
+    num_std = num.std(ddof=0)
+    numeric = num_std[num_std > 0].index
+
+    cat = df.select_dtypes(exclude='number')
+    cat_nunique = cat.nunique(dropna=True)
+    categorical = cat_nunique[cat_nunique > 1].index
+
+    return {**{c: 'numeric' for c in numeric}, **{c: 'categorical' for c in categorical}}
+
+"""
+Correlation
+"""
+# Num x Num
+def _pearson(df: pd.DataFrame, a: str, b: str) -> float:
+    pair = df[[a, b]].dropna()
+    if len(pair) < 2:
+        return np.nan
+    return pair[a].corr(pair[b], method='pearson')
+
+# Cat x Cat
+def _cramers_v(df: pd.DataFrame, a: str, b: str) -> float:
+    """Bias-corrected Cramér's V (Bergsma 2013)."""
+    pair = df[[a, b]].dropna()
+    if pair.empty:
+        return np.nan
+
+    a_codes, _ = pair[a].factorize()
+    b_codes, _ = pair[b].factorize()
+    if len(a_codes) == 0 or len(b_codes) == 0:
+        return np.nan
+    r = int(a_codes.max()) + 1
+    k = int(b_codes.max()) + 1
+    if r < 2 or k < 2:
+        return np.nan
+
+    n = len(pair)
+    obs = coo_matrix((np.ones(n), (a_codes, b_codes)), shape=(r, k)).tocsr()
+    row_sum = np.asarray(obs.sum(axis=1)).ravel()
+    col_sum = np.asarray(obs.sum(axis=0)).ravel()
+
+    coo = obs.tocoo()
+    expected = row_sum[coo.row] * col_sum[coo.col] / n
+    chi2 = np.sum(coo.data ** 2 / expected) - n
+
+    phi2 = chi2 / n
+    r, k = obs.shape
+
+    # Bergsma-Bias Correction
+    phi2corr = max(0.0, phi2 - ((k - 1) * (r - 1)) / (n - 1))
+    rcorr = r - ((r - 1) ** 2) / (n - 1)
+    kcorr = k - ((k - 1) ** 2) / (n - 1)
+
+    denom = min((kcorr - 1), (rcorr - 1))
+    if denom <= 0:
+        return np.nan
+    return np.sqrt(phi2corr / denom)
+
+# Num x Cat
+def _eta_squared(df: pd.DataFrame, cat: str, num: str) -> float:
+    """Correlation ratio eta^2 (ANOVA): variance in num explained by groups of cat."""
+    pair = df[[cat, num]].dropna()
+    if len(pair) < 2:
+        return np.nan
+
+    grand_mean = pair[num].mean()
+    agg = pair.groupby(cat)[num].agg(['count', 'mean'])
+    counts = agg['count'].to_numpy()
+    means = agg['mean'].to_numpy()
+
+    ss_between = np.sum(counts * (means - grand_mean) ** 2)
+    ss_total = ((pair[num] - grand_mean) ** 2).sum()
+
+    if ss_total == 0:
+        return np.nan
+    return ss_between / ss_total
+
+
+def _correlation_pair(df, a, b, types) -> tuple[float, str]:
+    ta, tb = types[a], types[b]
+
+    if ta == 'numeric' and tb == 'numeric':
+        return abs(_pearson(df, a, b)), 'Pearson'
+    if ta == 'categorical' and tb == 'categorical':
+        return _cramers_v(df, a, b), "Cramér's V"
+    cat, num = (a, b) if ta == 'categorical' else (b, a)
+    return _eta_squared(df, cat, num), 'Eta²'
+
+
+def compute_correlation_matrix(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    types = _classify_columns(df)
+    cols = list(types.keys())
+    n = len(cols)
+
+    values = pd.DataFrame(np.eye(n), index=cols, columns=cols)
+    methods = pd.DataFrame('', index=cols, columns=cols, dtype=object)
+    for c in cols:
+        methods.at[c, c] = 'self'
+
+    for i in range(n):
+        for j in range(i + 1, n):
+            a, b = cols[i], cols[j]
+            value, method = _correlation_pair(df, a, b, types)
+            value = round(float(value), 3) if value == value else np.nan
+
+            values.iat[i, j] = value
+            values.iat[j, i] = value
+            methods.iat[i, j] = method
+            methods.iat[j, i] = method
+
+    return values, methods
+
+
+def feature_target_correlation(df: pd.DataFrame, target: str) -> dict | None:
+    if target not in df.columns:
+        return None
+
+    types = _classify_columns(df)
+    if target not in types:
+        return None
+
+    result = {}
+    for col in types:
+        if col == target:
+            continue
+        value, method = _correlation_pair(df, col, target, types)
+        if value == value:
+            result[col] = {'value': round(float(value), 3), 'method': method}
+    return result or None
+
+def feature_target_plot(feature_target: dict | None):
+    if not feature_target:
+        return None
+
+    ranked = sorted(feature_target.items(), key=lambda x: x[1]['value'])
+    features = [f for f, _ in ranked]
+    valuevec = [info['value'] for _, info in ranked]
+    methodvec = [info['method'] for _, info in ranked]
+
+    method_colors = {
+        "Pearson": "#0F65A0",
+        "Cramér's V": "#65A1E1",
+        "Eta squared": "#994564",
+    }
+    bar_colors = [method_colors.get(m, "#A1ACBD") for m in methodvec]
+
+    fig = go.Figure()
+    seen = set()
+    for f, v, m, c in zip(features, valuevec, methodvec, bar_colors):
+        fig.add_trace(go.Bar(
+            x=[v], y=[f], orientation='h',
+            marker_color=c, name=m,
+            legendgroup=m, showlegend=m not in seen,
+            text=[f"{v:.3f}"], textposition="outside",
+            hovertemplate=f"{f}<br>Association: {v:.3f}<br>Method: {m}<extra></extra>",
+        ))
+        seen.add(m)
+
+    fig.update_layout(
+        title="Feature–Target Association",
+        xaxis=dict(title="Association strength", range=[0, 1.05]),
+        yaxis=dict(title="Feature"),
+        template="plotly_white",
+        bargap=0.3,
+        height=max(400, 40 * len(features) + 150),
+        legend=dict(title="Method"),
+    )
+    return fig.to_html(full_html=False, include_plotlyjs=False)
+
+#ToDo change for Column Overview
+def get_correlation(df: pd.DataFrame, col) -> list | None:
+    ncols = df.select_dtypes(include='number').dropna(axis=1, how='all').columns
+    if col in ncols:
+        std = df[ncols].std(ddof=0)
+        ncols = std[std > 0].index
+        if col not in ncols:
+            return None
+        corr = df[ncols].corrwith(df[col], method='pearson')
+        corr.drop(labels=col, inplace=True)
+        corr = corr[corr.abs() >= 0.3]
+        if corr.empty:
+            return None
+        return list(zip(corr.index, corr))
+    return None
+
+def pearson_correlation_heatmap(df: pd.DataFrame):
+    df_numeric = df.select_dtypes(include=['float64', 'int64']).dropna(axis=1, how='all')
+    if not df_numeric.empty:
+        std = df_numeric.std(ddof=0)
+        df_numeric = df_numeric.loc[:, std[std > 0].index]
+    corr_matrix = round(df_numeric.corr(), 3)
+    fig = px.imshow(corr_matrix, text_auto=True,
+                    labels=dict(color="Correlation"),
+                    color_continuous_scale="RdBu_r", aspect="auto", height=700)
+    fig.update_layout(title="Correlation Heatmap")
+    return fig.to_html(full_html=False, include_plotlyjs=False)
+
+def correlation_heatmap(df: pd.DataFrame, methods: pd.DataFrame):
+    fig = px.imshow(
+        df, text_auto=True,
+        labels=dict(color="Association"),
+        color_continuous_scale="Blues", aspect="auto", height=700,
+        zmin=0, zmax=1,
+    )
+    fig.update_traces(
+        customdata=methods.values,
+        hovertemplate="%{x} ↔ %{y}<br>Association: %{z}<br>Method: %{customdata}<extra></extra>",
+    )
+    fig.update_layout(
+        title="Association Heatmap (mixed-type)",
+        plot_bgcolor="#FFFFFF",
+        margin=dict(b=120),
+    )
+    return fig.to_html(full_html=False, include_plotlyjs=False)
+
+
+def cramers_heatmap(df: pd.DataFrame, types: dict) -> str | None:
+    """Cramér's V matrix over categorical columns only (0..1)."""
+    cols = [c for c, t in types.items() if t == 'categorical' and c in df.index]
+    if len(cols) < 2:
+        return None
+
+    mat = df.loc[cols, cols]
+
+    colorscale = [
+        [0.0, "#EAF4FB"], [0.25, "#A9E1FF"], [0.5, "#65A1E1"],
+        [0.75, "#4082C0"], [1.0, "#0F65A0"],
+    ]
+
+    fig = px.imshow(
+        mat, text_auto=".3g",
+        labels=dict(color="Cramér's V"),
+        color_continuous_scale=colorscale, aspect="auto",
+        height=700, zmin=0, zmax=1,
+    )
+    fig.update_traces(
+        hovertemplate="%{x} ↔ %{y}<br>Cramér's V: %{z}<extra></extra>",
+    )
+    fig.update_layout(
+        title="Cramér's V (categorical pairs)",
+        autosize=True,
+        xaxis=dict(tickangle=-45),
+        plot_bgcolor="#FFFFFF",
+        margin=dict(b=120),
+    )
+    return fig.to_html(full_html=False, include_plotlyjs=False, config={"responsive": True})
+
+
+def eta_heatmap(df: pd.DataFrame, types: dict) -> str | None:
+    cats = [c for c, t in types.items() if t == 'categorical' and c in df.index]
+    nums = [c for c, t in types.items() if t == 'numeric' and c in df.index]
+    if not cats or not nums:
+        return None
+
+    mat = df.loc[cats, nums]
+
+    colorscale = [
+        [0.0, "#F7E9F0"], [0.25, "#D27897"], [0.5, "#A83665"],
+        [0.75, "#994564"], [1.0, "#932263"],
+    ]
+
+    fig = px.imshow(
+        mat, text_auto=".3g",
+        labels=dict(color="Eta²", x="Numeric", y="Categorical"),
+        color_continuous_scale=colorscale, aspect="auto",
+        height=700, zmin=0, zmax=1,
+    )
+    fig.update_traces(
+        hovertemplate="%{y} (cat) → %{x} (num)<br>Eta²: %{z}<extra></extra>",
+    )
+    fig.update_layout(
+        title="Eta² — variance in numeric explained by categorical (directional)",
+        autosize=True,
+        xaxis=dict(tickangle=-45),
+        plot_bgcolor="#FFFFFF",
+        margin=dict(b=120),
+    )
+    return fig.to_html(full_html=False, include_plotlyjs=False, config={"responsive": True})
+
+def top_associations(values, methods, threshold=0.7):
+    pairs = []
+    cols = list(values.columns)
+    for i in range(len(cols)):
+        for j in range(i + 1, len(cols)):
+            v = values.iat[i, j]
+            if v == v and v >= threshold:
+                pairs.append({
+                    "var1": cols[i],
+                    "var2": cols[j],
+                    "value": round(float(v), 3),
+                    "method": methods.iat[i, j],
+                })
+    return sorted(pairs, key=lambda p: p["value"], reverse=True) or None
+
+
+def mutual_information(df: pd.DataFrame, target: str) -> dict | None:
+    from sklearn.feature_selection import mutual_info_classif, mutual_info_regression
+
+    if target not in df.columns:
+        return None
+    types = _classify_columns(df)
+    if target not in types:
+        return None
+
+    features = [c for c in types if c != target]
+    if not features:
+        return None
+
+    work = df[features + [target]].dropna()
+    if len(work) < 3:
+        return None
+
+    X = work[features].copy()
+    discrete_features = []
+    for col in features:
+        if types[col] == 'categorical':
+            X[col], _ = X[col].factorize()
+            discrete_features.append(True)
+        else:
+            X[col] = X[col].astype(float)
+            discrete_features.append(False)
+
+    if types[target] == 'categorical':
+        y, _ = work[target].factorize()
+        mi = mutual_info_classif(X, y, discrete_features=discrete_features, random_state=0)
+    else:
+        y = work[target].astype(float)
+        mi = mutual_info_regression(X, y, discrete_features=discrete_features, random_state=0)
+
+    return {feat: {'value': round(float(score), 4)} for feat, score in zip(features, mi)} or None
+
+
+def mutual_information_plot(mi: dict | None):
+    if not mi:
+        return None
+
+    ranked = sorted(mi.items(), key=lambda x: x[1]['value'])
+    features = [f for f, _ in ranked]
+    values = [info['value'] for _, info in ranked]
+
+    fig = go.Figure(go.Bar(
+        x=values, y=features, orientation='h',
+        marker_color="#0F65A0",
+        text=[f"{v:.3f}" for v in values], textposition="outside",
+        hovertemplate="%{y}<br>Mutual Information: %{x:.4f}<extra></extra>",
+    ))
+    fig.update_layout(
+        title="Mutual Information (feature → target, non-linear)",
+        xaxis=dict(title="Mutual Information"),
+        yaxis=dict(title="Feature"),
+        template="plotly_white",
+        bargap=0.3,
+        height=max(400, 40 * len(features) + 150),
+    )
+    return fig.to_html(full_html=False, include_plotlyjs=False)
+
+
+def mi_relationship_plots(df: pd.DataFrame, target: str, mi: dict | None, top_n: int = 3):
+    if not mi or target not in df.columns:
+        return None
+
+    types = _classify_columns(df)
+    if target not in types:
+        return None
+
+    top = sorted(mi.items(), key=lambda x: x[1]['value'], reverse=True)[:top_n]
+    target_is_cat = types[target] == 'categorical'
+    plots = []
+    for feature, info in top:
+        work = df[[feature, target]].dropna()
+        if work.empty:
+            continue
+
+        if target_is_cat:
+            # distribution of the feature per target class
+            if types[feature] == 'numeric':
+                fig = px.violin(
+                    work, x=target, y=feature, color=target, box=True, points=False,
+                    color_discrete_sequence=["#0F65A0", "#994564", "#65A1E1", "#A83665"],
+                )
+            else:
+                # categorical feature vs categorical target -> grouped counts
+                ct = work.groupby([feature, target]).size().reset_index(name="count")
+                fig = px.bar(ct, x=feature, y="count", color=target, barmode="group",
+                             color_discrete_sequence=["#0F65A0", "#994564", "#65A1E1", "#A83665"])
+            fig.update_layout(title=f"{feature} by {target}  (MI={info['value']})")
+        else:
+            # numeric target: scatter + LOWESS trend
+            if types[feature] == 'numeric':
+                fig = px.scatter(
+                    work, x=feature, y=target, trendline="lowess",
+                    trendline_color_override="#994564",
+                    color_discrete_sequence=["#0F65A0"], opacity=0.5,
+                )
+                fig.update_traces(marker=dict(size=4), selector=dict(mode="markers"))
+            else:
+                # categorical feature vs numeric target -> box per category
+                fig = px.box(work, x=feature, y=target,
+                             color_discrete_sequence=["#0F65A0"])
+            fig.update_layout(title=f"{feature} vs {target}  (MI={info['value']})")
+
+        fig.update_layout(template="plotly_white", height=400)
+        plots.append({
+            "feature": feature,
+            "value": info['value'],
+            "plot": fig.to_html(full_html=False, include_plotlyjs=False),
+        })
+    return plots or None
+
+"""
+
+Missingness
+
+"""
+def littles_mcar_test(df: pd.DataFrame):
+    return {"Hello":"World"}
+
+def missing_matrix(df: pd.DataFrame):
+    missing_values = df.isnull().astype(int)
+    fig = px.imshow(missing_values, labels=dict(color="Missing Values"),
+                    aspect="auto", color_continuous_scale="blues_r",
+                    title="Missing Values Matrix")
+    fig.update_yaxes(autorange='reversed')
+    fig.update_layout(coloraxis_showscale=False)
+    return fig.to_html(full_html=False, include_plotlyjs=False)
+
+
+def missing_values_barchart(df: pd.DataFrame):
+    missing_counts = df.isna().sum()
+    fig = px.bar(x=missing_counts.index, y=missing_counts.values,
+                 labels={'x': 'Columns', 'y': 'Missing Values'},
+                 color_discrete_sequence=['#0F65A0'])
+    fig.update_layout(title="Missing Values per Column", bargap=0.2, plot_bgcolor='white')
+    apply_standard_axes(fig, tick_angle=-45)
+    return fig.to_html(full_html=False, include_plotlyjs=False)
+
+
+def balance_plot(df, target):
+    fig = px.histogram(df, x=target, color_discrete_sequence=["#0F65A0"], text_auto=True)
+    fig.update_layout(title="Class Balance (Target Distribution)", bargap=0.2, plot_bgcolor="white")
+    apply_standard_axes(fig)
+    return fig.to_html(full_html=False, include_plotlyjs=False)
+
+
+def boxplot(df: pd.DataFrame):
+    df = df.select_dtypes(include=['float64', 'int64']).dropna(axis=1, how='all')
+    fig = go.Figure()
+    for col in df:
+        fig.add_trace(go.Box(y=df[col].values, name=df[col].name))
+    fig.update_yaxes(type="log", title="Logarithmic", showticklabels=False)
+    fig.update_layout(
+        xaxis=dict(rangeslider=dict(visible=True), type="linear"),
+        title="Boxplot", xaxis_title="Columns",
+        yaxis_title="Values", legend_title="Columns",
+    )
+    return fig.to_html(full_html=False, include_plotlyjs=False)
+
+
+def scatter_matrix(df: pd.DataFrame):
+    df = df.select_dtypes(include=['float64', 'int64']).dropna(axis=1, how='all')
+    fig = px.scatter_matrix(df, color_discrete_sequence=["#0F65A0"], height=750)
+    fig.update_traces(diagonal_visible=False,
+                      marker=dict(size=2, opacity=0.5, color="#0F65A0"))
+    fig.update_layout(title="Scatter Matrix", xaxis_title="Columns",
+                      plot_bgcolor="white", bargap=0.2, dragmode="select")
+
+    n_vars = len(df.columns)
+    for i in range(1, n_vars + 1):
+        for j in range(1, n_vars + 1):
+            if i == 1:
+                fig.update_layout({f'xaxis{j if j > 1 else ""}': dict(
+                    mirror=True, ticks="outside", showline=True,
+                    linecolor="black", linewidth=1, gridcolor="lightgrey",
+                    title_standoff=25,
+                )})
+            if j == 1:
+                fig.update_layout({f'yaxis{i if i > 1 else ""}': dict(
+                    mirror=True, ticks="outside", showline=True,
+                    linecolor="black", linewidth=1, gridcolor="lightgrey",
+                    title_standoff=25,
+                )})
+
+    fig.for_each_annotation(lambda a: a.update(
+        textangle=0,
+        x=-0.08 if a.textangle == 90 or 'y' in str(a.yref) else a.x,
+        y=-0.08 if a.textangle == 0 and 'x' in str(a.xref) else a.y,
+    ))
+    return fig.to_html(full_html=False, include_plotlyjs=False)

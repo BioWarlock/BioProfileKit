@@ -1,6 +1,6 @@
 peptides~=0.5.0
 weblogo~=3.7.12
-requests~=2.32.5
+requests~=2.34.2
 goatools~=1.5.1
 pandas~=2.3.0
 jinja2~=3.1.6
@@ -12,3 +12,4 @@ plotly~=6.3.0
 scipy~=1.16.1
 setuptools~=70.0.0
 matplotlib~=3.10.7
+pytest~=9.1.0

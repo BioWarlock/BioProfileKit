@@ -1,5 +1,5 @@
 import sysconfig
-
+import numpy as np
 from Cython.Build import cythonize
 from setuptools import setup, Extension, find_packages
 
@@ -9,13 +9,16 @@ def get_python_include_dir():
 
 extensions = [
     Extension(
-        "qc_eda.basic.wrapper_utils",
-        ["src/qc_eda/basic/wrapper_utils.pyx"],
+        "cython_wrapper.wrapper_utils",
+        ["src/cython_wrapper/wrapper_utils.pyx"],
     ),
     Extension(
-            "qc_eda.basic.taxonomy_validator",
-            ["src/qc_eda/basic/taxonomy_validator.pyx"],
+        "cython_wrapper.taxonomy_validator",
+        ["src/cython_wrapper/taxonomy_validator.pyx"],
     ),
+    Extension("cython_wrapper.medcouple_fast",
+              ["src/cython_wrapper/medcouple_fast.pyx"],
+              include_dirs=[np.get_include()])
 ]
 
 setup(
@@ -23,6 +26,6 @@ setup(
     version="0.1",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
-    ext_modules=cythonize(extensions, compiler_directives={'language_level': "3"}),
+    ext_modules=cythonize(extensions, compiler_directives={'language_level': "3"}, force=True),
     zip_safe=False,
 )

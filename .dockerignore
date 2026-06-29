@@ -64,10 +64,26 @@ compose.yaml
 # Data & Output files
 data/
 renders/
+*_renders/
 *.pdf
 *.csv
 *.xlsx
+benchmark/
+benchmark_data/
 
 # Project files (not needed in container)
 MANIFEST.in
 requirements.txt
+
+src/cython_wrapper/*.c
+src/cython_wrapper/*.so
+*.egg-info
+tests/
+.old_venv/
+.bioprofilekit
+iedb_test_report.html
+iedb_sub_renders.zip
+profile.out
+test.html
+tests_
+__pycache__

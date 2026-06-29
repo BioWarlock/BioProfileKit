@@ -5,11 +5,29 @@
  * Licensed under MIT (https://github.com/twbs/bootstrap/blob/main/LICENSE)
  */
 
+/* ── Shared component styles ─────────────────────────────────────── */
 #dup_table tbody td:first-child {
     font-weight: bold;
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   Theme colour palettes
+   Apply data-cb-theme="internal" (default) or "colorblind" to <body>.
+
+   Semantic aliases translate palette positions into component roles so
+   every component rule below is written once and works in both themes.
+
+   Two alias families are provided:
+     --cb-action*        → background / border use (buttons, active states)
+     --cb-action-text*   → text / foreground use (links, labels, tab text)
+
+   These must be separate because WCAG contrast requirements differ:
+   a colour used as a background only needs to contrast with its text,
+   while a colour used as text on white must reach ≥ 4.5:1 on its own.
+   ═══════════════════════════════════════════════════════════════════ */
+
 [data-cb-theme=internal] {
+    /* Raw palette */
     --cb-blue-1: #00447B;
     --cb-blue-2: #0F65A0;
     --cb-blue-3: #4082C0;
@@ -22,9 +40,24 @@
     --cb-pink-2: #A83665;
     --cb-pink-3: #994564;
     --cb-pink-4: #D27897;
+
+    /* Background / border aliases */
+    --cb-action:          var(--cb-pink-1);  /* primary CTA bg        #932263 */
+    --cb-action-hover:    var(--cb-pink-2);  /* hover / active bg     #A83665 */
+    --cb-action-subtle:   var(--cb-pink-4);  /* border / focus ring   #D27897 */
+    --cb-surface:         var(--cb-grey-1);  /* dark navbar / footer  #3D4756 */
+
+    /* Text-on-filled-action aliases */
+    --cb-on-action:       #fff;              /* text on filled button — 7.9:1  */
+    --cb-on-action-hover: #fff;
+
+    /* Text-on-white aliases (internal theme: same as action bg) */
+    --cb-action-text:       var(--cb-pink-1);  /* links, tabs, labels   7.9:1 ✓ */
+    --cb-action-hover-text: var(--cb-pink-2);  /* hover text            6.2:1 ✓ */
 }
 
 [data-cb-theme=colorblind] {
+    /* Raw palette */
     --cb-blue-1: #616D78;
     --cb-blue-2: #5B666A;
     --cb-blue-3: #6C7385;
@@ -37,7 +70,58 @@
     --cb-pink-2: #5EC8B6;
     --cb-pink-3: #5A969A;
     --cb-pink-4: #378979;
+
+    /* Background / border aliases */
+    --cb-action:          var(--cb-pink-4);  /* primary CTA bg        #378979 */
+    --cb-action-hover:    var(--cb-pink-3);  /* hover / active bg     #5A969A */
+    --cb-action-subtle:   var(--cb-pink-2);  /* border / focus ring   #5EC8B6 */
+    --cb-surface:         var(--cb-grey-1);  /* light navbar / footer #7DB3C6 */
+
+    /*
+     * Text-on-filled-action: #334A52 (L=0.062) has only 2.2:1 on #378979.
+     * Pure black (L=0) gives 5.0:1 on #378979 and 6.3:1 on #5A969A.  ✓
+     */
+    --cb-on-action:       #000;
+    --cb-on-action-hover: #000;
+
+    /*
+     * Text-on-white: #378979 gives only 4.2:1 — below WCAG AA (4.5:1).
+     * --cb-grey-2 (#334A52) gives 9.4:1 and shares the teal character. ✓
+     */
+    --cb-action-text:       var(--cb-grey-2);  /* links, labels on white 9.4:1 ✓ */
+    --cb-action-hover-text: var(--cb-grey-2);  /* hover stays dark; underline signals state */
+
+    /*
+     * Bootstrap semantic colour overrides — Okabe-Ito palette.
+     * These drive .bg-danger / .bg-success / .bg-warning badges,
+     * .table-danger / -success / -warning row tints, and alerts.
+     *
+     *   Red   → Vermillion    #D55E00  (safe for protanopia + deuteranopia)
+     *   Green → Blue          #0072B2  (clearly distinct from vermillion)
+     *   Yellow → Orange-yellow #E69F00 (safe for all common types)
+     */
+    --bs-danger:                 #D55E00;
+    --bs-danger-rgb:             213, 94, 0;
+    --bs-danger-bg-subtle:       #FAE0CC;
+    --bs-danger-border-subtle:   #ECA066;
+    --bs-danger-text-emphasis:   #7F3700;
+
+    --bs-success:                #0072B2;
+    --bs-success-rgb:            0, 114, 178;
+    --bs-success-bg-subtle:      #CCE5F5;
+    --bs-success-border-subtle:  #80BEE0;
+    --bs-success-text-emphasis:  #00416A;
+
+    --bs-warning:                #E69F00;
+    --bs-warning-rgb:            230, 159, 0;
+    --bs-warning-bg-subtle:      #FBF0CC;
+    --bs-warning-border-subtle:  #F3CF66;
+    --bs-warning-text-emphasis:  #7F5700;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Bootstrap utility overrides
+   ═══════════════════════════════════════════════════════════════════ */
 
 .text-bg-dark {
     color: #fff !important;
@@ -46,60 +130,134 @@
 
 .bg-dark {
     --bs-bg-opacity: 1;
-    background-color: #3D4756 !important;
+    background-color: var(--cb-surface) !important;
 }
 
 .bg-secondary {
     --bs-bg-opacity: 1;
-    background-color: #3D4756 !important;
+    background-color: var(--cb-surface) !important;
 }
 
+/*
+ * In colorblind mode the surface colour (#7DB3C6) is a light blue.
+ * Bootstrap's .text-white uses !important, so we must counter it here
+ * for any white text that appears on top of a surface-coloured container.
+ * Also invert the footer GitHub icon filter so it stays visible.
+ */
+/*
+ * #334A52 (cb-grey-2) gives only 4.1:1 on the CB surface (#7DB3C6),
+ * which is below AA for small body text. Use near-black instead (8.0:1 ✓).
+ */
+[data-cb-theme=colorblind] .bg-dark .text-white,
+[data-cb-theme=colorblind] .bg-secondary .text-white {
+    color: #1a1a1a !important;
+}
+
+[data-cb-theme=colorblind] #footer img {
+    filter: brightness(0) !important;   /* keeps the SVG logo legible on light bg */
+}
+
+/* ── Primary filled button ────────────────────────────────────────── */
 .btn-cb-primary {
-    --bs-btn-color: #fff;
-    --bs-btn-bg: #932263;
-    --bs-btn-border-color: #932263;
-    --bs-btn-hover-color: #fff;
-    --bs-btn-hover-bg: #A83665;
-    --bs-btn-hover-border-color: #D27897;
-    --bs-btn-focus-shadow-rgb: 49, 132, 253;
-    --bs-btn-active-color: #fff;
-    --bs-btn-active-bg: #A83665;
-    --bs-btn-active-border-color: #D27897;
-    --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
-    --bs-btn-disabled-color: #fff;
-    --bs-btn-disabled-bg: #932263;
-    --bs-btn-disabled-border-color: #932263;
+    --bs-btn-color:                 var(--cb-on-action);
+    --bs-btn-bg:                    var(--cb-action);
+    --bs-btn-border-color:          var(--cb-action);
+    --bs-btn-hover-color:           var(--cb-on-action-hover);
+    --bs-btn-hover-bg:              var(--cb-action-hover);
+    --bs-btn-hover-border-color:    var(--cb-action-subtle);
+    --bs-btn-focus-shadow-rgb:      49, 132, 253;
+    --bs-btn-active-color:          var(--cb-on-action-hover);
+    --bs-btn-active-bg:             var(--cb-action-hover);
+    --bs-btn-active-border-color:   var(--cb-action-subtle);
+    --bs-btn-active-shadow:         inset 0 3px 5px rgba(0, 0, 0, 0.125);
+    --bs-btn-disabled-color:        var(--cb-on-action);
+    --bs-btn-disabled-bg:           var(--cb-action);
+    --bs-btn-disabled-border-color: var(--cb-action);
 }
 
+/* ── Primary outline button ──────────────────────────────────────── */
 .btn-cb-outline-primary {
-    --bs-btn-color: #932263;
-    --bs-btn-border-color: #932263;
-    --bs-btn-hover-color: #fff;
-    --bs-btn-hover-bg: #A83665;
-    --bs-btn-hover-border-color: #D27897;
-    --bs-btn-focus-shadow-rgb: 13, 110, 253;
-    --bs-btn-active-color: #fff;
-    --bs-btn-active-bg: #A83665;
-    --bs-btn-active-border-color: #D27897;
-    --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
-    --bs-btn-disabled-color: #932263;
-    --bs-btn-disabled-bg: transparent;
-    --bs-btn-disabled-border-color: #932263;
+    --bs-btn-color:                 var(--cb-action-text);
+    --bs-btn-border-color:          var(--cb-action);
+    --bs-btn-hover-color:           var(--cb-on-action-hover);
+    --bs-btn-hover-bg:              var(--cb-action-hover);
+    --bs-btn-hover-border-color:    var(--cb-action-subtle);
+    --bs-btn-focus-shadow-rgb:      13, 110, 253;
+    --bs-btn-active-color:          var(--cb-on-action-hover);
+    --bs-btn-active-bg:             var(--cb-action-hover);
+    --bs-btn-active-border-color:   var(--cb-action-subtle);
+    --bs-btn-active-shadow:         inset 0 3px 5px rgba(0, 0, 0, 0.125);
+    --bs-btn-disabled-color:        var(--cb-action-text);
+    --bs-btn-disabled-bg:           transparent;
+    --bs-btn-disabled-border-color: var(--cb-action);
     --bs-gradient: none;
 }
 
+/* ── Navbar ──────────────────────────────────────────────────────── */
 .navbar-cb-dark,
 .navbar[data-cb-theme=internal] {
-    --bs-navbar-color: rgba(255, 255, 255, 0.55);
-    --bs-navbar-hover-color: rgba(255, 255, 255, 0.75);
-    --bs-navbar-disabled-color: rgba(255, 255, 255, 0.25);
-    --bs-navbar-active-color: #fff;
-    --bs-navbar-brand-color: #fff;
-    --bs-navbar-brand-hover-color: #fff;
+    --bs-navbar-color:                rgba(255, 255, 255, 0.55);
+    --bs-navbar-hover-color:          rgba(255, 255, 255, 0.75);
+    --bs-navbar-disabled-color:       rgba(255, 255, 255, 0.25);
+    --bs-navbar-active-color:         #fff;
+    --bs-navbar-brand-color:          #fff;
+    --bs-navbar-brand-hover-color:    #fff;
     --bs-navbar-toggler-border-color: rgba(255, 255, 255, 0.1);
     --bs-navbar-toggler-icon-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.55%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
 }
 
+/* In colorblind mode the surface (#7DB3C6) is light — switch to dark text. */
+[data-cb-theme=colorblind] .navbar-cb-dark {
+    --bs-navbar-color:                rgba(0, 0, 0, 0.65);
+    --bs-navbar-hover-color:          rgba(0, 0, 0, 0.85);
+    --bs-navbar-disabled-color:       rgba(0, 0, 0, 0.30);
+    --bs-navbar-active-color:         #000;
+    --bs-navbar-brand-color:          #000;
+    --bs-navbar-brand-hover-color:    #000;
+    --bs-navbar-toggler-border-color: rgba(0, 0, 0, 0.2);
+    --bs-navbar-toggler-icon-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%280, 0, 0, 0.65%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+}
+
+/*
+ * ── Navbar toggle button (.btn-cb-navbar) ────────────────────────
+ * Purpose-built for the navbar context so it is legible regardless
+ * of whether the palette has been switched:
+ *   Internal mode  (dark surface #3D4756) → white outline / white text
+ *   Colorblind mode (light surface #7DB3C6) → dark outline / dark text
+ */
+.btn-cb-navbar {
+    --bs-btn-color:                 rgba(255, 255, 255, 0.85);
+    --bs-btn-bg:                    transparent;
+    --bs-btn-border-color:          rgba(255, 255, 255, 0.55);
+    --bs-btn-hover-color:           #fff;
+    --bs-btn-hover-bg:              rgba(255, 255, 255, 0.15);
+    --bs-btn-hover-border-color:    rgba(255, 255, 255, 0.85);
+    --bs-btn-focus-shadow-rgb:      255, 255, 255;
+    --bs-btn-active-color:          #fff;
+    --bs-btn-active-bg:             rgba(255, 255, 255, 0.20);
+    --bs-btn-active-border-color:   #fff;
+    --bs-btn-active-shadow:         inset 0 3px 5px rgba(0, 0, 0, 0.125);
+    --bs-btn-disabled-color:        rgba(255, 255, 255, 0.35);
+    --bs-btn-disabled-bg:           transparent;
+    --bs-btn-disabled-border-color: rgba(255, 255, 255, 0.25);
+    --bs-gradient: none;
+}
+
+[data-cb-theme=colorblind] .btn-cb-navbar {
+    --bs-btn-color:                 rgba(0, 0, 0, 0.75);
+    --bs-btn-bg:                    transparent;
+    --bs-btn-border-color:          rgba(0, 0, 0, 0.45);
+    --bs-btn-hover-color:           #000;
+    --bs-btn-hover-bg:              rgba(0, 0, 0, 0.10);
+    --bs-btn-hover-border-color:    rgba(0, 0, 0, 0.75);
+    --bs-btn-active-color:          #000;
+    --bs-btn-active-bg:             rgba(0, 0, 0, 0.15);
+    --bs-btn-active-border-color:   #000;
+    --bs-btn-disabled-color:        rgba(0, 0, 0, 0.30);
+    --bs-btn-disabled-border-color: rgba(0, 0, 0, 0.20);
+}
+
+/* ── Layout helpers ──────────────────────────────────────────────── */
 #page-container {
     position: relative;
     min-height: 100vh;
@@ -117,86 +275,124 @@
     min-height: 5rem;
 }
 
+/* ── Search input ────────────────────────────────────────────────── */
 input.form-control[type="search"] {
     background-color: #fff;
-    color: #932263;
-    border: 1px solid #932263;
+    color: var(--cb-action-text);
+    border: 1px solid var(--cb-action);
     opacity: 0.65;
     box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
 }
 
+/* ── Pagination ──────────────────────────────────────────────────── */
 ul.pagination li.page-item .page-link {
     background-color: #fff;
-    color: #932263;
-    border: 1px solid #932263;
+    color: var(--cb-action-text);
+    border: 1px solid var(--cb-action);
 }
 
 ul.pagination li.page-item .page-link:hover {
-    background-color: #A83665;
-    color: #fff;
-    border-color: #A83665;
+    background-color: var(--cb-action-hover);
+    color: var(--cb-on-action-hover);
+    border-color: var(--cb-action-hover);
 }
 
 ul.pagination li.page-item.active .page-link {
-    background-color: #A83665;
-    border-color: #A83665;
-    color: #fff;
+    background-color: var(--cb-action-hover);
+    border-color: var(--cb-action-hover);
+    color: var(--cb-on-action-hover);
     box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
 }
 
 ul.pagination li.page-item.disabled .page-link {
     background-color: #fff;
-    color: #932263;
-    border-color: #932263;
+    color: var(--cb-action-text);
+    border-color: var(--cb-action);
     opacity: 0.45;
     cursor: not-allowed;
 }
 
 ul.pagination li.page-item .page-link.ellipsis {
     background-color: #fff;
-    color: #932263;
-    border: 1px solid #932263;
+    color: var(--cb-action-text);
+    border: 1px solid var(--cb-action);
     pointer-events: none;
 }
 
+/* ── Internal cross-reference links ─────────────────────────────── */
 .cb-pink-link {
-    color: var(--cb-pink-1) !important;
+    color: var(--cb-action-text) !important;
     text-decoration: none;
 }
 
 .cb-pink-link:hover {
-    color: var(--cb-pink-2) !important;
+    color: var(--cb-action-hover-text) !important;
     text-decoration: underline;
 }
 
+/* ── Navbar dropdown ─────────────────────────────────────────────── */
 .navbar-cb-dark .dropdown-menu {
     --bs-dropdown-bg: #fff;
-    --bs-dropdown-border-color: #932263;
+    --bs-dropdown-border-color: var(--cb-action);
 }
 
 .navbar-cb-dark .dropdown-item {
-    color: #932263;
+    color: var(--cb-action-text);
 }
 
 .navbar-cb-dark .dropdown-item.active,
 .navbar-cb-dark .dropdown-item:active {
-    background-color: #932263;
-    color: #fff;
+    background-color: var(--cb-action);
+    color: var(--cb-on-action);
 }
 
 .navbar-cb-dark .dropdown-item:active {
-    background-color: #932263;
-    color: #fff;
+    background-color: var(--cb-action);
+    color: var(--cb-on-action);
     box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
 }
 
-/* Tab Navigation */
+/* ── Tab navigation ──────────────────────────────────────────────── */
 .nav-tabs .nav-link {
-    color: #932263;
+    color: var(--cb-action-text);
 }
 
 /* Tab Navigation - Active */
 .nav-tabs .nav-link.active,
 .nav-tabs .nav-item.show .nav-link {
-    color: #932263;
+    color: var(--cb-action-text);
+}
+
+/* ── Table section header rows ───────────────────────────────────── */
+.table-secondary {
+    --bs-table-color:        var(--cb-action-text);
+    --bs-table-bg:           #ffffff;
+    --bs-table-border-color: #dee2e6;
+}
+
+.table > :not(caption) > .table-secondary > * {
+    background-color: #ffffff !important;
+    box-shadow:       none !important;
+    color:            var(--cb-action-text) !important;
+    padding-top:      1rem !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Colorblind mode — badge / alert / table-row text contrast fixes.
+
+   Bootstrap hardcodes white text on .bg-danger and .bg-success.
+   Vermillion (#D55E00) and orange-yellow (#E69F00) require dark text
+   for WCAG AA. Blue (#0072B2) passes at 5.2:1 with white text.
+   ═══════════════════════════════════════════════════════════════════ */
+
+[data-cb-theme=colorblind] .bg-danger,
+[data-cb-theme=colorblind] .badge.bg-danger,
+[data-cb-theme=colorblind] .alert-danger {
+    color: #000 !important;
+}
+
+[data-cb-theme=colorblind] .bg-warning,
+[data-cb-theme=colorblind] .badge.bg-warning,
+[data-cb-theme=colorblind] .alert-warning {
+    color: #000 !important;
 }

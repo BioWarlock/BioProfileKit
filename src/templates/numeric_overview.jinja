@@ -5,144 +5,419 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <meta name="description" content="Analysis Overview - BioProfileKit" />
     <meta name="author" content="JLU" />
-    <title>Overview</title>
-    <!-- Favicon-->
+    <title>Analysis Overview – BioProfileKit</title>
     <link rel="icon" type="image/x-icon" href="static/assets/favicon.ico" />
-    <!-- Core theme CSS (includes Bootstrap)-->
     <link href="static/css/bootstrap.css" rel="stylesheet" />
     <link href="static/css/cb.css" rel="stylesheet" />
-
     <link rel="stylesheet" href="https://cdn.datatables.net/2.0.7/css/dataTables.bootstrap5.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/3.0.0/css/responsive.bootstrap5.min.css">
+    <style>
+        .section-heading {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: var(--cb-text, #1A1A1A);
+            border-left: 4px solid var(--cb-primary, #0F65A0);
+            padding-left: .65rem;
+            margin-bottom: 1.1rem;
+        }
+        .dataTables_wrapper,
+        .dataTables_wrapper table,
+        .dataTables_wrapper input,
+        .dataTables_wrapper select,
+        .dataTables_wrapper .dataTables_info,
+        .dataTables_wrapper .dataTables_paginate,
+        .dataTables_wrapper .dataTables_filter label,
+        .dataTables_wrapper .dataTables_length label {
+            font-family: inherit;
+            font-size: .875rem;
+        }
+    </style>
 </head>
-<body>
-<!-- Responsive navbar-->
+<body data-cb-theme="internal">
+
 <nav class="navbar navbar-expand-lg navbar-cb-dark bg-dark">
     <div class="container px-5">
         <a class="navbar-brand" href="index.html">BioProfileKit</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
+                aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
             <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
                 <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
-                <li class="nav-item dropdown">
-                    <a class="nav-link active dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        Services
-                    </a>
-                    <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                        <a class="dropdown-item nav-item active" href="numeric_data.html">Overview of Analysis</a>
-                        <a class="dropdown-item" href="columns.html">Column Analysis</a>
-                        <a class="dropdown-item" href="general_statistics.html">General Statistics</a>
-                    </div>
-                </li>
+                <li class="nav-item"><a class="nav-link active" aria-current="page" href="numeric_data.html">Analysis Overview</a></li>
+                <li class="nav-item"><a class="nav-link" href="columns.html">Column Analysis</a></li>
+                <li class="nav-item"><a class="nav-link" href="general_statistics.html">Multivariate Statistics</a></li>
+
             </ul>
         </div>
     </div>
 </nav>
-<!-- Page Content-->
+
 <div id="page-container">
-    <div id="content-wrap">
-        <div class="container px-4 px-lg-5">
-            <!-- Heading Row-->
-            <div class="row gx-4 gx-lg-5 align-items-center my-5">
-                <div class="col-12">
-                    <h1 class="font-weight-light">Overview of Analysis</h1>
-                    <p style="text-align: justify">
-                        Get a compact, numerical summary of all analyses carried out. Visualisations and key figures provide a quick overview of key results and developments - ideal for evaluation at a glance.
-                    </p>
-                </div>
+  <div id="content-wrap">
+    <div class="container px-4 px-lg-5">
+
+      <!-- Heading -->
+      <div class="row gx-4 gx-lg-5 align-items-center my-5">
+        <div class="col-12">
+          <h1 class="font-weight-light">Overview of Analysis</h1>
+          <p style="text-align:justify;">
+            Get a compact, numerical summary of all analyses carried out. Visualisations and key figures
+            provide a quick overview of key results and developments — ideal for evaluation at a glance.
+          </p>
+        </div>
+      </div>
+
+      <div class="row gx-4 gx-lg-5">
+        <div class="col-12">
+
+          {# ================================================================
+             1) GENERAL DATASET STATISTICS
+             ================================================================ #}
+          <p class="section-heading">General Dataset Statistics</p>
+
+          <div class="row gx-4 mb-4">
+
+            {# ── Left: Dataset overview ── #}
+            <div class="col-lg-7">
+              <h6 class="text-uppercase text-muted fw-semibold mb-2" style="font-size:.7rem; letter-spacing:.08em;">
+                  Dataset Overview
+              </h6>
+              <table class="table table-sm table-hover mb-3">
+                <caption class="visually-hidden">General dataset statistics</caption>
+                <tbody>
+                  <tr><td>Filename</td>              <td><strong>{{ general.filename }}</strong></td></tr>
+                  <tr><td>Rows</td>                  <td>{{ general.rows }}</td></tr>
+                  <tr><td>Columns</td>               <td>{{ general.cols }}</td></tr>
+                  <tr><td>Missing values</td>         <td>{{ general.nulls }}</td></tr>
+                  <tr><td>Missing values (%)</td>     <td>{{ general.nulls_percentage }}</td></tr>
+                  <tr><td>Empty rows</td>             <td>{{ general.empty_rows }}</td></tr>
+                  <tr><td>Duplicate rows</td>
+                      <td>
+                        {% if general.dup_row > 0 %}
+                          <span class="badge bg-warning text-dark">{{ general.dup_row }}</span>
+                        {% else %}
+                          {{ general.dup_row }}
+                        {% endif %}
+                      </td>
+                  </tr>
+                  <tr><td>Duplicate columns</td>
+                      <td>
+                        {% if general.dup_col > 0 %}
+                          <span class="badge bg-warning text-dark">{{ general.dup_col }}</span>
+                        {% else %}
+                          {{ general.dup_col }}
+                        {% endif %}
+                      </td>
+                  </tr>
+                  <tr><td>Sample-Feature Ratio</td>  <td>{{ general.ratio }}</td></tr>
+                  <tr><td>Memory usage</td>           <td>{{ general.memory }}</td></tr>
+                  <tr><td>Alerts</td>                 <td>{{ general.alerts }}</td></tr>
+                </tbody>
+              </table>
             </div>
-            <!-- Content Row-->
-            <div class="row gx-4 gx-lg-5">
-                <div class="col-12">
-                    <table class="table table-hover">
-                        <thead>
-                        </thead>
-                        <tbody>
-                        <TR>
-                            <TD>Filename</TD>
-                            <TD>{{ general.filename }}</TD>
-                        </TR>
-                        <TR>
-                            <TD>Row number</TD>
-                            <TD>{{ general.rows }}</TD>
-                        </TR>
-                        <TR>
-                            <td>Column number</td>
-                            <TD>{{ general.cols }}</TD>
-                        </TR>
-                        <TR>
-                            <td>Missing values</td>
-                            <td>{{ general.nulls }}</td>
-                        </TR>
-                        <TR>
-                            <td>Missing values (%)</td>
-                            <td>{{ general.nulls_percentage }}</td>
-                        </TR>
-                        <TR>
-                            <td>Duplicate rows</td>
-                            <td>{{ general.dup_row }}</td>
-                        </TR>
-                        <TR>
-                            <td>Duplicate columns</td>
-                            <td>{{ general.dup_col }}</td>
-                        </TR>
-                        <TR>
-                            <td>Memory usage</td>
-                            <td>{{ general.memory }}</td>
-                        </TR>
-                        <TR>
-                            <td>Alerts</td>
-                            <td>{{ general.alters }}</td>
-                        </TR>
-                        </tbody>
+
+            {# ── Right: Column type breakdown ── #}
+            <div class="col-lg-5">
+              <h6 class="text-uppercase text-muted fw-semibold mb-2" style="font-size:.7rem; letter-spacing:.08em;">
+                  Column Types
+              </h6>
+              <table class="table table-sm table-hover mb-3">
+                <caption class="visually-hidden">Column type breakdown</caption>
+                <tbody>
+                  {% if general.n_number %}
+                  <tr><td>Numeric</td>               <td>{{ general.n_number }}</td></tr>
+                  {% endif %}
+                  {% if general.n_categorical %}
+                  <tr><td>Categorical</td>            <td>{{ general.n_categorical }}</td></tr>
+                  {% endif %}
+                  {% if general.n_dna %}
+                  <tr><td>DNA sequences</td>          <td>{{ general.n_dna }}</td></tr>
+                  {% endif %}
+                  {% if general.n_rna %}
+                  <tr><td>RNA sequences</td>          <td>{{ general.n_rna }}</td></tr>
+                  {% endif %}
+                  {% if general.n_protein %}
+                  <tr><td>Protein sequences</td>      <td>{{ general.n_protein }}</td></tr>
+                  {% endif %}
+                  {% if general.n_taxonomy %}
+                  <tr><td>Taxonomy</td>               <td>{{ general.n_taxonomy }}</td></tr>
+                  {% endif %}
+                  {% if general.n_unit %}
+                  <tr><td>Lab measurements</td>       <td>{{ general.n_unit }}</td></tr>
+                  {% endif %}
+                  {% if general.n_functional %}
+                  <tr><td>Functional annotation</td>  <td>{{ general.n_functional }}</td></tr>
+                  {% endif %}
+                  {% if general.n_empty %}
+                  <tr>
+                    <td>Empty (all-null)</td>
+                    <td><span class="badge bg-warning text-dark">{{ general.n_empty }}</span></td>
+                  </tr>
+                  {% endif %}
+                </tbody>
+              </table>
+
+              {# Only shown when taxonomy candidates exist but --tax was not used #}
+              {% if general.n_taxonomy == 0 and general.n_taxonomy_candidates is defined and general.n_taxonomy_candidates > 0 %}
+              <div class="alert alert-light border py-2" style="font-size:.875rem;">
+                <strong>Taxonomy:</strong>
+                <span class="text-muted">Not checked —
+                  run with <code>--tax</code> to enable taxonomic validation.
+                </span>
+              </div>
+              {% endif %}
+            </div>
+
+          </div>{# /row #}
+
+          <hr>
+
+          {# ================================================================
+             2) QUALITY ASSESSMENT REPORT
+             ================================================================ #}
+          {% if quality %}
+          <p class="section-heading">Quality Assessment Report</p>
+
+          {# ── Overall banner ── #}
+          {% if quality.overall == 'ready' %}
+            {% set banner_class = 'success' %}
+            {% set banner_icon  = 'M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z' %}
+            {% set banner_label = 'No Quality Issues' %}
+          {% elif quality.overall == 'caution' %}
+            {% set banner_class = 'warning' %}
+            {% set banner_icon  = 'M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z' %}
+            {% set banner_label = 'Minor Quality Issues' %}
+          {% else %}
+            {% set banner_class = 'danger' %}
+            {% set banner_icon  = 'M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z' %}
+            {% set banner_label = 'Major Quality Issues' %}
+          {% endif %}
+
+          <div class="alert alert-{{ banner_class }} d-flex align-items-center gap-3 mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
+                 viewBox="0 0 16 16" aria-hidden="true" style="flex-shrink:0;">
+              <path d="{{ banner_icon }}"/>
+            </svg>
+            <div>
+              <strong style="font-size:1.05rem;">{{ banner_label }}</strong>
+              <span class="ms-3 text-muted" style="font-size:.875rem;">
+                {{ quality.passed }} passed &nbsp;·&nbsp;
+                {{ quality.warnings }} warning{{ 's' if quality.warnings != 1 else '' }} &nbsp;·&nbsp;
+                {{ quality.failed }} failed &nbsp;&nbsp;({{ quality.total }} checks total)
+              </span>
+            </div>
+          </div>
+
+          {# ── Category cards ── #}
+          <div class="row g-4 mb-5">
+            {% for cat in quality.categories %}
+              {# category header colour #}
+              {% if cat.status == 'fail' %}
+                {% set cat_color = 'danger' %}
+                {% set cat_icon  = 'M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z' %}
+              {% elif cat.status == 'warn' %}
+                {% set cat_color = 'warning' %}
+                {% set cat_icon  = 'M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z' %}
+              {% else %}
+                {% set cat_color = 'success' %}
+                {% set cat_icon  = 'M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z' %}
+              {% endif %}
+
+              <div class="col-12">
+                <div class="card border-{{ cat_color }} shadow-sm">
+
+                  {# card header #}
+                  <div class="card-header bg-{{ cat_color }} {% if cat_color == 'warning' %}text-dark{% else %}text-white{% endif %} d-flex align-items-center gap-2 py-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor"
+                         viewBox="0 0 16 16" aria-hidden="true">
+                      <path d="{{ cat_icon }}"/>
+                    </svg>
+                    <strong style="font-size:.95rem; letter-spacing:.03em;">{{ cat.name }}</strong>
+                    {# mini pass/warn/fail summary #}
+                    {% set n_pass = cat.checks | selectattr('status','equalto','pass') | list | length %}
+                    {% set n_warn = cat.checks | selectattr('status','equalto','warn') | list | length %}
+                    {% set n_fail = cat.checks | selectattr('status','equalto','fail') | list | length %}
+                    <span class="ms-auto d-flex gap-1" style="font-size:.78rem;">
+                      {% if n_pass %}<span class="badge bg-light text-success">{{ n_pass }}&nbsp;✓</span>{% endif %}
+                      {% if n_warn %}<span class="badge bg-light text-warning-emphasis">{{ n_warn }}&nbsp;⚠</span>{% endif %}
+                      {% if n_fail %}<span class="badge bg-light text-danger">{{ n_fail }}&nbsp;✗</span>{% endif %}
+                    </span>
+                  </div>
+
+                  {# check rows #}
+                  <div class="card-body p-0">
+                    <table class="table table-sm mb-0" style="font-size:.875rem;">
+                      <tbody>
+                      {% for check in cat.checks %}
+                        {# row background #}
+                        {% if check.status == 'fail' %}
+                          {% set row_class = 'table-danger' %}
+                          {% set dot_color = 'text-danger' %}
+                          {% set dot       = '✗' %}
+                        {% elif check.status == 'warn' %}
+                          {% set row_class = 'table-warning' %}
+                          {% set dot_color = 'text-warning-emphasis' %}
+                          {% set dot       = '⚠' %}
+                        {% else %}
+                          {% set row_class = '' %}
+                          {% set dot_color = 'text-success' %}
+                          {% set dot       = '✓' %}
+                        {% endif %}
+
+                        <tr class="{{ row_class }}">
+                          {# status icon #}
+                          <td style="width:2rem; text-align:center; vertical-align:middle;">
+                            <span class="{{ dot_color }}" style="font-size:1rem;" aria-label="{{ check.status }}">
+                              {{ dot }}
+                            </span>
+                          </td>
+                          {# check name #}
+                          <td style="width:22%; font-weight:600; vertical-align:middle;">
+                            {{ check.name }}
+                          </td>
+                          {# message – render comma-separated items as a list #}
+                          <td style="vertical-align:middle; color:#4a4a4a;">
+                            {%- if ': ' in check.message and ', ' in check.message.split(': ', 1)[1] %}
+                              {%- set prefix = check.message.split(': ', 1)[0] %}
+                              {%- set items  = check.message.split(': ', 1)[1].split(', ') %}
+                              <span style="font-weight:500;">{{ prefix }}:</span>
+                              <ul class="mb-0 mt-1 ps-3" style="font-size:.85rem;">
+                                {%- for item in items %}
+                                  <li>{{ item }}</li>
+                                {%- endfor %}
+                              </ul>
+                            {%- else %}
+                              {{ check.message }}
+                            {%- endif %}
+                          </td>
+                          {# optional deep-link #}
+                          <td style="width:3rem; text-align:right; vertical-align:middle;">
+                            {% if check.detail_link %}
+                              <a href="{{ check.detail_link }}" class="text-muted"
+                                 title="Go to details" style="font-size:.8rem;">↗</a>
+                            {% endif %}
+                          </td>
+                        </tr>
+                      {% endfor %}
+                      </tbody>
                     </table>
-                    <h3>Duplicates</h3>
-                    <div class="table-responsive mb-4">
-                        {{ dups | safe }}
-                    </div>
+                  </div>
+
                 </div>
+              </div>
+            {% endfor %}
+          </div>
+          {% endif %}{# /quality #}
+
+          <hr>
+          <p class="section-heading">
+            Duplicates
+            {% if general.dup_row > 0 %}
+              <small class="text-muted fw-normal ms-2" style="font-size:.75em;">
+                {{ general.dup_row }} duplicate row{{ 's' if general.dup_row != 1 else '' }} found
+              </small>
+            {% endif %}
+          </p>
+
+          {% if general.dup_row > 0 %}
+            <div class="table-responsive mb-5">
+              {{ dups | safe }}
             </div>
+          {% else %}
+            <div class="alert alert-success mb-5">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                   class="me-2" viewBox="0 0 16 16">
+                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477
+                         9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0
+                         1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/>
+              </svg>
+              No duplicate rows detected in this dataset.
+            </div>
+          {% endif %}
+
         </div>
+      </div>
     </div>
-    <!-- Footer-->
-    <footer class="py-5 bg-dark d-flex flex-column justify-content-center align-items-center" id="footer">
-        <div class="mb-2">
-            <a href="https://github.com/BioWarlock/BioProfileKit">
-                <img src="static/assets/github.svg" alt="Github" style="filter: brightness(0) invert(1);">
-            </a>
-        </div>
-        <div>
-            <p class="m-0 text-center text-white">Copyright &copy; JLU 2025</p>
-        </div>
-    </footer>
+  </div>
+
+  <footer class="py-5 bg-dark d-flex flex-column justify-content-center align-items-center" id="footer">
+    <div class="mb-2">
+      <a href="https://github.com/BioWarlock/BioProfileKit">
+        <img src="static/assets/github.svg" alt="BioProfileKit on GitHub"
+             style="filter:brightness(0) invert(1);">
+      </a>
+    </div>
+    <p class="m-0 text-center text-white">Copyright &copy; JLU 2025</p>
+  </footer>
 </div>
-<!-- Bootstrap core JS-->
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
-<!-- Core theme JS-->
 <script src="../static/js/scripts.js"></script>
+<script>
+      document.addEventListener('DOMContentLoaded', function () {
+    const pill  = document.getElementById('cbPill');
+    const label = document.getElementById('cbLabel');
+    const body  = document.body;
+    function applyTheme(t) {
+      body.dataset.cbTheme = t;
+      label.textContent = t === 'colorblind' ? 'Standard Mode' : 'Colorblind Mode';
+      pill.style.outline = t === 'colorblind' ? '2px solid #7DC3E8' : 'none';
+    }
+    const stored = localStorage.getItem('cb-theme');
+    if (stored === 'colorblind') applyTheme('colorblind');
+    pill.addEventListener('click', function () {
+      const next = body.dataset.cbTheme === 'colorblind' ? 'internal' : 'colorblind';
+      applyTheme(next); localStorage.setItem('cb-theme', next);
+    });
+  });
+</script>
+
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<!-- DataTables -->
 <script src="https://cdn.datatables.net/2.3.1/js/dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/2.3.1/js/dataTables.bootstrap5.min.js"></script>
 <script src="https://cdn.datatables.net/responsive/3.0.4/js/dataTables.responsive.min.js"></script>
 <script src="https://cdn.datatables.net/responsive/3.0.4/js/responsive.bootstrap5.min.js"></script>
 
 <script>
-    $(document).ready(function() {
-        $('#dup_table').DataTable({
-            "paging": true,
-            "searching": true,
-            "ordering": true,
-            "info": false,
-            "lengthChange": false,
-            "responsive": false,
-            "scrollX": 1200,
-            "scroller":true,
-            "scrollCollapse": true,
-            "pageLength":15,
-            stateSave: true
-        });
+  $(document).ready(function () {
+    {% if general.dup_row > 0 %}
+    $('#dup_table').DataTable({
+      paging:       true,
+      searching:    true,
+      ordering:     true,
+      info:         false,
+      lengthChange: false,
+      responsive:   false,
+      scrollX:      1200,
+      scroller:     true,
+      scrollCollapse: true,
+      pageLength:   15,
+      stateSave:    true,
+      language: {
+        search: 'Search:'
+      }
     });
+    {% endif %}
+  });
 </script>
+
+<!-- Colorblind mode pill (fixed, bottom-right) -->
+<div id="cbPill" style="
+    position:fixed; bottom:1.25rem; right:1.25rem; z-index:1050;
+    display:flex; align-items:center; gap:.45rem;
+    background:rgba(30,30,30,.82); backdrop-filter:blur(6px);
+    border-radius:2rem; padding:.35rem .85rem .35rem .6rem;
+    box-shadow:0 2px 8px rgba(0,0,0,.25); cursor:pointer;
+    user-select:none; transition:opacity .2s;" title="Toggle colorblind-friendly palette">
+  <!-- eye icon -->
+  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="#ccc" viewBox="0 0 16 16" aria-hidden="true">
+    <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
+    <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
+  </svg>
+  <span id="cbLabel" style="font-size:.78rem; color:#ddd; white-space:nowrap;">Colorblind Mode</span>
+</div>
 </body>
 </html>
