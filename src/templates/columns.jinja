@@ -625,6 +625,18 @@
                                                             {% endfor %}
                                                         {% endif %}
                                                     {% endfor %}
+
+                                                    {% for ov in overview %}
+                                                        {% if col.name == ov.name %}
+                                                            {% for key, value in ov.frequencies.items() %}
+                                                                <tr>
+                                                                    <td>{{ key }}</td>
+                                                                    <td>{{ ov.value_counts[key] }}</td>
+                                                                    <td>{{ value }}</td>
+                                                                </tr>
+                                                            {% endfor %}
+                                                        {% endif %}
+                                                    {% endfor %}
                                                     </tbody>
                                                 </table>
                                             </div>
