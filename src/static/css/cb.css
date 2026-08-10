@@ -26,6 +26,18 @@
    while a colour used as text on white must reach ≥ 4.5:1 on its own.
    ═══════════════════════════════════════════════════════════════════ */
 
+/*
+ * Bootstrap's default <code> color is #d63384 (bright pink), meant for
+ * syntax-highlighted snippets. In this app <code> is used for plain data
+ * values (e.g. affected sequence IDs in the Reverse Complement Duplicates
+ * list, CLI flag hints like `--tax`) — those should read as normal text,
+ * not stand out as a pink accent. Applies regardless of data-cb-theme,
+ * since this isn't a contrast/colorblind concern, just a semantic mismatch.
+ */
+:root {
+    --bs-code-color: var(--bs-body-color, #212529);
+}
+
 [data-cb-theme=internal] {
     /* Raw palette */
     --cb-blue-1: #00447B;
