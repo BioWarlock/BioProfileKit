@@ -24,7 +24,7 @@ def _resolve_detail_links(quality):
             anchor = check.detail_link.lstrip("#")
             check.detail_link = PAGE_MAP.get(anchor)
 
-def write_report(output_path: Path, general, plots, duplicates_table,
+def write_report(output_path: Path, general, plots, dup_groups,
                  column_overviews, numeric_overviews, categorical_overviews,
                  top_n, quality=None):
     output_path.mkdir(parents=True, exist_ok=True)
@@ -34,7 +34,7 @@ def write_report(output_path: Path, general, plots, duplicates_table,
 
     _render_to_file(output_path / "index.html", 'LandingPage.jinja')
     _render_to_file(output_path / "numeric_data.html", 'numeric_overview.jinja',
-                    general=general, dups=duplicates_table, quality=quality)
+                    general=general, dup_groups=dup_groups, quality=quality)
     _render_to_file(output_path / "columns.html", 'columns.jinja',
                     columns=column_overviews, overview=numeric_overviews,
                     categorical=categorical_overviews, top_n=top_n)

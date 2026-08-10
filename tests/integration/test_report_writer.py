@@ -20,7 +20,7 @@ from cli.report_writer import write_report, _render_to_file
 
 TEMPLATES = {
     "LandingPage.jinja": "<html><body>Landing</body></html>",
-    "numeric_overview.jinja": "<html><body>{{ general }}{{ dups|safe }}</body></html>",
+    "numeric_overview.jinja": "<html><body>{{ general }}{{ dup_groups }}</body></html>",
     "columns.jinja": "<html><body>{{ columns }}{{ overview }}{{ categorical }}{{ top_n }}</body></html>",
     "general_statistics.jinja": "<html><body>{{ plots|safe }}</body></html>",
 }
@@ -36,7 +36,7 @@ STATIC_PATCH = "cli.report_writer.STATIC_DIR"
 # ---------------------------------------------------------------------------
 
 def invoke_write_report(tmp_path, general="general", plots="plots",
-                        dups="<table></table>", column_overviews=None,
+                        dup_groups="<table></table>", column_overviews=None,
                         numeric_overviews=None, categorical_overviews=None,
                         top_n=20, quality=None):
     """Call write_report with mocked env and static dir."""
@@ -50,7 +50,7 @@ def invoke_write_report(tmp_path, general="general", plots="plots",
             output,
             general=general,
             plots=plots,
-            duplicates_table=dups,
+            dup_groups=dup_groups,
             column_overviews=column_overviews or [],
             numeric_overviews=numeric_overviews or [],
             categorical_overviews=categorical_overviews or [],
@@ -140,8 +140,8 @@ class TestTemplateContext:
         content = (output / "numeric_data.html").read_text()
         assert "MY_GENERAL_MARKER" in content
 
-    def test_dups_passed_to_numeric_template(self, tmp_path):
-        output = invoke_write_report(tmp_path, dups="<table>DUP_MARKER</table>")
+    def test_dup_groups_passed_to_numeric_template(self, tmp_path):
+        output = invoke_write_report(tmp_path, dup_groups="<table>DUP_MARKER</table>")
         content = (output / "numeric_data.html").read_text()
         assert "DUP_MARKER" in content
 
@@ -192,7 +192,7 @@ class TestRenderToFile:
         filepath = tmp_path / "out.html"
         with patch(ENV_PATCH, TEST_ENV):
             _render_to_file(filepath, "numeric_overview.jinja",
-                            general="TEST_GENERAL", dups="TEST_DUPS")
+                            general="TEST_GENERAL", dup_groups="TEST_DUPS")
         content = filepath.read_text(encoding="utf-8")
         assert "TEST_GENERAL" in content
         assert "TEST_DUPS" in content
@@ -242,15 +242,17 @@ class TestAutoescaping:
         assert "<script>" not in content
         assert "&lt;script&gt;" in content
 
-    def test_duplicate_table_rendered_unescaped(self, tmp_path):
-        """dups uses |safe — raw HTML renders correctly, not escaped."""
+    def test_duplicate_groups_content_is_escaped(self, tmp_path):
+        """dup_groups no longer uses |safe (real template renders structured
+        row values via plain {{ }} interpolation) — raw HTML should now be
+        escaped, same as any other non-safe context variable."""
         output = invoke_write_report(
             tmp_path,
-            dups="<table><tr><td>data</td></tr></table>",
+            dup_groups="<table><tr><td>data</td></tr></table>",
         )
         content = (output / "numeric_data.html").read_text()
-        assert "<table>" in content
-        assert "&lt;table&gt;" not in content
+        assert "<table>" not in content
+        assert "&lt;table&gt;" in content
 
     def test_plots_rendered_unescaped(self, tmp_path):
         """plots uses |safe — Plotly HTML renders correctly."""

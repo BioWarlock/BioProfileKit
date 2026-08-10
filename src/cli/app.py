@@ -10,7 +10,7 @@ from termcolor import colored
 from analysis.categorical_analysis import categorical_columns
 from analysis.multivariate_analysis import multivariate_analysis
 from analysis.numeric_analysis import numeric_columns
-from analysis.overview import overview, column_overview
+from analysis.overview import overview, column_overview, duplicate_row_groups
 from biological.functional_annotation import annotation_flags
 from biological.measurement_data import measurement_columns
 from biological.sequence_data import dna_rna_columns, protein_columns
@@ -48,11 +48,7 @@ def cli(input: str, tax: bool = False, func: str = None,
     general = overview(df, input_path.name)
     done(f"{df.shape[0]:,} rows × {df.shape[1]} columns")
 
-    dups = df[df.duplicated(keep=False)].reset_index()
-    duplicates_table = dups.to_html(
-        classes="table table-hover table-responsive nowrap",
-        border="0", table_id="dup_table", index=False,
-    )
+    dup_groups = duplicate_row_groups(df)
 
     done = print_step(f"Column overview ({len(df.columns)} columns)")
     column_overviews = [column_overview(df, col) for col in df.columns]
@@ -69,7 +65,8 @@ def cli(input: str, tax: bool = False, func: str = None,
     seq_count = 0
     for col_ov in column_overviews:
         if tax and tax_df is not None:
-            col_ov.taxonomy = taxonomy_flags(df, col_ov.name, valid_names, valid_tax_ids, name_to_rank, taxid_to_rank,  name_to_scientific)
+            col_ov.taxonomy = taxonomy_flags(df, col_ov.name, valid_names, valid_tax_ids, name_to_rank, taxid_to_rank,
+                                             name_to_scientific)
 
         if func and col_ov.taxonomy is not None:
             col_ov.annotation = [annotation_flags(df, col_ov.name, func)]
@@ -148,7 +145,7 @@ def cli(input: str, tax: bool = False, func: str = None,
     parameters = {k: v for k, v in ctx.params.items() if k != "input"}
     parameters["input_file"] = Path(input).name
 
-    write_report(output_path, general, plots, duplicates_table,
+    write_report(output_path, general, plots, dup_groups,
                  column_overviews, numeric_overviews, categorical_overviews, top_n, quality)
     write_result_json(output_path / "results.json", general, column_overviews,
                       numeric_overviews, categorical_overviews, plots, quality, empty_cols, parameters)

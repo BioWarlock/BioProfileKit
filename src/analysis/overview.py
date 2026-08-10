@@ -45,15 +45,69 @@ def _check_taxonomy_candidate(df: pd.DataFrame, col: str) -> bool:
     return binomial_matches / len(sample) >= 0.5
 
 
+def _non_empty_mask(df: pd.DataFrame) -> pd.Series:
+    """Rows that are not entirely null/empty-string.
+
+    Fully empty rows are reported separately under `empty_rows`; excluding
+    them here prevents them from also inflating `dup_row` and the grouped
+    duplicates table, where every empty row would otherwise appear as a
+    "duplicate" of every other empty row.
+    """
+    return ~df.replace("", np.nan).isna().all(axis=1)
+
+
+def duplicate_row_groups(df: pd.DataFrame, exclude_empty: bool = True, max_indices: int = 25):
+    """Group duplicate rows by content instead of listing every occurrence.
+
+    Returns a list of dicts, sorted by occurrence count (descending):
+        {
+            "row": {col: value, ...},   # representative values for the group
+            "count": int,               # how often this content occurs
+            "indices": [int, ...],      # original row indices (capped at max_indices)
+            "indices_truncated": int,   # how many indices were omitted, if any
+        }
+
+    Fully empty rows are excluded by default (see `_non_empty_mask`).
+    """
+    work_df = df[_non_empty_mask(df)] if exclude_empty else df
+    if work_df.empty:
+        return []
+
+    dup_mask = work_df.duplicated(keep=False)
+    dup_df = work_df[dup_mask]
+    if dup_df.empty:
+        return []
+
+    groups = []
+    group_cols = list(dup_df.columns)
+    for _, group in dup_df.groupby(group_cols, dropna=False, sort=False):
+        indices = group.index.tolist()
+        first_row = group.iloc[0]
+        row_values = {
+            col: (None if pd.isna(val) else val)
+            for col, val in first_row.items()
+        }
+        groups.append({
+            "row": row_values,
+            "count": len(indices),
+            "indices": indices[:max_indices],
+            "indices_truncated": max(0, len(indices) - max_indices),
+        })
+
+    groups.sort(key=lambda g: g["count"], reverse=True)
+    return groups
+
+
 def overview(df: pd.DataFrame, file) -> DatasetSummary:
+    non_empty = _non_empty_mask(df)
     return DatasetSummary(
         filename=file,
         rows=df.shape[0],
         cols=df.shape[1],
         nulls=sum(df.isnull().sum()),
         nulls_percentage=100 if df.isnull().all().all() else round(sum(df.isnull().sum()) * 100 / df.size, 2),
-        empty_rows=df.replace("", np.nan).isna().all(axis=1).sum(),
-        dup_row=int(df.duplicated().sum()),
+        empty_rows=(~non_empty).sum(),
+        dup_row=int(df[non_empty].duplicated().sum()),
         dup_col=int(df.columns.duplicated().sum()),
         ratio=round(df.shape[0] / df.shape[1], 3),
         memory=int(df.memory_usage(deep=True).sum()),

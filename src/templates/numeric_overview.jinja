@@ -318,13 +318,56 @@
             {% if general.dup_row > 0 %}
               <small class="text-muted fw-normal ms-2" style="font-size:.75em;">
                 {{ general.dup_row }} duplicate row{{ 's' if general.dup_row != 1 else '' }} found
+                in {{ dup_groups | length }} group{{ 's' if dup_groups | length != 1 else '' }}
               </small>
             {% endif %}
           </p>
 
+          {% if general.empty_rows > 0 %}
+            <p class="text-muted" style="font-size:.85rem;">
+              Note: {{ general.empty_rows }} fully empty row{{ 's' if general.empty_rows != 1 else '' }}
+              {{ 'are' if general.empty_rows != 1 else 'is' }} excluded from duplicate detection
+              — see <em>Empty rows</em> above.
+            </p>
+          {% endif %}
+
           {% if general.dup_row > 0 %}
             <div class="table-responsive mb-5">
-              {{ dups | safe }}
+              <table id="dup_table" class="table table-sm table-hover table-bordered" style="width:100%">
+                <caption class="visually-hidden">Duplicate row groups</caption>
+                <thead>
+                  <tr>
+                    <th style="width:5rem;">Count</th>
+                    <th>Row values</th>
+                    <th style="width:20rem;">Indices</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for group in dup_groups %}
+                  <tr>
+                    <td>
+                      <span class="badge bg-warning text-dark">{{ group.count }}</span>
+                    </td>
+                    <td style="font-size:.82rem;">
+                      {% for key, value in group.row.items() %}
+                        <span class="text-muted">{{ key }}:</span>
+                        <span>{{ value if value is not none else '—' }}</span>{% if not loop.last %}<span class="text-muted"> · </span>{% endif %}
+                      {% endfor %}
+                    </td>
+                    <td>
+                      {% for idx in group.indices %}
+                        <span class="badge bg-secondary fw-normal" style="font-size:.75rem;">{{ idx }}</span>
+                      {% endfor %}
+                      {% if group.indices_truncated > 0 %}
+                        <span class="text-muted" style="font-size:.78rem;">
+                          +{{ group.indices_truncated }} more
+                        </span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
             </div>
           {% else %}
             <div class="alert alert-success mb-5">
