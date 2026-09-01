@@ -286,7 +286,9 @@ def protein_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5, 
     all_overview['ambiguous_ratio'] = np.round(np.where(all_overview['lengths'] > 0, all_overview['ambiguous'] / all_overview['lengths'] * 100, 0.0), 2)
 
     all_overview['stop_codon'] = all_overview['sequence'].str.count(r'\*')
-    all_overview['entropy'] = all_overview['sequence'].apply(_normalized_shanon_entropy)
+    valid_mask = all_overview['sequence'].apply(lambda x: isinstance(x, str))
+    all_overview.loc[valid_mask, 'entropy'] = all_overview.loc[valid_mask, 'sequence'].apply(_normalized_shanon_entropy)
+    #all_overview['entropy'] = all_overview['sequence'].apply(_normalized_shanon_entropy)
 
     ambiguous_residue_ratio = SequenceMetricSummary(
         min=round(float(all_overview['ambiguous_ratio'].min()), 2),
@@ -310,7 +312,7 @@ def protein_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5, 
         mean=round(float(all_overview['entropy'].mean()), 2),
     )
 
-    all_overview['gravy'] = all_overview['sequence'].apply(_gravy)
+    all_overview.loc[valid_mask, 'gravy'] = all_overview.loc[valid_mask, 'sequence'].apply(_gravy)
     all_overview['cysteine'] = all_overview['sequence'].str.count('C')
     all_overview['disorder'] = all_overview['sequence'].str.count(f"[{''.join(DISORDER_AA)}]")
     all_overview['disorder_ratio'] = np.round(
@@ -440,7 +442,7 @@ def make_logo(seqs, color, seq_type):
             svg_content = svg_match.group(1)
             svg_content = svg_content.replace(
                 '<svg ',
-                '<svg style="width: 100%; height: 250px; max-width: 800px;" '
+                '<svg style="width: 100%; height: 350px; max-width: 900px;" '
             )
             return svg_content
 

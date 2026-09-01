@@ -1,3 +1,6 @@
+import numpy as np
+import pandas as pd
+
 from quality_assessment.utils import _worst, _rate
 from models import QualityCheck
 
@@ -92,13 +95,14 @@ def _check_infinity(numeric_overviews) -> QualityCheck:
 def _check_skewness(numeric_overviews) -> QualityCheck:
     statuses, notes = [], []
     for n in numeric_overviews:
-        s = abs(n.skewness) if n.skewness == n.skewness else 0.0  # guard NaN
+        skew = n.skewness if pd.notna(n.skewness) and np.isfinite(n.skewness) else 0.0
+        s = abs(skew)
         if s > SKEW_FAIL:
             statuses.append("fail")
-            notes.append(f"{n.name} ({n.skewness:.1f})")
+            notes.append(f"{n.name} ({skew:.1f})")
         elif s > SKEW_WARN:
             statuses.append("warn")
-            notes.append(f"{n.name} ({n.skewness:.1f})")
+            notes.append(f"{n.name} ({skew:.1f})")
     status = _worst(statuses) if statuses else "pass"
     return QualityCheck(
         name="Skewness", status=status,

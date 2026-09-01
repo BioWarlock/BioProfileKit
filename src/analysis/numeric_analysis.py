@@ -12,6 +12,9 @@ def _safe_round(val, decimals=2):
 
 def numeric_columns(df: pd.DataFrame, col) -> NumericColumns:
     series = df[col].dropna()
+    infinity_count = int(series.isin([np.inf, -np.inf]).sum())
+    series = series[np.isfinite(series)]
+
 
     if series.empty:
         coefficient_of_variation = np.nan
@@ -61,7 +64,7 @@ def numeric_columns(df: pd.DataFrame, col) -> NumericColumns:
         coefficient_of_variation=round(coefficient_of_variation, 2) if np.isfinite(coefficient_of_variation) else np.nan,
         mad=mad_value if np.isfinite(mad_value) else np.nan,
         quantiles=quantiles,
-        infinity= series.isin([np.inf, -np.inf]).sum(),
+        infinity= infinity_count,
         negative_count=np.sum((series < 0).values.ravel()),
         zero_count= np.sum(series== 0),
         memory=df[col].memory_usage(deep=True),

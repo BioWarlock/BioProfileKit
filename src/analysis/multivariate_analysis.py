@@ -10,6 +10,10 @@ from .plot_utils import apply_standard_axes
 
 
 def multivariate_analysis(df: pd.DataFrame, target: str) -> MultivariateAnalysis:
+    numeric_cols = df.select_dtypes(include='number').columns
+    df = df.copy()
+    df[numeric_cols] = df[numeric_cols].replace([np.inf, -np.inf], np.nan)
+
     types = _classify_columns(df)
     values, methods = compute_correlation_matrix(df)
     feat_target_corr = feature_target_correlation(df, target) if target else None
@@ -141,7 +145,7 @@ def compute_correlation_matrix(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataF
         for j in range(i + 1, n):
             a, b = cols[i], cols[j]
             value, method = _correlation_pair(df, a, b, types)
-            value = round(float(value), 3) if value == value else np.nan
+            value = round(float(value), 3) if pd.notna(value) and np.isfinite(value) else np.nan
 
             values.iat[i, j] = value
             values.iat[j, i] = value
@@ -164,7 +168,7 @@ def feature_target_correlation(df: pd.DataFrame, target: str) -> dict | None:
         if col == target:
             continue
         value, method = _correlation_pair(df, col, target, types)
-        if value == value:
+        if pd.notna(value) and np.isfinite(value):
             result[col] = {'value': round(float(value), 3), 'method': method}
     return result or None
 
@@ -210,12 +214,14 @@ def feature_target_plot(feature_target: dict | None):
 #ToDo change for Column Overview
 def get_correlation(df: pd.DataFrame, col) -> list | None:
     ncols = df.select_dtypes(include='number').dropna(axis=1, how='all').columns
+    df_ = df.copy()
+    df_[ncols] = df_[ncols].replace([np.inf, -np.inf], np.nan)
     if col in ncols:
-        std = df[ncols].std(ddof=0)
+        std = df_[ncols].std(ddof=0)
         ncols = std[std > 0].index
         if col not in ncols:
             return None
-        corr = df[ncols].corrwith(df[col], method='pearson')
+        corr = df_[ncols].corrwith(df_[col], method='pearson')
         corr.drop(labels=col, inplace=True)
         corr = corr[corr.abs() >= 0.3]
         if corr.empty:
@@ -323,14 +329,14 @@ def top_associations(values, methods, threshold=0.7):
     for i in range(len(cols)):
         for j in range(i + 1, len(cols)):
             v = values.iat[i, j]
-            if v == v and v >= threshold:
+            if pd.notna(v) and np.isfinite(v) and abs(v) >= threshold:
                 pairs.append({
                     "var1": cols[i],
                     "var2": cols[j],
                     "value": round(float(v), 3),
                     "method": methods.iat[i, j],
                 })
-    return sorted(pairs, key=lambda p: p["value"], reverse=True) or None
+    return sorted(pairs, key=lambda p: abs(p["value"]), reverse=True) or None
 
 
 def mutual_information(df: pd.DataFrame, target: str) -> dict | None:
