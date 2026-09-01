@@ -164,7 +164,7 @@
                                     <button class="btn btn-sm cbf-warning"   data-quality="mixedvalues"   title="Column contains mixed numeric and non-numeric values">Mixed Values</button>
                                     <!-- Sequence -->
                                     <button class="btn btn-sm cbf-danger"    data-quality="invalidseqs"   title="Contains invalid / unparseable sequences">Invalid Seq.</button>
-                                    <button class="btn btn-sm cbf-warning"   data-quality="ambiguousbases" title="Mean ambiguous base ratio (N) > 0 — possible low sequencing quality">Ambiguous Bases</button>
+                                    <button class="btn btn-sm cbf-warning"   data-quality="ambiguousbases" title="Mean ambiguous base ratio (N/R/Y) > 0 — possible low sequencing quality">Ambiguous Bases</button>
                                     <button class="btn btn-sm cbf-warning"   data-quality="rcduplicates"  title="Reverse-complement duplicate sequences detected">RC Duplicates</button>
                                     <button class="btn btn-sm cbf-warning"   data-quality="lowcomplexity" title="Low sequence complexity (Shannon entropy < 50%) — possible repeats or poly-A tails">Low Complexity</button>
                                     <!-- Biological metadata -->
@@ -334,17 +334,17 @@
                                 <!-- TODO: Add missing badges - Skewness, Duplicates, Diff Sequence Length, Biological Naming, Diff Units -->
                                 {# ── DNA/RNA quality badges ── #}
                                 {% if col.sequence != 'None' and col.dna_rna_data %}
-                                    {# Ambiguous Bases (N) #}
+                                    {# Ambiguous Bases (N/R/Y) #}
                                     {% if col.dna_rna_data.ambiguous_base_ratio is defined and col.dna_rna_data.ambiguous_base_ratio.mean > 0 %}
                                         {% set amb_mean = col.dna_rna_data.ambiguous_base_ratio.mean %}
                                         {% if amb_mean >= 5 %}
                                             <span class="badge bg-danger me-2"
-                                                  title="Mean {{ amb_mean }}% ambiguous bases (N) — may indicate poor sequencing quality">
+                                                  title="Mean {{ amb_mean }}% ambiguous bases (N/R/Y) — may indicate poor sequencing quality">
                                                 Ambiguous Bases ({{ amb_mean }}%)
                                             </span>
                                         {% else %}
                                             <span class="badge bg-warning text-dark me-2"
-                                                  title="Mean {{ amb_mean }}% ambiguous bases (N) detected">
+                                                  title="Mean {{ amb_mean }}% ambiguous bases (N/R/Y) detected">
                                                 Ambiguous Bases ({{ amb_mean }}%)
                                             </span>
                                         {% endif %}
@@ -1411,13 +1411,13 @@
                                                             {# ── Ambiguous Bases ── #}
                                                             <tr class="table-secondary">
                                                                 <td colspan="4">
-                                                                    <strong>Ambiguous Bases (N)</strong>
+                                                                    <strong>Ambiguous Bases (N/R/Y)</strong>
                                                                     <br><small class="text-muted">poor sequencing quality indicator</small>
                                                                 </td>
                                                             </tr>
                                                             {% if d.ambiguous_base_ratio is defined %}
                                                             <tr {% if d.ambiguous_base_ratio.mean >= 5 %}class="table-danger"{% elif d.ambiguous_base_ratio.mean > 0 %}class="table-warning"{% endif %}>
-                                                                <td>N-Rate (%)</td>
+                                                                <td>N/R/Y-Rate (%)</td>
                                                                 <td>{{ d.ambiguous_base_ratio.min }}%</td>
                                                                 <td>
                                                                     {{ d.ambiguous_base_ratio.mean }}%
@@ -1650,15 +1650,15 @@
                                                         {# Ambiguous Base Distribution #}
                                                         {% if d.ambiguous_distribution %}
                                                             <hr>
-                                                            <h6>Ambiguous Base (N) Distribution</h6>
-                                                            <p class="text-muted small">N-count per sequence in chronological order. Spikes may indicate specific flowcell tiles or regions with poor sequencing quality.</p>
+                                                            <h6>Ambiguous Base (N/R/Y) Distribution</h6>
+                                                            <p class="text-muted small">N/R/Y-count per sequence in chronological order. Spikes may indicate specific flowcell tiles or regions with poor sequencing quality.</p>
                                                             <div class="plot-container mb-4" style="max-height: fit-content; overflow: scroll;">
-                                                                <figure role="img" aria-label="Distribution of ambiguous base (N) counts per sequence in column {{ col.name }}">
+                                                                <figure role="img" aria-label="Distribution of ambiguous base (N/R/Y) counts per sequence in column {{ col.name }}">
                                                                     {{ d.ambiguous_distribution | safe }}
                                                                 </figure>
                                                             </div>
                                                         {% elif d.ambiguous_base_ratio is defined and d.ambiguous_base_ratio.mean == 0 %}
-                                                            <div class="alert alert-success mt-3">No ambiguous bases (N) detected — distribution plot not generated.</div>
+                                                            <div class="alert alert-success mt-3">No ambiguous bases (N/R/Y) detected — distribution plot not generated.</div>
                                                         {% endif %}
                                                     </div>
                                                 </div>
@@ -1928,7 +1928,7 @@
                                                             {# ── Ambiguous Residues ── #}
                                                             <tr class="table-secondary">
                                                                 <td colspan="4">
-                                                                    <strong>Ambiguous Residues (X / J / U)</strong>
+                                                                    <strong>Ambiguous Residues (X / J / U / V / O / B / Z)</strong>
                                                                     <br><small class="text-muted">non-standard or unresolved amino acids</small>
                                                                 </td>
                                                             </tr>
@@ -2248,7 +2248,7 @@
                                                         {# ── Ambiguous Residue Distribution ── #}
                                                         {% if pd.ambiguous_distribution %}
                                                             <hr>
-                                                            <h6>Ambiguous Residue (X/J/U) Distribution</h6>
+                                                            <h6>Ambiguous Residue (X/J/U/V/O/B/Z) Distribution</h6>
                                                             <p class="text-muted small">Count of ambiguous residues per sequence. Elevated counts may indicate incomplete sequencing or database annotation issues.</p>
                                                             <div class="plot-container mb-4" style="max-height: fit-content; overflow: scroll;">
                                                                 <figure role="img" aria-label="Ambiguous residue distribution per sequence for column {{ col.name }}">
@@ -2256,7 +2256,7 @@
                                                                 </figure>
                                                             </div>
                                                         {% elif pd.ambiguous_residue_ratio is defined and pd.ambiguous_residue_ratio.mean == 0 %}
-                                                            <div class="alert alert-success mt-3">No ambiguous residues (X/J/U) detected — distribution plot not generated.</div>
+                                                            <div class="alert alert-success mt-3">No ambiguous residues (X/J/U/V/O/B/Z) detected — distribution plot not generated.</div>
                                                         {% endif %}
 
                                                     </div>
