@@ -19,11 +19,12 @@ CACHE_TIL_DAYS = 30
 
 TAXONOMY_CACHE_DIR = BPK_CACHE_ROOT / "taxonomy"
 GO_CACHE_DIR = BPK_CACHE_ROOT / "go"
+COG_CACHE_DIR = BPK_CACHE_ROOT / "cog"
 
 TAXONOMY_FILE = "taxonomy_raw.parquet"
 TAXONOMY_VOCAB = "taxonomy_vocab.parquet"
 GO_FILE = "go_terms.parquet"
-
+COG_FILE = "cog_groups.parquet"
 
 def _load_or_fetch(cache_dir: Path, filename: str, fetch_fn, force_refresh: bool) -> pd.DataFrame:
     cache_dir.mkdir(parents=True, exist_ok=True)
@@ -53,43 +54,25 @@ def _download_gene_ontology():
     return df
 
 
-def get_clusters_of_orthologous_groups():
+def get_clusters_of_orthologous_groups(force_refresh: bool = False) -> pd.DataFrame:
+    return _load_or_fetch(COG_CACHE_DIR, COG_FILE, _download_cog, force_refresh)
+
+def _download_cog() -> pd.DataFrame:
     url: str = "https://ftp.ncbi.nlm.nih.gov/pub/COG/COG2024/data/cog-24.def.tab"
     fields = ["COG_ID", "Functional Category", "COG name"]
-    response = requests.get(url)
 
-    if response.status_code == 200:
+    response = requests.get(url, timeout=60)
+    response.raise_for_status()
+    return pd.read_csv(io.StringIO(response.text), sep="\t", skipinitialspace=True, usecols=[0, 1, 2], names=fields,)
+    """if response.status_code == 200:
         df = pd.read_csv(io.StringIO(response.text), sep="\t", skipinitialspace=True, usecols=[0, 1, 2], names=fields)
     else:
         print(f"Error: {response.status_code}")
-    return df
+    return df"""
 
 
 def get_tax_ids(force_refresh: bool = False):
     return _load_or_fetch(TAXONOMY_CACHE_DIR, TAXONOMY_VOCAB, _build_taxonomy_vocab, force_refresh)
-
-    """TAXONOMY_CACHE.mkdir(parents=True, exist_ok=True)
-    raw_path = TAXONOMY_CACHE / TAXONOMY_FILE
-    vocab_path = TAXONOMY_CACHE / TAXONOMY_VOCAB
-
-    if not force_refresh and vocab_path.is_file():
-        age_days = (time.time() - vocab_path.stat().st_mtime) / 86400
-        if age_days < CACHE_TIL_DAYS:
-            return pd.read_parquet(vocab_path)"""
-
-    """if not force_refresh and raw_path.is_file():
-        age_days = (time.time() - vocab_path.stat().st_mtime) / 86400
-        if age_days < CACHE_TIL_DAYS:
-            raw = pd.read_parquet(raw_path)"""
-
-
-
-    """raw = _download_taxonomy()
-    raw.to_parquet(raw_path, index=False)
-
-    vocab = build_taxonomy(raw)
-    vocab.to_parquet(vocab_path, index=False)
-    return vocab"""
 
 def _build_taxonomy_vocab() -> pd.DataFrame:
     raw = _download_taxonomy()
