@@ -12,23 +12,39 @@ import time
 from pathlib import Path
 
 BPK_CACHE_ROOT = Path(os.environ.get("BPK_CACHE_DIR", Path.cwd() / ".bioprofilekit"))
-
-CACHE_DIR = BPK_CACHE_ROOT / "taxonomy"
-#CACHE_DIR = Path.cwd() / ".bioprofilekit" / "taxonomy" #ToDo change to Home --> Backend
 CACHE_TIL_DAYS = 30
+
+
+#CACHE_DIR = Path.cwd() / ".bioprofilekit" / "taxonomy" #ToDo change to Home --> Backend
+
+TAXONOMY_CACHE_DIR = BPK_CACHE_ROOT / "taxonomy"
+GO_CACHE_DIR = BPK_CACHE_ROOT / "go"
+
 TAXONOMY_FILE = "taxonomy_raw.parquet"
 TAXONOMY_VOCAB = "taxonomy_vocab.parquet"
+GO_FILE = "go_terms.parquet"
 
 
-def get_gene_ontology():
+def _load_or_fetch(cache_dir: Path, filename: str, fetch_fn, force_refresh: bool) -> pd.DataFrame:
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    path = cache_dir / filename
+    if not force_refresh and path.is_file():
+        age_days = (time.time() - path.stat().st_mtime) / 86400
+        if age_days < CACHE_TIL_DAYS:
+            return pd.read_parquet(path)
+
+    df = fetch_fn()
+    df.to_parquet(path, index=False)
+    return df
+
+def get_gene_ontology(force_refresh: bool = False) -> pd.DataFrame:
+    return _load_or_fetch(GO_CACHE_DIR, GO_FILE, _download_gene_ontology, force_refresh)
+
+def _download_gene_ontology():
     obo_path = download_go_basic_obo()
     go_dag = GODag(obo_path)
-    print(go_dag.version)
-    data = list()
-    for go_id in go_dag.keys():
-        term = go_dag[go_id]
-        namespace = getattr(term, "namespace", "")
-        data.append([go_id, term.name, namespace])
+
+    data = [[go_id, term.name, getattr(term, "namespace", "")] for go_id, term in go_dag.items()]
 
     df = pd.DataFrame(data, columns=["GO_ID", "Name", "Namespace"])
     if Path(obo_path).is_file():
@@ -50,26 +66,36 @@ def get_clusters_of_orthologous_groups():
 
 
 def get_tax_ids(force_refresh: bool = False):
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    raw_path = CACHE_DIR / TAXONOMY_FILE
-    vocab_path = CACHE_DIR / TAXONOMY_VOCAB
+    return _load_or_fetch(TAXONOMY_CACHE_DIR, TAXONOMY_VOCAB, _build_taxonomy_vocab, force_refresh)
+
+    """TAXONOMY_CACHE.mkdir(parents=True, exist_ok=True)
+    raw_path = TAXONOMY_CACHE / TAXONOMY_FILE
+    vocab_path = TAXONOMY_CACHE / TAXONOMY_VOCAB
 
     if not force_refresh and vocab_path.is_file():
         age_days = (time.time() - vocab_path.stat().st_mtime) / 86400
         if age_days < CACHE_TIL_DAYS:
-            return pd.read_parquet(vocab_path)
+            return pd.read_parquet(vocab_path)"""
 
     """if not force_refresh and raw_path.is_file():
         age_days = (time.time() - vocab_path.stat().st_mtime) / 86400
         if age_days < CACHE_TIL_DAYS:
             raw = pd.read_parquet(raw_path)"""
 
-    raw = _download_taxonomy()
+
+
+    """raw = _download_taxonomy()
     raw.to_parquet(raw_path, index=False)
 
     vocab = build_taxonomy(raw)
     vocab.to_parquet(vocab_path, index=False)
-    return vocab
+    return vocab"""
+
+def _build_taxonomy_vocab() -> pd.DataFrame:
+    raw = _download_taxonomy()
+    raw.to_parquet(TAXONOMY_CACHE_DIR / TAXONOMY_FILE, index=False)
+    return build_taxonomy(raw)
+
 
 def _download_taxonomy():
     url = "https://ftp.ncbi.nih.gov/pub/taxonomy/taxdmp.zip"

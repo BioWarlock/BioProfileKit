@@ -9,6 +9,12 @@ class AnnotationFlags:
     valid_annotation: set | str | None
 
 
+def build_annotation_lookup(annotation_df: pd.DataFrame, id_column: str) -> dict:
+    return {
+        "cleaned": set(clean_strings(annotation_df[id_column])),
+        "raw": set(annotation_df[id_column].astype(str)),
+    }
+
 def annotation_flags(df, col, annotation_type) -> AnnotationFlags | None:
     if annotation_type == "cog":
         cog_df = get_clusters_of_orthologous_groups()

@@ -11,7 +11,7 @@ from analysis.categorical_analysis import categorical_columns
 from analysis.multivariate_analysis import multivariate_analysis
 from analysis.numeric_analysis import numeric_columns
 from analysis.overview import overview, column_overview, duplicate_row_groups
-from biological.functional_annotation import annotation_flags
+from biological.functional_annotation import annotation_flags, build_annotation_lookup
 from biological.measurement_data import measurement_columns
 from biological.sequence_data import dna_rna_columns, protein_columns
 from biological.taxonomy import taxonomy_flags, build_lookups
@@ -19,7 +19,7 @@ from cli.report_json import write_result_json
 from cli.report_writer import write_report
 from cli.utils import _fmt_duration, print_step, info
 from data_utils.file_reader import read_file, parse_parquet
-from data_utils.remote_data import get_tax_ids
+from data_utils.remote_data import get_tax_ids, get_gene_ontology
 from quality_assessment.quality_assessment import quality_assessment, print_quality_report
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -60,6 +60,11 @@ def cli(input: str, tax: bool = False, func: str = None,
         done = print_step("Building taxonomy lookups")
         valid_names, valid_tax_ids, name_to_rank, taxid_to_rank, name_to_scientific = build_lookups(tax_df)
         done(f"{len(valid_names):,} scientific names")
+    go_lookup = cog_lookup = uniprot_lookup = None
+    if func == "go":
+        done = print_step("Building GO lookup")
+        go_lookup = build_annotation_lookup(get_gene_ontology(), "GO_ID")
+        done(f"{len(go_lookup['raw']):,} GO terms")
 
     done = print_step("Per-column analysis")
     seq_count = 0
