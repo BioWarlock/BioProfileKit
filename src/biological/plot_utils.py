@@ -68,7 +68,7 @@ def gc_distribution(all_overview: DataFrame):
     config['toImageButtonOptions']['filename'] = "gc_distribution"
     return fig.to_html(full_html=False, include_plotlyjs=False, config=config)
 
-def ambiguous_distribution(all_overview: DataFrame, col: str = "N", label: str = "N-Count"):
+def ambiguous_distribution(all_overview: DataFrame, col: str = "ambiguous_count", label: str = "NRY-Count"):
     fig = go.Figure()
 
     fig.add_trace(go.Scattergl(

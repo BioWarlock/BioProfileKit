@@ -88,9 +88,8 @@ def dna_rna_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5, 
     all_overview["GC_count"] = all_overview['sequence'].str.count('[GC]')
     all_overview["gc_content"] = np.round(np.where(all_overview["lengths"] > 0, all_overview["GC_count"] / all_overview["lengths"] * 100, 0.0), 2)
 
-    all_overview["N"] = all_overview['sequence'].str.count('N')
-    all_overview["ambiguous_base_ratio"] = np.round(np.where(all_overview["lengths"] > 0, all_overview["N"] / all_overview["lengths"] * 100, 0.0), 2)
-
+    all_overview["ambiguous_count"] = all_overview['sequence'].str.count('[NRY]')
+    all_overview["ambiguous_base_ratio"] = np.round(np.where(all_overview["lengths"] > 0, all_overview["ambiguous_count"] / all_overview["lengths"] * 100, 0.0),2,)
     all_overview["codon_complete"] = all_overview["lengths"] % 3
     all_overview["codon_pct"] = np.where(all_overview["lengths"] > 0, (all_overview["lengths"] - all_overview["codon_complete"]) / all_overview["lengths"] * 100,0.0)
     codon_completeness = SequenceMetricSummary(
@@ -143,7 +142,7 @@ def dna_rna_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5, 
     at_gc_plot = at_gc_skewness(all_overview)
     gc_dist_plot = gc_distribution(all_overview)
 
-    affected_sequences = (all_overview["N"] > 0).sum()
+    affected_sequences = (all_overview["ambiguous_count"] > 0).sum()
     ambiguous_dist_plot = None
     if affected_sequences > 0:
         ambiguous_dist_plot = ambiguous_distribution(all_overview)
@@ -282,7 +281,7 @@ def protein_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5, 
     all_overview['sequence'] = seqs.str.upper()
     all_overview['lengths'] = all_overview['sequence'].str.len()
 
-    all_overview['ambiguous'] = all_overview['sequence'].str.count('[XJU]')
+    all_overview['ambiguous'] = all_overview['sequence'].str.count('[XJUVOXBZ]')
     all_overview['ambiguous_ratio'] = np.round(np.where(all_overview['lengths'] > 0, all_overview['ambiguous'] / all_overview['lengths'] * 100, 0.0), 2)
 
     all_overview['stop_codon'] = all_overview['sequence'].str.count(r'\*')
@@ -347,7 +346,7 @@ def protein_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5, 
     affected = (all_overview['ambiguous'] > 0).sum()
     ambiguous_dist_plot = None
     if affected > 0:
-        ambiguous_dist_plot = ambiguous_distribution(all_overview, col='ambiguous', label='X/J/U')
+        ambiguous_dist_plot = ambiguous_distribution(all_overview, col='ambiguous', label='X/J/U/V/O/X/B/Z')
 
     plot = None
     if min_len == max_len:
