@@ -1333,13 +1333,13 @@
                                                         <div class="table-responsive mt-3" style="max-height: 400px; overflow-y: auto;">
                                                             <table class="table table-sm table-striped w-100" style="min-width: 500px;">
                                                                 <thead class="sticky-top bg-light">
-                                                                <tr><th>#</th><th>Value</th></tr>
+                                                                <tr><th>Index</th><th>Value</th></tr>
                                                                 </thead>
                                                                 <tbody>
-                                                                {% for seq in col.invalid_seqs %}
+                                                                {% for row_idx, seq in col.invalid_seqs %}
                                                                     <tr>
-                                                                        <td>{{ loop.index }}</td>
-                                                                        <td>
+                                                                        <td><span class="badge bg-light text-dark border" title="Original row index">{{ row_idx }}</span></td>
+                                                                        <td style="font-family: var(--bs-font-monospace, monospace); word-break: break-all;">
                                                                             {% if seq|length > 50 %}
                                                                                 {{ seq[:25] }}<span class="text-muted">...</span>{{ seq[-25:] }}
                                                                             {% else %}
@@ -1864,15 +1864,15 @@
                                                             <table class="table table-sm table-striped w-100" style="min-width: 500px;">
                                                                 <thead class="sticky-top bg-light">
                                                                 <tr>
-                                                                    <th>#</th>
+                                                                    <th>Index</th>
                                                                     <th>Value</th>
                                                                 </tr>
                                                                 </thead>
                                                                 <tbody>
-                                                                {% for seq in col.invalid_seqs %}
+                                                                {% for row_idx, seq in col.invalid_seqs %}
                                                                     <tr>
-                                                                        <td>{{ loop.index }}</td>
-                                                                        <td>
+                                                                        <td><span class="badge bg-light text-dark border" title="Original row index">{{ row_idx }}</span></td>
+                                                                        <td style="font-family: var(--bs-font-monospace, monospace); word-break: break-all;">
                                                                             {% if seq|length > 50 %}
                                                                                 {{ seq[:25] }}<span class="text-muted">...</span>{{ seq[-25:] }}
                                                                             {% else %}
