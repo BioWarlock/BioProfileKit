@@ -66,7 +66,8 @@ def biological_data_top_entries(seqs: pd.Series, top_k: int = 20) -> Tuple[
 
 def dna_rna_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5, invalid: list=None) -> DNARNAColumns:
     if invalid:
-        seqs = seqs[~seqs.isin(invalid)]
+        invalid_values = [value for _, value in invalid]
+        seqs = seqs[~seqs.isin(invalid_values)]
     seqs.dropna(inplace=True)
     #Over Top N
     uniques, counts, min_len, max_len, lengths = biological_data_top_entries(seqs, top_n)
@@ -270,7 +271,8 @@ def protein_descriptors(peptide: str) -> Dict[str, str | float | dict[str, float
 def protein_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5, invalid: list=None) -> PROTEINColumns:
     # Top-N
     if invalid:
-        seqs = seqs[~seqs.isin(invalid)]
+        invalid_values = [value for _, value in invalid]
+        seqs = seqs[~seqs.isin(invalid_values)]
     uniques, counts, min_len, max_len, lengths = biological_data_top_entries(seqs, top_n)
     aa_composition = [dict(Counter(seq)) for seq in uniques]
     descriptors = [protein_descriptors(seq) for seq in uniques]

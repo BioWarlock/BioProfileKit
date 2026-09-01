@@ -29,6 +29,7 @@ def check_sequence(df, col, threshold=0.92):
     if df[col].astype(str).str.len().eq(1).all():
         return "None", []
     values = df[col].dropna().astype(str).tolist()
+    indices = df[col].dropna().index.tolist()
 
     unique_count = len(set(values))
     if unique_count < 10:
@@ -43,18 +44,18 @@ def check_sequence(df, col, threshold=0.92):
     if all(len(x) > 2 for x in values):
         match, invalid = fast_check_sequence(values, Sequence.DNA.value, threshold)
         if match:
-            return "dna", _get_invalid(values, invalid)
+            return "dna", _get_invalid(values, indices, invalid)
         match, invalid = fast_check_sequence(values, Sequence.RNA.value, threshold)
         if match:
-            return "rna", _get_invalid(values, invalid)
+            return "rna", _get_invalid(values, indices, invalid)
         match, invalid = fast_check_sequence(values, Sequence.PROTEIN.value, threshold)
         if match:
             if not invalid or char_entropy(values, PROTEIN_ALPHABET) >= ENTROPY_THRESHOLDS["protein"]:
-                return "protein", _get_invalid(values, invalid)
+                return "protein", _get_invalid(values, indices, invalid)
     return "None", []
 
 
-def _get_invalid(values, invalid_indices):
-    if not invalid_indices:
+def _get_invalid(values, indices, invalid_positions):
+    if not invalid_positions:
         return []
-    return [values[i] for i in invalid_indices]
+    return [(indices[i], values[i]) for i in invalid_positions]
