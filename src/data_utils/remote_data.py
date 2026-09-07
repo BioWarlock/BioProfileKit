@@ -1,6 +1,7 @@
 import io
 import os
 import pathlib
+import re
 import zipfile
 from pathlib import Path
 
@@ -10,7 +11,8 @@ from goatools.base import download_go_basic_obo
 from goatools.obo_parser import GODag
 import time
 from pathlib import Path
-
+from Bio import SwissProt
+import gzip
 BPK_CACHE_ROOT = Path(os.environ.get("BPK_CACHE_DIR", Path.cwd() / ".bioprofilekit"))
 CACHE_TIL_DAYS = 30
 
@@ -20,11 +22,18 @@ CACHE_TIL_DAYS = 30
 TAXONOMY_CACHE_DIR = BPK_CACHE_ROOT / "taxonomy"
 GO_CACHE_DIR = BPK_CACHE_ROOT / "go"
 COG_CACHE_DIR = BPK_CACHE_ROOT / "cog"
+UNIPROT_CACHE_DIR = BPK_CACHE_ROOT / "uniprot"
 
 TAXONOMY_FILE = "taxonomy_raw.parquet"
 TAXONOMY_VOCAB = "taxonomy_vocab.parquet"
 GO_FILE = "go_terms.parquet"
 COG_FILE = "cog_groups.parquet"
+UNIPROT_FILE = "uniprot_swissport.parquet"
+
+SEGMENT_RE = re.compile(r'(RecName|AltName|SubName|Flags|Contains|Includes):')
+FIELD_RE = re.compile(r'(Full|Short|EC|Allergen|CD_antigen|INN|Biotech)=([^;]+)')
+ECO_TAG_RE = re.compile(r'\s*\{ECO:[^}]*\}')
+
 
 def _load_or_fetch(cache_dir: Path, filename: str, fetch_fn, force_refresh: bool) -> pd.DataFrame:
     cache_dir.mkdir(parents=True, exist_ok=True)
@@ -70,6 +79,96 @@ def _download_cog() -> pd.DataFrame:
         print(f"Error: {response.status_code}")
     return df"""
 
+def get_uniprot_swissprot_metadata(force_refresh: bool = False) -> pd.DataFrame:
+    return _load_or_fetch(UNIPROT_CACHE_DIR, UNIPROT_FILE, _download_uniprot_swissprot_metadata, force_refresh)
+
+def _download_uniprot_swissprot_metadata() -> pd.DataFrame:
+    url = "https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.dat.gz"
+    print("Downloading UniProt Swiss-Prot flat file ...")
+    response = requests.get(url, stream=True, timeout=600)
+    response.raise_for_status()
+
+    return _parse_swissprot_dat(response.raw)
+
+def _parse_swissprot_dat(raw_stream) -> pd.DataFrame:
+    records = []
+    with gzip.open(raw_stream, "rt") as fh:
+        for record in SwissProt.parse(fh):
+            accession = record.accessions[0] if record.accessions else None
+            if accession is None:
+                continue
+
+            parsed = _parse_description(record.description)
+
+            records.append({
+                "accession": accession,
+                "entry_name": record.entry_name,
+                "organism_name": record.organism.rstrip("."),
+                "organism_id": record.taxonomy_id[0] if record.taxonomy_id else None,
+                "length": record.sequence_length,
+                "protein_name": parsed["protein_name"],
+                "alt_names": _join(parsed["alt_names"]),
+                "short_names": _join(parsed["short_names"]),
+                "ec_numbers": _join(parsed["ec_numbers"]),
+                "gene_names": _clean_gene_names(record.gene_name),
+                "allergens": _join(parsed["allergens"]),
+                "cd_antigens": _join(parsed["cd_antigens"]),
+                "inn_names": _join(parsed["inn_names"]),
+                "biotech_names": _join(parsed["biotech_names"]),
+            })
+
+    return pd.DataFrame(records)
+
+def _clean_evidence_tags(text: str) -> str:
+    return ECO_TAG_RE.sub('', text).strip() if text else text
+
+
+def _join(values: list) -> str | None:
+    return ";".join(values) if values else None
+
+
+def _clean_gene_names(gene_name_field) -> str | None:
+    if not gene_name_field:
+        return None
+    names = [_clean_evidence_tags(g.get("Name", "")) for g in gene_name_field if g.get("Name")]
+    return ";".join(names) if names else None
+
+def _parse_description(description: str) -> dict:
+    result = {
+        "protein_name": None,
+        "alt_names": [], "short_names": [], "ec_numbers": [],
+        "allergens": [], "cd_antigens": [], "inn_names": [], "biotech_names": [],
+    }
+    if not description:
+        return result
+
+    parts = SEGMENT_RE.split(description)
+    segments = [(parts[i], parts[i + 1]) for i in range(1, len(parts) - 1, 2)]
+
+    for tag, content in segments:
+        for field_name, value in FIELD_RE.findall(content):
+            value = _clean_evidence_tags(value)
+            if not value:
+                continue
+            if field_name == "Full":
+                if tag == "RecName" and result["protein_name"] is None:
+                    result["protein_name"] = value
+                else:
+                    result["alt_names"].append(value)
+            elif field_name == "Short":
+                result["short_names"].append(value)
+            elif field_name == "EC":
+                result["ec_numbers"].append(f"EC {value}")
+            elif field_name == "Allergen":
+                result["allergens"].append(value)
+            elif field_name == "CD_antigen":
+                result["cd_antigens"].append(value)
+            elif field_name == "INN":
+                result["inn_names"].append(value)
+            elif field_name == "Biotech":
+                result["biotech_names"].append(value)
+
+    return result
 
 def get_tax_ids(force_refresh: bool = False):
     return _load_or_fetch(TAXONOMY_CACHE_DIR, TAXONOMY_VOCAB, _build_taxonomy_vocab, force_refresh)

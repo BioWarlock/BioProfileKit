@@ -19,7 +19,7 @@ from cli.report_json import write_result_json
 from cli.report_writer import write_report
 from cli.utils import _fmt_duration, print_step, info
 from data_utils.file_reader import read_file, parse_parquet
-from data_utils.remote_data import get_tax_ids, get_gene_ontology, get_clusters_of_orthologous_groups
+from data_utils.remote_data import get_tax_ids, get_gene_ontology, get_clusters_of_orthologous_groups, get_uniprot_swissprot_metadata
 from quality_assessment.quality_assessment import quality_assessment, print_quality_report
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -29,7 +29,7 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option("-i", "--input", type=click.Path(exists=True, resolve_path=True), required=True,
               help="Input file as .tsv, .csv or .json")
 @click.option('-t', '--tax', is_flag=True, help='Enable taxonomy analysis')
-@click.option('-f', '--func', type=click.Choice(['cog', 'go']),
+@click.option('-f', '--func', type=click.Choice(['cog', 'go', 'uniprot']),
               help='Enable functional annotation analysis. Choose between cog or go')
 @click.option('-tc', '--target_column', type=str, help='Target column for Analysis')
 @click.option('-k', '--kmer', type=int, default=3, help="K-mer Size for sequence analysis")
@@ -69,6 +69,12 @@ def cli(input: str, tax: bool = False, func: str = None,
         done = print_step("Building COG lookup")
         cog_lookup = build_annotation_lookup(get_clusters_of_orthologous_groups(), "COG_ID")
         done(f"{len(cog_lookup['raw']):,} COG groups")
+    elif func == "uniprot":
+        done = print_step("Building UniProt/Swiss-Prot lookup")
+        uniprot_lookup = build_annotation_lookup(get_uniprot_swissprot_metadata(), "accession")
+        done(f"{len(uniprot_lookup['raw']):,} Swiss-Prot entries")
+
+    annotation_lookup = {"go": go_lookup, "cog": cog_lookup, "uniprot": uniprot_lookup}.get(func)
 
     done = print_step("Per-column analysis")
     seq_count = 0
