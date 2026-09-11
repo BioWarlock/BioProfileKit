@@ -36,8 +36,7 @@ def taxonomy_flags(df, col, valid_names, valid_tax_ids, name_to_rank, taxid_to_r
                 lineage_table = build_lineage(raw_tax_df, needed_taxids)
                 sunburst_data = build_sunburst_data_from_taxids(df[col], lineage_table)
                 if not sunburst_data.empty:
-                    # ToDo: plot return
-                    taxonomy_sunburst_plot(sunburst_data)
+                    sunburst_plot = taxonomy_sunburst_plot(sunburst_data)
             return TaxonomyFlags(
                 name=col,
                 is_taxonomy=True,
@@ -58,12 +57,9 @@ def taxonomy_flags(df, col, valid_names, valid_tax_ids, name_to_rank, taxid_to_r
                     if n in name_to_taxid
                 }
                 lineage_table = build_lineage(raw_tax_df, needed_taxids)
-                print(lineage_table)
                 sunburst_data = build_sunburst_data(df[col], name_to_taxid, lineage_table)
-                print(sunburst_data)
                 if not sunburst_data.empty:
-                    # ToDo return plot
-                    taxonomy_sunburst_plot(sunburst_data)
+                    sunburst_plot = taxonomy_sunburst_plot(sunburst_data)
             return TaxonomyFlags(
                 name=col,
                 is_taxonomy=True,
@@ -289,5 +285,5 @@ def taxonomy_sunburst_plot(sunburst_df: pd.DataFrame):
     fig.update_traces(
         hovertemplate="<b>%{label}</b><br>Count: %{value}<br>Share of parent: %{percentParent:.1%}<br>Share of total: %{percentRoot:.1%}<extra></extra>",
     )
-    fig.update_layout(title="Taxonomic Composition", )
-    fig.write_html("test.html")
+    fig.update_layout(title="Taxonomic Composition")
+    return fig.to_html(full_html=False, include_plotlyjs=False)
