@@ -6,11 +6,12 @@ from pathlib import Path
 import click
 import pandas as pd
 from termcolor import colored
-
+from biological.uniprot_swissprot import diagnose_protein_name_mismatch
 from analysis.categorical_analysis import categorical_columns
 from analysis.multivariate_analysis import multivariate_analysis
 from analysis.numeric_analysis import numeric_columns
 from analysis.overview import overview, column_overview, duplicate_row_groups
+from biological.uniprot_swissprot import build_uniprot_lookups, uniprot_flags
 from biological.functional_annotation import annotation_flags, build_annotation_lookup
 from biological.measurement_data import measurement_columns
 from biological.sequence_data import dna_rna_columns, protein_columns
@@ -19,7 +20,8 @@ from cli.report_json import write_result_json
 from cli.report_writer import write_report
 from cli.utils import _fmt_duration, print_step, info
 from data_utils.file_reader import read_file, parse_parquet
-from data_utils.remote_data import get_tax_ids, get_gene_ontology, get_clusters_of_orthologous_groups, get_uniprot_swissprot_metadata
+from data_utils.remote_data import get_tax_ids, get_gene_ontology, get_clusters_of_orthologous_groups, \
+    get_uniprot_swissprot_metadata, get_uniprot_trembl_metadata
 from quality_assessment.quality_assessment import quality_assessment, print_quality_report
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -29,12 +31,13 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option("-i", "--input", type=click.Path(exists=True, resolve_path=True), required=True,
               help="Input file as .tsv, .csv or .json")
 @click.option('-t', '--tax', is_flag=True, help='Enable taxonomy analysis')
-@click.option('-f', '--func', type=click.Choice(['cog', 'go', 'uniprot']),
+@click.option('-u', '--uniprot', type=click.Choice(["swissprot", "trembl"]), help='Enable uniprot analysis against Swiss-port or TrEMBL')
+@click.option('-f', '--func', type=click.Choice(['cog', 'go']),
               help='Enable functional annotation analysis. Choose between cog or go')
 @click.option('-tc', '--target_column', type=str, help='Target column for Analysis')
 @click.option('-k', '--kmer', type=int, default=3, help="K-mer Size for sequence analysis")
 @click.option('-n', '--top_n', type=int, default=20, help="Top N entries analysis")
-def cli(input: str, tax: bool = False, func: str = None,
+def cli(input: str, tax: bool = False, uniprot: bool = False, func: str = None,
         target_column: str = None, kmer: int = None, top_n: int = None):
     run_start = time.perf_counter()
     input_path = Path(input)
@@ -60,7 +63,7 @@ def cli(input: str, tax: bool = False, func: str = None,
         done = print_step("Building taxonomy lookups")
         valid_names, valid_tax_ids, name_to_rank, taxid_to_rank, name_to_scientific = build_lookups(tax_df)
         done(f"{len(valid_names):,} scientific names")
-    go_lookup = cog_lookup = uniprot_lookup = None
+    go_lookup = cog_lookup = None
     if func == "go":
         done = print_step("Building GO lookup")
         go_lookup = build_annotation_lookup(get_gene_ontology(), "GO_ID")
@@ -69,12 +72,25 @@ def cli(input: str, tax: bool = False, func: str = None,
         done = print_step("Building COG lookup")
         cog_lookup = build_annotation_lookup(get_clusters_of_orthologous_groups(), "COG_ID")
         done(f"{len(cog_lookup['raw']):,} COG groups")
-    elif func == "uniprot":
-        done = print_step("Building UniProt/Swiss-Prot lookup")
-        uniprot_lookup = build_annotation_lookup(get_uniprot_swissprot_metadata(), "accession")
-        done(f"{len(uniprot_lookup['raw']):,} Swiss-Prot entries")
 
-    annotation_lookup = {"go": go_lookup, "cog": cog_lookup, "uniprot": uniprot_lookup}.get(func)
+    uniprot_lookups = None
+    if uniprot == "swissprot":
+        done = print_step("Building UniProt lookups")
+        uniprot_df = get_uniprot_swissprot_metadata()
+        uniprot_lookups = build_uniprot_lookups(uniprot_df)
+        done(f"{len(uniprot_lookups['protein_names']):,} protein names, "
+             f"{len(uniprot_lookups['ec_numbers']):,} EC numbers, "
+             f"{len(uniprot_lookups['gene_names']):,} gene names")
+    elif uniprot == "trembl":
+        done = print_step("Building UniProt lookups (TrEMBL)")
+        uniprot_df = get_uniprot_trembl_metadata()  #ToDo: add division=trembl_division
+        uniprot_lookups = build_uniprot_lookups(uniprot_df)
+        done(f"{len(uniprot_lookups['protein_names']):,} protein names, "
+             f"{len(uniprot_lookups['ec_numbers']):,} EC numbers, "
+             f"{len(uniprot_lookups['gene_names']):,} gene names")
+
+    result = diagnose_protein_name_mismatch(df['protein'], uniprot_lookups)
+    print(result)
 
     done = print_step("Per-column analysis")
     seq_count = 0
@@ -112,6 +128,18 @@ def cli(input: str, tax: bool = False, func: str = None,
             col_ov.measurement_data = measurement_data if measurement_data else None
         else:
             col_ov.measurement_data = None
+        is_sequence = col_ov.sequence != 'None'
+        is_taxonomy = ((col_ov.taxonomy is not None and col_ov.taxonomy.is_taxonomy) or getattr(col_ov, 'taxonomy_candidate', None))
+        is_measurement = col_ov.measurement_data is not None
+        #ToDo add GO & COG
+        if uniprot_lookups and not is_sequence and not is_taxonomy and not is_measurement:
+            result = uniprot_flags(df, col_ov.name, uniprot_lookups)
+            col_ov.uniprot = result
+            if result.is_uniprot:
+                info(f"UniProt {result.match_type}: {col_ov.name}") #  f"({result.validity_rate:.1%} valid)")
+        else:
+            col_ov.uniprot = None
+
     done(f"{seq_count} sequence column(s)")
 
     empty_cols = [col for col in df.columns if df[col].isnull().all()]
@@ -153,7 +181,7 @@ def cli(input: str, tax: bool = False, func: str = None,
         1 for col in column_overviews
         if getattr(col, 'taxonomy_candidate', False)
     )
-    
+    #ToDo: Check Windows
     output_path = Path(input_path.stem + "_renders")
     done = print_step("Writing report")
     ctx = click.get_current_context()

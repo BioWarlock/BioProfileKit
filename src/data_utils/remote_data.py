@@ -2,7 +2,9 @@ import io
 import os
 import pathlib
 import re
+import sys
 import zipfile
+from contextlib import redirect_stdout
 from pathlib import Path
 
 import pandas as pd
@@ -13,7 +15,15 @@ import time
 from pathlib import Path
 from Bio import SwissProt
 import gzip
-BPK_CACHE_ROOT = Path(os.environ.get("BPK_CACHE_DIR", Path.cwd() / ".bioprofilekit"))
+
+
+if sys.platform == "win32":
+    BPK_CACHE_ROOT = Path(os.environ.get("BPK_CACHE_DIR", "%LOCALAPPDAT%/bioprofilekit")).expanduser().resolve()
+elif sys.platform in ["linux", "darwin"]:
+    BPK_CACHE_ROOT = Path(os.environ.get("BPK_CACHE_DIR", "~/.local/share/bioprofilekit")).expanduser().resolve()
+else:
+    raise RuntimeError(f"Unsupported operating system: {sys.platform}")
+
 CACHE_TIL_DAYS = 30
 
 
@@ -29,6 +39,7 @@ TAXONOMY_VOCAB = "taxonomy_vocab.parquet"
 GO_FILE = "go_terms.parquet"
 COG_FILE = "cog_groups.parquet"
 UNIPROT_FILE = "uniprot_swissport.parquet"
+TREMBL_FILE = "uniprot_trembl.parquet"
 
 SEGMENT_RE = re.compile(r'(RecName|AltName|SubName|Flags|Contains|Includes):')
 FIELD_RE = re.compile(r'(Full|Short|EC|Allergen|CD_antigen|INN|Biotech)=([^;]+)')
@@ -51,15 +62,16 @@ def get_gene_ontology(force_refresh: bool = False) -> pd.DataFrame:
     return _load_or_fetch(GO_CACHE_DIR, GO_FILE, _download_gene_ontology, force_refresh)
 
 def _download_gene_ontology():
-    obo_path = download_go_basic_obo()
-    go_dag = GODag(obo_path)
+    with redirect_stdout(io.StringIO()):
+        obo_path = download_go_basic_obo()
+    go_dag = GODag(obo_path, prt=None)
 
     data = [[go_id, term.name, getattr(term, "namespace", "")] for go_id, term in go_dag.items()]
 
     df = pd.DataFrame(data, columns=["GO_ID", "Name", "Namespace"])
     if Path(obo_path).is_file():
         pathlib.Path(obo_path).unlink(missing_ok=True)
-        print(f"Removed {obo_path}")
+        #print(f"Removed {obo_path}")
     return df
 
 
@@ -73,24 +85,31 @@ def _download_cog() -> pd.DataFrame:
     response = requests.get(url, timeout=60)
     response.raise_for_status()
     return pd.read_csv(io.StringIO(response.text), sep="\t", skipinitialspace=True, usecols=[0, 1, 2], names=fields,)
-    """if response.status_code == 200:
-        df = pd.read_csv(io.StringIO(response.text), sep="\t", skipinitialspace=True, usecols=[0, 1, 2], names=fields)
-    else:
-        print(f"Error: {response.status_code}")
-    return df"""
+
+def get_uniprot_trembl_metadata(force_refresh: bool = False) -> pd.DataFrame:
+    # ToDo: add division
+    return _load_or_fetch(UNIPROT_CACHE_DIR, TREMBL_FILE, _download_uniprot_trembl_metadata, force_refresh)
+
+def _download_uniprot_trembl_metadata() -> pd.DataFrame:
+    #ToDo add division
+    url = "https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_trembl.dat.gz"
+    print("Downloading UniProt TrEMBL flat file (this is very large, may take a long time) ...")
+    response = requests.get(url, stream=True, timeout=600)
+    response.raise_for_status()
+    return _parse_uniprot_dat(response.raw)
 
 def get_uniprot_swissprot_metadata(force_refresh: bool = False) -> pd.DataFrame:
     return _load_or_fetch(UNIPROT_CACHE_DIR, UNIPROT_FILE, _download_uniprot_swissprot_metadata, force_refresh)
 
 def _download_uniprot_swissprot_metadata() -> pd.DataFrame:
     url = "https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.dat.gz"
-    print("Downloading UniProt Swiss-Prot flat file ...")
+    # print("Downloading UniProt Swiss-Prot flat file ...")
     response = requests.get(url, stream=True, timeout=600)
     response.raise_for_status()
 
-    return _parse_swissprot_dat(response.raw)
+    return _parse_uniprot_dat(response.raw)
 
-def _parse_swissprot_dat(raw_stream) -> pd.DataFrame:
+def _parse_uniprot_dat(raw_stream) -> pd.DataFrame:
     records = []
     with gzip.open(raw_stream, "rt") as fh:
         for record in SwissProt.parse(fh):
@@ -182,15 +201,15 @@ def _build_taxonomy_vocab() -> pd.DataFrame:
 def _download_taxonomy():
     url = "https://ftp.ncbi.nih.gov/pub/taxonomy/taxdmp.zip"
 
-    print(f"Downloading {url} ...")
+    #print(f"Downloading {url} ...")
     resp = requests.get(url, stream=True)
     resp.raise_for_status()
 
     with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
-        print("Files inside ZIP:", zf.namelist())
+        #print("Files inside ZIP:", zf.namelist())
 
         with zf.open("names.dmp") as fh:
-            print(fh)
+            #print(fh)
             names = pd.read_csv(
                 fh,
                 sep="|",

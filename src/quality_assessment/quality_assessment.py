@@ -2,7 +2,7 @@ from termcolor import colored
 
 from models.quality import QualityCategory, QualityAssessment
 from quality_assessment.biological_quality import _check_sequence_validity, _check_sequence_redundancy, \
-    _check_taxonomy_validity, _check_unit_validity
+    _check_taxonomy_validity, _check_unit_validity, _check_uniprot_validity
 from quality_assessment.column_quality import _check_missing, _check_variance, _check_high_cardinality, \
     _check_mixed_types, _check_infinity, _check_skewness, _check_outliers
 from quality_assessment.dataset_quality import _check_sample_size, _check_duplicate_rows, _check_duplicate_columns, \
@@ -35,6 +35,7 @@ def quality_assessment(general, column_overviews, numeric_overviews, categorical
         _check_sequence_redundancy(column_overviews),
         _check_taxonomy_validity(column_overviews),
         _check_unit_validity(column_overviews),
+        _check_uniprot_validity(column_overviews),
     ]
     relationships = [
         _check_leakage(multivariate),

@@ -102,3 +102,25 @@ def _check_unit_validity(column_overviews) -> QualityCheck:
     return QualityCheck(name="Unit Validity", status=status,
                         message="; ".join(notes) if notes else "Unit valid",
                         detail_link="#columns")
+
+def _check_uniprot_validity(column_overviews) -> QualityCheck:
+    uniprot_cols = [c for c in column_overviews if c.uniprot is not None and c.uniprot.is_uniprot]
+    if not uniprot_cols:
+        return QualityCheck(name="UniProt Validity", status="pass",
+                            message="No UniProt-matched columns present", detail_link=None)
+    statuses, notes = [], []
+    for c in uniprot_cols:
+        n_invalid = len(c.uniprot.invalid_values) if c.uniprot.invalid_values else 0
+        if n_invalid > 0:
+            statuses.append("warn")
+            notes.append(f"{c.name} ({c.uniprot.match_type}): {n_invalid} invalid")
+
+        n_outdated = len(c.uniprot.outdated_names) if c.uniprot.outdated_names else 0
+        if n_outdated > 0:
+            statuses.append("warn")
+            notes.append(f"{c.name}: {n_outdated} outdated name(s)")
+
+    status = _worst(statuses) if statuses else "pass"
+    return QualityCheck(name="UniProt Validity", status=status,
+                        message="; ".join(notes) if notes else "UniProt-matched columns valid",
+                        detail_link="#columns")
