@@ -1,2 +1,2 @@
 from .file_reader import read_file, parse_parquet
-from .remote_data import get_tax_ids, get_clusters_of_orthologous_groups, get_gene_ontology, get_uniprot_swissprot_metadata, get_uniprot_trembl_metadata
+from .remote_data import get_tax_ids, get_taxonomy_raw, get_clusters_of_orthologous_groups, get_gene_ontology, get_uniprot_swissprot_metadata, get_uniprot_trembl_metadata

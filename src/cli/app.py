@@ -15,13 +15,13 @@ from biological.uniprot_swissprot import build_uniprot_lookups, uniprot_flags
 from biological.functional_annotation import annotation_flags, build_annotation_lookup
 from biological.measurement_data import measurement_columns
 from biological.sequence_data import dna_rna_columns, protein_columns
-from biological.taxonomy import taxonomy_flags, build_lookups
+from biological.taxonomy import taxonomy_flags, build_lookups, build_name_to_taxid
 from cli.report_json import write_result_json
 from cli.report_writer import write_report
 from cli.utils import _fmt_duration, print_step, info
 from data_utils.file_reader import read_file, parse_parquet
 from data_utils.remote_data import get_tax_ids, get_gene_ontology, get_clusters_of_orthologous_groups, \
-    get_uniprot_swissprot_metadata, get_uniprot_trembl_metadata
+    get_uniprot_swissprot_metadata, get_uniprot_trembl_metadata, get_taxonomy_raw
 from quality_assessment.quality_assessment import quality_assessment, print_quality_report
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -59,10 +59,14 @@ def cli(input: str, tax: bool = False, uniprot: bool = False, func: str = None,
 
     tax_df = get_tax_ids() if tax else None
     valid_names, valid_tax_ids, name_to_rank, taxid_to_rank, name_to_scientific = None, None, None, None, None
+    name_to_taxid, raw_tax_df = None, None
     if tax and tax_df is not None:
         done = print_step("Building taxonomy lookups")
         valid_names, valid_tax_ids, name_to_rank, taxid_to_rank, name_to_scientific = build_lookups(tax_df)
+        name_to_taxid = build_name_to_taxid(tax_df)
+        raw_tax_df = get_taxonomy_raw()
         done(f"{len(valid_names):,} scientific names")
+
     go_lookup = cog_lookup = None
     if func == "go":
         done = print_step("Building GO lookup")
@@ -89,15 +93,15 @@ def cli(input: str, tax: bool = False, uniprot: bool = False, func: str = None,
              f"{len(uniprot_lookups['ec_numbers']):,} EC numbers, "
              f"{len(uniprot_lookups['gene_names']):,} gene names")
 
-    result = diagnose_protein_name_mismatch(df['protein'], uniprot_lookups)
-    print(result)
+    #result = diagnose_protein_name_mismatch(df['protein'], uniprot_lookups)
+    #print(result)
 
     done = print_step("Per-column analysis")
     seq_count = 0
     for col_ov in column_overviews:
         if tax and tax_df is not None:
             col_ov.taxonomy = taxonomy_flags(df, col_ov.name, valid_names, valid_tax_ids, name_to_rank, taxid_to_rank,
-                                             name_to_scientific)
+                                             name_to_scientific, name_to_taxid, raw_tax_df)
 
         if func and col_ov.taxonomy is not None:
             col_ov.annotation = [annotation_flags(df, col_ov.name, func)]

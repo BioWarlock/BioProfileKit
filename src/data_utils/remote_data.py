@@ -192,6 +192,15 @@ def _parse_description(description: str) -> dict:
 def get_tax_ids(force_refresh: bool = False):
     return _load_or_fetch(TAXONOMY_CACHE_DIR, TAXONOMY_VOCAB, _build_taxonomy_vocab, force_refresh)
 
+def get_taxonomy_raw() -> pd.DataFrame:
+    path = TAXONOMY_CACHE_DIR / TAXONOMY_FILE
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"{path} not found - run get_tax_ids() first to download and cache the taxonomy data."
+        )
+    return pd.read_parquet(path)
+
+
 def _build_taxonomy_vocab() -> pd.DataFrame:
     raw = _download_taxonomy()
     raw.to_parquet(TAXONOMY_CACHE_DIR / TAXONOMY_FILE, index=False)
@@ -220,7 +229,7 @@ def _download_taxonomy():
             )
 
         with zf.open("nodes.dmp") as fh:
-            nodes = pd.read_csv(fh, sep="|", header=None, index_col=False, usecols=[0,2], names=["tax_id", "rank"], engine="c")
+            nodes = pd.read_csv(fh, sep="|", header=None, index_col=False, usecols=[0, 1, 2], names=["tax_id", "parent_tax_id", "rank"], engine="c")
 
     names = names.map(lambda x: x.strip() if isinstance(x, str) else x)
     nodes = nodes.map(lambda x: x.strip() if isinstance(x, str) else x)
