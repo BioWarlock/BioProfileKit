@@ -173,6 +173,9 @@
                                     <button class="btn btn-sm cbf-warning"   data-quality="taxonomynotchecked"   title="Taxonomy candidate column detected but not validated — run with --tax">Taxonomy Not Checked</button>
                                     <button class="btn btn-sm cbf-secondary" data-quality="taxonomy"             title="All columns with taxonomy (valid, invalid or unchecked)">Taxonomy (All)</button>
                                     <button class="btn btn-sm cbf-danger"    data-quality="annotationinvalid"    title="Functional annotation failed controlled vocabulary check">Annotation Invalid</button>
+                                    <button class="btn btn-sm cbf-danger"    data-quality="uniprotinvalid"       title="UniProt/SwissProt identifiers failed validation">UniProt Invalid</button>
+                                    <button class="btn btn-sm cbf-success"   data-quality="uniprotvalid"         title="UniProt/SwissProt validated successfully">UniProt Valid</button>
+                                    <button class="btn btn-sm cbf-secondary" data-quality="uniprot"              title="All columns with UniProt/SwissProt metadata (valid or invalid)">UniProt (All)</button>
                                     <!-- Data anomalies -->
                                     <button class="btn btn-sm cbf-warning"   data-quality="dataanomalies" title="Suspect or anomalous values detected in this column">Data Anomalies</button>
                                 </div>
@@ -209,7 +212,7 @@
             <div id="columns-container">
                 {% for col in columns %}
                     {# fns = filter namespace — separate from badge ns #}
-                    {% set fns = namespace(has_inf='no',is_sparse='no',has_outliers='no',imbalanced='no',nzv='no',rare='no',ambiguous_bases='no',rc_duplicates='no',low_complexity='no',mixed_values='no',data_anomalies='no',taxonomy_invalid='no',taxonomy_valid='no',taxonomy_not_checked='no',annotation_invalid='no') %}
+                    {% set fns = namespace(has_inf='no',is_sparse='no',has_outliers='no',imbalanced='no',nzv='no',rare='no',ambiguous_bases='no',rc_duplicates='no',low_complexity='no',mixed_values='no',data_anomalies='no',taxonomy_invalid='no',taxonomy_valid='no',taxonomy_not_checked='no',annotation_invalid='no',uniprot_invalid='no',uniprot_valid='no') %}
                     {% for ov in overview %}{% if ov.name == col.name %}
                         {% set _n = col.number if col.number and col.number > 0 else 1 %}
                         {% if ov.infinity is defined and ov.infinity > 0 %}{% set fns.has_inf = 'yes' %}{% endif %}
@@ -232,10 +235,30 @@
                     {% endif %}
                     {% if col.measurement_data and col.measurement_data.with_measurement %}{% set fns.mixed_values = 'yes' %}{% endif %}
                     {% if col.suspect_values is not none and not (col.invalid_seqs and col.invalid_seqs|length > 0) %}{% set fns.data_anomalies = 'yes' %}{% endif %}
-                    {% if col.taxonomy and col.taxonomy.is_taxonomy and col.taxonomy.taxonomy is not string %}{% set fns.taxonomy_invalid = 'yes' %}{% endif %}
-                    {% if col.taxonomy and col.taxonomy.is_taxonomy and col.taxonomy.taxonomy is string %}{% set fns.taxonomy_valid = 'yes' %}{% endif %}
+                    {% set tax_status = namespace(invalid=false, valid=false, invalid_count=0) %}
+                    {% if col.taxonomy and col.taxonomy.is_taxonomy %}
+                        {% if col.taxonomy.taxid is not none %}
+                            {% if col.taxonomy.taxid is string %}
+                                {% set tax_status.valid = true %}
+                            {% else %}
+                                {% set tax_status.invalid = true %}
+                                {% set tax_status.invalid_count = col.taxonomy.taxid | length %}
+                            {% endif %}
+                        {% elif col.taxonomy.taxonomy is not none %}
+                            {% if col.taxonomy.taxonomy is string %}
+                                {% set tax_status.valid = true %}
+                            {% else %}
+                                {% set tax_status.invalid = true %}
+                                {% set tax_status.invalid_count = col.taxonomy.taxonomy | length %}
+                            {% endif %}
+                        {% endif %}
+                    {% endif %}
+                    {% if tax_status.invalid %}{% set fns.taxonomy_invalid = 'yes' %}{% endif %}
+                    {% if tax_status.valid %}{% set fns.taxonomy_valid = 'yes' %}{% endif %}
                     {% if col.taxonomy is defined and col.taxonomy is none and col.taxonomy_candidate %}{% set fns.taxonomy_not_checked = 'yes' %}{% endif %}
                     {% if col.annotation and col.annotation.is_annotation and col.taxonomy.valid_annotation is not string %}{% set fns.annotation_invalid = 'yes' %}{% endif %}
+                    {% if col.uniprot and col.uniprot.is_uniprot and col.uniprot.invalid_values %}{% set fns.uniprot_invalid = 'yes' %}{% endif %}
+                    {% if col.uniprot and col.uniprot.is_uniprot and not col.uniprot.invalid_values %}{% set fns.uniprot_valid = 'yes' %}{% endif %}
                     <div class="card row mt-3 column-item" data-index="{{ loop.index0 }}"
                          data-name="{{ col.name | lower }}"
                          data-type="{{ col.type }}"
@@ -259,6 +282,8 @@
                          data-taxonomyvalid="{{ fns.taxonomy_valid }}"
                          data-taxonomynotchecked="{{ fns.taxonomy_not_checked }}"
                          data-annotationinvalid="{{ fns.annotation_invalid }}"
+                         data-uniprotinvalid="{{ fns.uniprot_invalid }}"
+                         data-uniprotvalid="{{ fns.uniprot_valid }}"
                          style="display: {% if loop.index0 < items_per_page %}block{% else %}none{% endif %};">
                         <div class="card-header d-inline-flex gap-1 mb-2">
                             <button class="btn btn-cb-outline-primary" type="button" data-bs-toggle="collapse"
@@ -268,15 +293,20 @@
                                 {{ col.name.replace('_', ' ').title() }}
                             </button>
                             <div class="m-2 d-flex">
-                                {% if col.taxonomy and col.taxonomy.is_taxonomy and col.taxonomy.taxonomy is not string %}
+                                {% if tax_status.invalid %}
                                     <span class="badge bg-danger me-2">Taxonomy Invalid</span>
-                                {% elif col.taxonomy and col.taxonomy.is_taxonomy and col.taxonomy.taxonomy is string %}
+                                {% elif tax_status.valid %}
                                     <span class="badge bg-success me-2">Taxonomy Valid</span>
                                 {% elif col.taxonomy is defined and col.taxonomy is none and col.taxonomy_candidate %}
                                     <span class="badge bg-warning text-dark me-2" title="Run with --tax to validate">Taxonomy Not Checked</span>
                                 {% endif %}
                                 {% if col.annotation and col.annotation.is_annotation and col.taxonomy.valid_annotation is not string %}
                                     <span class="badge bg-danger me-2">Annotation invalid</span>
+                                {% endif %}
+                                {% if col.uniprot and col.uniprot.is_uniprot and col.uniprot.invalid_values %}
+                                    <span class="badge bg-danger me-2" title="UniProt/SwissProt match type: {{ col.uniprot.match_type.replace('_', ' ') }}">UniProt Invalid</span>
+                                {% elif col.uniprot and col.uniprot.is_uniprot %}
+                                    <span class="badge bg-success me-2" title="UniProt/SwissProt match type: {{ col.uniprot.match_type.replace('_', ' ') }}">UniProt Valid</span>
                                 {% endif %}
                                 {% if col.unique == 1 %}
                                     <span class="badge bg-danger me-2">Constant</span>
@@ -484,12 +514,12 @@
                                             <strong>Sequence type:</strong> {{ col.sequence }}<br>
                                         {% endif %}
                                         {% if col.taxonomy and col.taxonomy.is_taxonomy %}
-                                            {% if col.taxonomy.taxonomy is string %}
+                                            {% if tax_status.valid %}
                                                 <strong>Taxonomy:</strong>
                                                 <span class="text-success">Valid</span><br>
-                                            {% else %}
+                                            {% elif tax_status.invalid %}
                                                 <strong>Taxonomy:</strong>
-                                                <span class="text-danger">{{ col.taxonomy.taxonomy | length }} invalid entr{{ 'y' if col.taxonomy.taxonomy | length == 1 else 'ies' }}</span><br>
+                                                <span class="text-danger">{{ tax_status.invalid_count }} invalid entr{{ 'y' if tax_status.invalid_count == 1 else 'ies' }}</span><br>
                                             {% endif %}
                                             {% if col.taxonomy.is_mixed %}
                                                 <strong>Rank:</strong> <span class="text-warning">Mixed</span><br>
@@ -511,6 +541,22 @@
                                                 <strong>Functional Annotation:</strong> {{ col.annotation.valid_annotation }}<br>
                                             {% else %}
                                                 <strong>Functional Annotation:</strong> Invalid<br>
+                                            {% endif %}
+                                        {% endif %}
+                                        {% if col.uniprot and col.uniprot.is_uniprot %}
+                                            {% if col.uniprot.invalid_values %}
+                                                <strong>UniProt/SwissProt:</strong>
+                                                <span class="text-danger">{{ col.uniprot.invalid_values | length }} invalid entr{{ 'y' if col.uniprot.invalid_values | length == 1 else 'ies' }}</span><br>
+                                            {% else %}
+                                                <strong>UniProt/SwissProt:</strong>
+                                                <span class="text-success">Valid</span><br>
+                                            {% endif %}
+                                            <strong>Match type:</strong> {{ col.uniprot.match_type.replace('_', ' ') | title }}
+                                            {% if col.uniprot.validity_rate is not none %}
+                                                ({{ (col.uniprot.validity_rate * 100) | round(1) }}% matched)
+                                            {% endif %}<br>
+                                            {% if col.uniprot.outdated_names %}
+                                                <strong>Outdated protein names:</strong> {{ col.uniprot.outdated_names | length }}<br>
                                             {% endif %}
                                         {% endif %}
                                         {% if col.correlation %}
@@ -582,7 +628,7 @@
                                                         data-bs-toggle="tab" data-bs-target="#taxStats{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
                                                         type="button" role="tab">
                                                     Taxonomy
-                                                    {% if col.taxonomy.taxonomy is not string %}
+                                                    {% if tax_status.invalid %}
                                                         <span class="badge bg-danger ms-1" style="font-size:.7em;">Invalid</span>
                                                     {% else %}
                                                         <span class="badge bg-success ms-1" style="font-size:.7em;">Valid</span>
@@ -595,6 +641,21 @@
                                                         title="Taxonomy analysis not enabled — run with --tax">
                                                     Taxonomy
                                                     <span class="badge bg-secondary ms-1" style="font-size:.7em;">–</span>
+                                                </button>
+                                            </li>
+                                        {% endif %}
+
+                                        {% if col.uniprot and col.uniprot.is_uniprot %}
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="uniprot-stats-tab{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
+                                                        data-bs-toggle="tab" data-bs-target="#uniprotStats{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
+                                                        type="button" role="tab">
+                                                    UniProt
+                                                    {% if col.uniprot.invalid_values %}
+                                                        <span class="badge bg-danger ms-1" style="font-size:.7em;">Invalid</span>
+                                                    {% else %}
+                                                        <span class="badge bg-success ms-1" style="font-size:.7em;">Valid</span>
+                                                    {% endif %}
                                                 </button>
                                             </li>
                                         {% endif %}
@@ -701,7 +762,7 @@
                                                 <div class="mt-3">
 
                                                     {# ── Status banner ── #}
-                                                    {% if tax.taxonomy is string %}
+                                                    {% if tax_status.valid %}
                                                         <div class="alert alert-success d-flex align-items-center gap-2 py-2">
                                                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>
                                                             All taxonomy entries validated successfully.
@@ -709,7 +770,7 @@
                                                     {% else %}
                                                         <div class="alert alert-danger d-flex align-items-center gap-2 py-2">
                                                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
-                                                            <span>{{ tax.taxonomy | length }} invalid taxonomy entr{{ 'y' if tax.taxonomy | length == 1 else 'ies' }} detected.</span>
+                                                            <span>{{ tax_status.invalid_count }} invalid taxonomy entr{{ 'y' if tax_status.invalid_count == 1 else 'ies' }} detected.</span>
                                                         </div>
                                                     {% endif %}
 
@@ -722,13 +783,21 @@
 
                                                     {# ── Sub-tabs ── #}
                                                     <ul class="nav nav-tabs mt-2" id="taxSubTab{{ cid }}" role="tablist">
+                                                        {% if tax.sunburst_plot %}
+                                                            <li class="nav-item" role="presentation">
+                                                                <button class="nav-link active" data-bs-toggle="tab"
+                                                                        data-bs-target="#taxSunburst{{ cid }}" type="button" role="tab">
+                                                                    Taxonomic Composition
+                                                                </button>
+                                                            </li>
+                                                        {% endif %}
                                                         <li class="nav-item" role="presentation">
-                                                            <button class="nav-link active" data-bs-toggle="tab"
+                                                            <button class="nav-link {% if not tax.sunburst_plot %}active{% endif %}" data-bs-toggle="tab"
                                                                     data-bs-target="#taxRank{{ cid }}" type="button" role="tab">
                                                                 Rank Distribution
                                                             </button>
                                                         </li>
-                                                        {% if tax.taxonomy is not string %}
+                                                        {% if tax.taxonomy is not none and tax.taxonomy is not string %}
                                                             <li class="nav-item" role="presentation">
                                                                 <button class="nav-link" data-bs-toggle="tab"
                                                                         data-bs-target="#taxInvalid{{ cid }}" type="button" role="tab">
@@ -763,8 +832,19 @@
 
                                                     <div class="tab-content mt-2" id="taxSubContent{{ cid }}">
 
+                                                        {# ── Taxonomic Composition (Sunburst) ── #}
+                                                        {% if tax.sunburst_plot %}
+                                                            <div class="tab-pane fade show active" id="taxSunburst{{ cid }}" role="tabpanel">
+                                                                <div class="plot-container mt-2" style="max-height: fit-content; overflow-x: auto;">
+                                                                    <figure role="img" aria-label="Taxonomic composition sunburst for column {{ col.name }}" style="width:100%;">
+                                                                        {{ tax.sunburst_plot | safe }}
+                                                                    </figure>
+                                                                </div>
+                                                            </div>
+                                                        {% endif %}
+
                                                         {# ── Rank Distribution ── #}
-                                                        <div class="tab-pane fade show active" id="taxRank{{ cid }}" role="tabpanel">
+                                                        <div class="tab-pane fade {% if not tax.sunburst_plot %}show active{% endif %}" id="taxRank{{ cid }}" role="tabpanel">
                                                             {% if tax.rank_distribution %}
                                                                 <div class="table-responsive mt-2" style="max-height: 350px; overflow-y: auto;">
                                                                     <table class="table table-sm table-striped w-100">
@@ -803,7 +883,7 @@
                                                         </div>
 
                                                         {# ── Invalid Entries ── #}
-                                                        {% if tax.taxonomy is not string %}
+                                                        {% if tax.taxonomy is not none and tax.taxonomy is not string %}
                                                             <div class="tab-pane fade" id="taxInvalid{{ cid }}" role="tabpanel">
                                                                 <div class="alert alert-warning small py-2 mt-2">
                                                                     These entries could not be matched against the NCBI taxonomy database. Check for spelling errors, synonyms, or outdated names.
@@ -880,6 +960,110 @@
                                                                         </table>
                                                                     </div>
                                                                 {% endif %}
+                                                            </div>
+                                                        {% endif %}
+
+                                                    </div>{# /tab-content #}
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                        <!-- UniProt/SwissProt Tab -->
+                                        {% if col.uniprot and col.uniprot.is_uniprot %}
+                                            {% set up = col.uniprot %}
+                                            {% set ucid = col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize %}
+                                            <div class="tab-pane fade" id="uniprotStats{{ ucid }}" role="tabpanel"
+                                                 aria-labelledby="uniprot-stats-tab{{ ucid }}">
+                                                <div class="mt-3">
+
+                                                    {# ── Status banner ── #}
+                                                    {% if not up.invalid_values %}
+                                                        <div class="alert alert-success d-flex align-items-center gap-2 py-2">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>
+                                                            All values matched against UniProt/SwissProt successfully.
+                                                        </div>
+                                                    {% else %}
+                                                        <div class="alert alert-danger d-flex align-items-center gap-2 py-2">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
+                                                            <span>{{ up.invalid_values | length }} value{{ '' if up.invalid_values | length == 1 else 's' }} could not be matched against UniProt/SwissProt.</span>
+                                                        </div>
+                                                    {% endif %}
+
+                                                    <div class="small text-muted mb-2">
+                                                        <strong>Match type:</strong> {{ up.match_type.replace('_', ' ') | title }}
+                                                        {% if up.validity_rate is not none %}
+                                                            &middot; <strong>Validity rate:</strong> {{ (up.validity_rate * 100) | round(1) }}%
+                                                        {% endif %}
+                                                    </div>
+
+                                                    {# ── Sub-tabs ── #}
+                                                    <ul class="nav nav-tabs mt-2" id="uniprotSubTab{{ ucid }}" role="tablist">
+                                                        {% if up.invalid_values %}
+                                                            <li class="nav-item" role="presentation">
+                                                                <button class="nav-link active" data-bs-toggle="tab"
+                                                                        data-bs-target="#uniprotInvalid{{ ucid }}" type="button" role="tab">
+                                                                    Invalid Values
+                                                                    <span class="badge bg-danger ms-1" style="font-size:.7em;">{{ up.invalid_values | length }}</span>
+                                                                </button>
+                                                            </li>
+                                                        {% endif %}
+                                                        {% if up.outdated_names %}
+                                                            <li class="nav-item" role="presentation">
+                                                                <button class="nav-link {% if not up.invalid_values %}active{% endif %}" data-bs-toggle="tab"
+                                                                        data-bs-target="#uniprotOutdated{{ ucid }}" type="button" role="tab">
+                                                                    Outdated Names
+                                                                    <span class="badge bg-warning text-dark ms-1" style="font-size:.7em;">{{ up.outdated_names | length }}</span>
+                                                                </button>
+                                                            </li>
+                                                        {% endif %}
+                                                    </ul>
+
+                                                    <div class="tab-content mt-2" id="uniprotSubContent{{ ucid }}">
+
+                                                        {# ── Invalid Values ── #}
+                                                        {% if up.invalid_values %}
+                                                            <div class="tab-pane fade show active" id="uniprotInvalid{{ ucid }}" role="tabpanel">
+                                                                <div class="table-responsive mt-1" style="max-height: 350px; overflow-y: auto;">
+                                                                    <table class="table table-sm table-striped w-100">
+                                                                        <thead class="sticky-top bg-light">
+                                                                        <tr><th>#</th><th>Value</th></tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                        {% for val in up.invalid_values %}
+                                                                            <tr>
+                                                                                <td class="text-muted">{{ loop.index }}</td>
+                                                                                <td>{{ val }}</td>
+                                                                            </tr>
+                                                                        {% endfor %}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                            </div>
+                                                        {% endif %}
+
+                                                        {# ── Outdated Names ── #}
+                                                        {% if up.outdated_names %}
+                                                            <div class="tab-pane fade {% if not up.invalid_values %}show active{% endif %}" id="uniprotOutdated{{ ucid }}" role="tabpanel">
+                                                                <div class="alert alert-warning small py-2 mt-2">
+                                                                    These protein names are recognised but have been replaced by a current primary name. Consider updating them for consistency.
+                                                                </div>
+                                                                <div class="table-responsive mt-1" style="max-height: 350px; overflow-y: auto;">
+                                                                    <table class="table table-sm table-striped w-100">
+                                                                        <thead class="sticky-top bg-light">
+                                                                        <tr>
+                                                                            <th>Used Name</th>
+                                                                            <th>Current Primary Name</th>
+                                                                        </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                        {% for used, current in up.outdated_names.items() %}
+                                                                            <tr>
+                                                                                <td class="text-warning-emphasis">{{ used }}</td>
+                                                                                <td class="fst-italic">{{ current }}</td>
+                                                                            </tr>
+                                                                        {% endfor %}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
                                                             </div>
                                                         {% endif %}
 
@@ -2361,6 +2545,22 @@
 <script src="https://cdn.datatables.net/2.3.1/js/dataTables.bootstrap5.min.js" defer></script>
 <script src="https://cdn.datatables.net/responsive/3.0.4/js/dataTables.responsive.min.js" defer></script>
 <script src="https://cdn.datatables.net/responsive/3.0.4/js/responsive.bootstrap5.min.js" defer></script>
+
+<script>
+/* ── Plotly resize on tab activation ──
+   Plotly computes width = 0 when a tab-pane is hidden (display:none).
+   Bootstrap fires 'shown.bs.tab' after the pane becomes visible —
+   at that point we can read the real container width and relayout.
+   Note: Plotly uses class 'plotly-graph-div', not 'js-plotly-plot'. */
+document.addEventListener('shown.bs.tab', function (e) {
+  const pane = document.querySelector(e.target.getAttribute('data-bs-target'));
+  if (!pane) return;
+  pane.querySelectorAll('.plotly-graph-div').forEach(function (plot) {
+    Plotly.relayout(plot, { autosize: true });
+  });
+});
+</script>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const itemsPerPage = {{ items_per_page }};
@@ -2576,12 +2776,13 @@
             'missing','constant','correlation','infinity','sparse','outliers',
             'imbalanced','nzv','rare','mixedvalues','invalidseqs',
             'ambiguousbases','rcduplicates','lowcomplexity',
-            'taxonomyinvalid','annotationinvalid','dataanomalies'
+            'taxonomyinvalid','annotationinvalid','uniprotinvalid','dataanomalies'
         ];
 
         // Composite filters: one button matches if ANY of the listed flags is 'yes'
         const COMPOSITE_QUALITY = {
             'taxonomy': ['taxonomyinvalid', 'taxonomyvalid', 'taxonomynotchecked'],
+            'uniprot': ['uniprotinvalid', 'uniprotvalid'],
         };
 
         function matchesQuality(card, q) {
