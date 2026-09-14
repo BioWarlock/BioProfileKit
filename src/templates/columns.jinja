@@ -157,6 +157,7 @@
                                     <button class="btn btn-sm cbf-danger"    data-quality="infinity"      title="Contains Inf/-Inf — will crash most ML pipelines">∞ Infinity</button>
                                     <button class="btn btn-sm cbf-warning"   data-quality="sparse"        title="≥ 50% zero values — sparse feature">Sparse</button>
                                     <button class="btn btn-sm cbf-warning"   data-quality="outliers"      title="≥ 5% outliers detected (adjusted IQR)">Outliers</button>
+                                    <button class="btn btn-sm cbf-secondary" data-quality="skewed"        title="|skewness| > 0.5 — asymmetric distribution">Skewed</button>
                                     <!-- Categorical -->
                                     <button class="btn btn-sm cbf-warning"   data-quality="imbalanced"    title="Class imbalance ratio > 3">Imbalanced</button>
                                     <button class="btn btn-sm cbf-danger"    data-quality="nzv"           title="Near-zero variance — top category ≥ 95%">NZV</button>
@@ -167,6 +168,8 @@
                                     <button class="btn btn-sm cbf-warning"   data-quality="ambiguousbases" title="Mean ambiguous base ratio (N/R/Y) > 0 — possible low sequencing quality">Ambiguous Bases</button>
                                     <button class="btn btn-sm cbf-warning"   data-quality="rcduplicates"  title="Reverse-complement duplicate sequences detected">RC Duplicates</button>
                                     <button class="btn btn-sm cbf-warning"   data-quality="lowcomplexity" title="Low sequence complexity (Shannon entropy < 50%) — possible repeats or poly-A tails">Low Complexity</button>
+                                    <button class="btn btn-sm cbf-secondary" data-quality="diffseqlength" title="Sequences in this column have differing lengths">Diff Sequence Length</button>
+                                    <button class="btn btn-sm cbf-warning"   data-quality="diffunits"     title="More than one unit detected in this column">Diff Units</button>
                                     <!-- Biological metadata -->
                                     <button class="btn btn-sm cbf-danger"    data-quality="taxonomyinvalid"      title="Taxonomy identifiers failed validation">Taxonomy Invalid</button>
                                     <button class="btn btn-sm cbf-success"   data-quality="taxonomyvalid"        title="Taxonomy validated successfully">Taxonomy Valid</button>
@@ -212,12 +215,13 @@
             <div id="columns-container">
                 {% for col in columns %}
                     {# fns = filter namespace — separate from badge ns #}
-                    {% set fns = namespace(has_inf='no',is_sparse='no',has_outliers='no',imbalanced='no',nzv='no',rare='no',ambiguous_bases='no',rc_duplicates='no',low_complexity='no',mixed_values='no',data_anomalies='no',taxonomy_invalid='no',taxonomy_valid='no',taxonomy_not_checked='no',annotation_invalid='no',uniprot_invalid='no',uniprot_valid='no') %}
+                    {% set fns = namespace(has_inf='no',is_sparse='no',has_outliers='no',imbalanced='no',nzv='no',rare='no',ambiguous_bases='no',rc_duplicates='no',low_complexity='no',mixed_values='no',data_anomalies='no',taxonomy_invalid='no',taxonomy_valid='no',taxonomy_not_checked='no',annotation_invalid='no',uniprot_invalid='no',uniprot_valid='no',skewed='no',diff_seq_length='no',diff_units='no') %}
                     {% for ov in overview %}{% if ov.name == col.name %}
                         {% set _n = col.number if col.number and col.number > 0 else 1 %}
                         {% if ov.infinity is defined and ov.infinity > 0 %}{% set fns.has_inf = 'yes' %}{% endif %}
                         {% if ov.zero_count is defined and (ov.zero_count / _n) >= 0.5 %}{% set fns.is_sparse = 'yes' %}{% endif %}
                         {% if ov.outliers and ((ov.outliers.n_lower_iqr + ov.outliers.n_upper_iqr) / _n) >= 0.05 %}{% set fns.has_outliers = 'yes' %}{% endif %}
+                        {% if ov.skewness is not none and (ov.skewness | abs) > 0.5 %}{% set fns.skewed = 'yes' %}{% endif %}
                     {% endif %}{% endfor %}
                     {% for cat in categorical %}{% if cat.name == col.name %}
                         {% if cat.cib_ratio is defined and cat.cib_ratio > 3 %}{% set fns.imbalanced = 'yes' %}{% endif %}
@@ -228,13 +232,20 @@
                         {% if col.dna_rna_data.ambiguous_base_ratio is defined and col.dna_rna_data.ambiguous_base_ratio.mean > 0 %}{% set fns.ambiguous_bases = 'yes' %}{% endif %}
                         {% if col.dna_rna_data.reverse_complement_ratio is defined and col.dna_rna_data.reverse_complement_ratio > 0 %}{% set fns.rc_duplicates = 'yes' %}{% endif %}
                         {% if col.dna_rna_data.low_complexity is defined and col.dna_rna_data.low_complexity.mean < 50 %}{% set fns.low_complexity = 'yes' %}{% endif %}
+                        {% if col.dna_rna_data.length_stats is defined and col.dna_rna_data.length_stats.min != col.dna_rna_data.length_stats.max %}{% set fns.diff_seq_length = 'yes' %}{% endif %}
                     {% endif %}
                     {% if col.sequence != 'None' and col.protein_data %}
                         {% if col.protein_data.low_complexity is defined and col.protein_data.low_complexity.mean < 50 %}{% set fns.low_complexity = 'yes' %}{% endif %}
                         {% if col.protein_data.stop_codon_ratio is defined and col.protein_data.stop_codon_ratio > 0 %}{% set fns.data_anomalies = 'yes' %}{% endif %}
+                        {% if col.protein_data.length_stats is defined and col.protein_data.length_stats.min != col.protein_data.length_stats.max %}{% set fns.diff_seq_length = 'yes' %}{% endif %}
                     {% endif %}
                     {% if col.measurement_data and col.measurement_data.with_measurement %}{% set fns.mixed_values = 'yes' %}{% endif %}
+                    {% if col.measurement_data and col.measurement_data.unit_counts and col.measurement_data.unit_counts | length > 1 %}{% set fns.diff_units = 'yes' %}{% endif %}
                     {% if col.suspect_values is not none and not (col.invalid_seqs and col.invalid_seqs|length > 0) %}{% set fns.data_anomalies = 'yes' %}{% endif %}
+                    {# tax_status = single source of truth for taxonomy valid/invalid,
+                       correctly distinguishing the taxid-based path (col.taxonomy.taxonomy
+                       is always None there — validity lives in col.taxonomy.taxid instead)
+                       from the name-based path (validity lives in col.taxonomy.taxonomy). #}
                     {% set tax_status = namespace(invalid=false, valid=false, invalid_count=0) %}
                     {% if col.taxonomy and col.taxonomy.is_taxonomy %}
                         {% if col.taxonomy.taxid is not none %}
@@ -278,6 +289,9 @@
                          data-lowcomplexity="{{ fns.low_complexity }}"
                          data-mixedvalues="{{ fns.mixed_values }}"
                          data-dataanomalies="{{ fns.data_anomalies }}"
+                         data-skewed="{{ fns.skewed }}"
+                         data-diffseqlength="{{ fns.diff_seq_length }}"
+                         data-diffunits="{{ fns.diff_units }}"
                          data-taxonomyinvalid="{{ fns.taxonomy_invalid }}"
                          data-taxonomyvalid="{{ fns.taxonomy_valid }}"
                          data-taxonomynotchecked="{{ fns.taxonomy_not_checked }}"
@@ -361,7 +375,36 @@
                                     </span>
                                 {% endif %}
 
-                                <!-- TODO: Add missing badges - Skewness, Duplicates, Diff Sequence Length, Biological Naming, Diff Units -->
+                                <!-- TODO: Add missing badges - Duplicates, Biological Naming -->
+                                {# ── Skewness ── #}
+                                {% for ov in overview %}{% if ov.name == col.name and ov.skewness is not none %}
+                                    {% set sk_abs = ov.skewness | abs %}
+                                    {% if sk_abs > 1 %}
+                                        <span class="badge bg-warning text-dark me-2" title="Skewness: {{ ov.skewness | round(2) }} (|skewness| > 1)">Highly skewed</span>
+                                    {% elif sk_abs > 0.5 %}
+                                        <span class="badge bg-secondary me-2" title="Skewness: {{ ov.skewness | round(2) }} (|skewness| > 0.5)">Moderate skew</span>
+                                    {% endif %}
+                                {% endif %}{% endfor %}
+                                {# ── Diff Sequence Length ── #}
+                                {% if col.sequence != 'None' and col.dna_rna_data and col.dna_rna_data.length_stats is defined and col.dna_rna_data.length_stats.min != col.dna_rna_data.length_stats.max %}
+                                    <span class="badge bg-secondary me-2"
+                                          title="Sequence lengths range from {{ col.dna_rna_data.length_stats.min }} to {{ col.dna_rna_data.length_stats.max }} (mean {{ col.dna_rna_data.length_stats.mean }})">
+                                        Diff Sequence Length
+                                    </span>
+                                {% elif col.sequence != 'None' and col.protein_data and col.protein_data.length_stats is defined and col.protein_data.length_stats.min != col.protein_data.length_stats.max %}
+                                    <span class="badge bg-secondary me-2"
+                                          title="Sequence lengths range from {{ col.protein_data.length_stats.min }} to {{ col.protein_data.length_stats.max }} (mean {{ col.protein_data.length_stats.mean }})">
+                                        Diff Sequence Length
+                                    </span>
+                                {% endif %}
+                                {# ── Diff Units ── #}
+                                {% if col.measurement_data and col.measurement_data.unit_counts and col.measurement_data.unit_counts | length > 1 %}
+                                    <span class="badge bg-warning text-dark me-2"
+                                          title="{{ col.measurement_data.unit_counts | length }} different units detected in this column">
+                                        Diff Units
+                                    </span>
+                                {% endif %}
+
                                 {# ── DNA/RNA quality badges ── #}
                                 {% if col.sequence != 'None' and col.dna_rna_data %}
                                     {# Ambiguous Bases (N/R/Y) #}
@@ -2773,9 +2816,9 @@ document.addEventListener('shown.bs.tab', function (e) {
 
         // All data-quality keys that constitute an "alert" for the Any Alert shortcut
         const ALERT_FLAGS = [
-            'missing','constant','correlation','infinity','sparse','outliers',
+            'missing','constant','correlation','infinity','sparse','outliers','skewed',
             'imbalanced','nzv','rare','mixedvalues','invalidseqs',
-            'ambiguousbases','rcduplicates','lowcomplexity',
+            'ambiguousbases','rcduplicates','lowcomplexity','diffseqlength','diffunits',
             'taxonomyinvalid','annotationinvalid','uniprotinvalid','dataanomalies'
         ];
 
