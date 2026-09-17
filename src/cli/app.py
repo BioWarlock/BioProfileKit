@@ -6,6 +6,8 @@ from pathlib import Path
 import click
 import pandas as pd
 from termcolor import colored
+
+from biological.taxonomy_utils import TaxonomyLineageResolver
 from biological.uniprot_swissprot import diagnose_protein_name_mismatch
 from analysis.categorical_analysis import categorical_columns
 from analysis.multivariate_analysis import multivariate_analysis
@@ -65,9 +67,9 @@ def cli(input: str, tax: bool = False, uniprot: bool = False, func: str = None,
         valid_names, valid_tax_ids, name_to_rank, taxid_to_rank, name_to_scientific = build_lookups(tax_df)
         name_to_taxid = build_name_to_taxid(tax_df)
         raw_tax_df = get_taxonomy_raw()
+        lineage_resolver = TaxonomyLineageResolver(raw_tax_df)
         done(f"{len(valid_names):,} scientific names")
 
-    go_lookup = cog_lookup = None
     if func == "go":
         done = print_step("Building GO lookup")
         go_lookup = build_annotation_lookup(get_gene_ontology(), "GO_ID")
@@ -101,10 +103,10 @@ def cli(input: str, tax: bool = False, uniprot: bool = False, func: str = None,
     for col_ov in column_overviews:
         if tax and tax_df is not None:
             col_ov.taxonomy = taxonomy_flags(df, col_ov.name, valid_names, valid_tax_ids, name_to_rank, taxid_to_rank,
-                                             name_to_scientific, name_to_taxid, raw_tax_df)
-
-        if func and col_ov.taxonomy is not None:
+                                             name_to_scientific, name_to_taxid, lineage_resolver)
+        if func is not None:
             col_ov.annotation = [annotation_flags(df, col_ov.name, func)]
+            is_func_anno = col_ov.annotation is not None
 
         if hasattr(col_ov, "top_10") and isinstance(col_ov.top_10, pd.Series):
             col_ov.top_10_items = list(col_ov.top_10.items())
@@ -135,8 +137,10 @@ def cli(input: str, tax: bool = False, uniprot: bool = False, func: str = None,
         is_sequence = col_ov.sequence != 'None'
         is_taxonomy = ((col_ov.taxonomy is not None and col_ov.taxonomy.is_taxonomy) or getattr(col_ov, 'taxonomy_candidate', None))
         is_measurement = col_ov.measurement_data is not None
+
         #ToDo add GO & COG
-        if uniprot_lookups and not is_sequence and not is_taxonomy and not is_measurement:
+
+        if uniprot_lookups and not is_sequence and not is_taxonomy and not is_measurement and not is_func_anno:
             result = uniprot_flags(df, col_ov.name, uniprot_lookups)
             col_ov.uniprot = result
             if result.is_uniprot:

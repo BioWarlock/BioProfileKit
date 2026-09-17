@@ -1,0 +1,54 @@
+from enum import Enum
+
+
+class COGColor(Enum):
+    """
+    Source: NCBI COG2024, cog-24.fun.tab
+    (https://ftp.ncbi.nih.gov/pub/COG/COG2024/data/cog-24.fun.tab)
+    """
+    J = ("INFORMATION STORAGE AND PROCESSING", "#FCCCFC", "Translation, ribosomal structure and biogenesis")
+    A = ("INFORMATION STORAGE AND PROCESSING", "#FCDCFC", "RNA processing and modification")
+    K = ("INFORMATION STORAGE AND PROCESSING", "#FCDCEC", "Transcription")
+    L = ("INFORMATION STORAGE AND PROCESSING", "#FCDCDC", "Replication, recombination and repair")
+    B = ("INFORMATION STORAGE AND PROCESSING", "#FCDCCC", "Chromatin structure and dynamics")
+    D = ("CELLULAR PROCESSES AND SIGNALING", "#FCFCCC", "Cell cycle control, cell division, chromosome partitioning")
+    Y = ("CELLULAR PROCESSES AND SIGNALING", "#FCFCBC", "Nuclear structure")
+    V = ("CELLULAR PROCESSES AND SIGNALING", "#FCFCAC", "Defense mechanisms")
+    T = ("CELLULAR PROCESSES AND SIGNALING", "#ECFCAC", "Signal transduction mechanisms")
+    M = ("CELLULAR PROCESSES AND SIGNALING", "#DCFCAC", "Cell wall/membrane/envelope biogenesis")
+    N = ("CELLULAR PROCESSES AND SIGNALING", "#CCFCAC", "Cell motility")
+    Z = ("CELLULAR PROCESSES AND SIGNALING", "#BCFCAC", "Cytoskeleton")
+    W = ("CELLULAR PROCESSES AND SIGNALING", "#ACFCAC", "Extracellular structures")
+    U = ("CELLULAR PROCESSES AND SIGNALING", "#9CFCAC", "Intracellular trafficking, secretion, and vesicular transport")
+    O = ("CELLULAR PROCESSES AND SIGNALING", "#9CFC9C", "Posttranslational modification, protein turnover, chaperones")
+    X = ("CELLULAR PROCESSES AND SIGNALING", "#9CFC9C", "Mobilome: prophages, transposons")
+    C = ("METABOLISM", "#BCFCFC", "Energy production and conversion")
+    G = ("METABOLISM", "#CCFCFC", "Carbohydrate transport and metabolism")
+    E = ("METABOLISM", "#DCFCFC", "Amino acid transport and metabolism")
+    F = ("METABOLISM", "#DCECFC", "Nucleotide transport and metabolism")
+    H = ("METABOLISM", "#DCDCFC", "Coenzyme transport and metabolism")
+    I = ("METABOLISM", "#DCCCFC", "Lipid transport and metabolism")
+    P = ("METABOLISM", "#CCCCFC", "Inorganic ion transport and metabolism")
+    Q = ("METABOLISM", "#BCCCFC", "Secondary metabolites biosynthesis, transport and catabolism")
+    R = ("POORLY CHARACTERIZED", "#E0E0E0", "General function prediction only")
+    S = ("POORLY CHARACTERIZED", "#CCCCCC", "Function unknown")
+
+    @property
+    def group(self) -> str:
+        return self.value[0]
+
+    @property
+    def color(self) -> str:
+        return self.value[1]
+
+    @property
+    def description(self) -> str:
+        return self.value[2]
+
+
+COG_GROUP_ORDER = [
+    "INFORMATION STORAGE AND PROCESSING",
+    "CELLULAR PROCESSES AND SIGNALING",
+    "METABOLISM",
+    "POORLY CHARACTERIZED",
+]

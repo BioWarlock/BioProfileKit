@@ -878,7 +878,7 @@
                                                         {# ── Taxonomic Composition (Sunburst) ── #}
                                                         {% if tax.sunburst_plot %}
                                                             <div class="tab-pane fade show active" id="taxSunburst{{ cid }}" role="tabpanel">
-                                                                <div class="plot-container mt-2" style="max-height: fit-content; overflow-x: auto;">
+                                                                <div class="plot-container mt-2" style="max-height: fit-content; overflow-x: auto;display: flex; justify-content: center;">
                                                                     <figure role="img" aria-label="Taxonomic composition sunburst for column {{ col.name }}" style="width:100%;">
                                                                         {{ tax.sunburst_plot | safe }}
                                                                     </figure>
