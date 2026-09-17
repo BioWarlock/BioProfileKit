@@ -71,7 +71,6 @@ def _download_gene_ontology():
     df = pd.DataFrame(data, columns=["GO_ID", "Name", "Namespace"])
     if Path(obo_path).is_file():
         pathlib.Path(obo_path).unlink(missing_ok=True)
-        #print(f"Removed {obo_path}")
     return df
 
 
