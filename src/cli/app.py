@@ -110,7 +110,7 @@ def cli(input: str, tax: bool = False, uniprot: bool = False, func: str = None,
 
         if hasattr(col_ov, "top_10") and isinstance(col_ov.top_10, pd.Series):
             col_ov.top_10_items = list(col_ov.top_10.items())
-
+            print("Top 10", col_ov.top_10_items)
         if col_ov.sequence == 'dna':
             info(f"DNA sequences: {col_ov.name}")
             col_ov.dna_rna_data = dna_rna_columns(df[col_ov.name], k=kmer, top_n=top_n, invalid=col_ov.invalid_seqs)

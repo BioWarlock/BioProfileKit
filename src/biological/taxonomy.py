@@ -133,7 +133,7 @@ def is_taxonomy(col: pd.Series, valid_names: set, name_to_rank: dict, name_to_sc
 
     is_valid = tmp.isin(valid_unique)
     validity_rate = is_valid.sum() / len(col)
-    names = pd.Series([])
+
     if validity_rate < threshold:
         names = tmp.astype(str).str.extract(r'^([^(]+)')[0].str.strip()
         cleaned_uniques = pd.unique(names.dropna())
@@ -143,6 +143,8 @@ def is_taxonomy(col: pd.Series, valid_names: set, name_to_rank: dict, name_to_sc
 
         if validity_rate_cleaned > validity_rate:
             validity_rate = validity_rate_cleaned
+    else:
+        names = tmp.astype(str).str.strip()
 
     if validity_rate > threshold:
         distribution, is_mixed, invalid_names = rank_distribution(names, name_to_rank)

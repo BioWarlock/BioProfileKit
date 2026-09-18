@@ -77,7 +77,6 @@ def annotation_flags(df, col, annotation_type) -> AnnotationFlags | None:
             matched_column = None
         if matched_column is not None:
             term_counts, namespace_counts, go_invalid = build_go_counts(df[col], go_df, matched_column)
-            print(len(go_invalid))
             go_bar = go_term_barchart(term_counts, id_column=matched_column)
             go_name_count = go_namespace_donut(namespace_counts)
     else:
@@ -130,7 +129,6 @@ def build_cog_counts(col: pd.Series, cog__df: pd.DataFrame, cog_col: str = "COG_
 
     values = col.dropna().astype(str).str.strip().to_frame(cog_col)
     invalid_values = sorted(set(values[cog_col].unique()) - set(cog_categories[cog_col]))
-    print(invalid_values)
     invalid_values = invalid_values if invalid_values else None
     matched = values.merge(cog_categories, on=cog_col, how="inner")
 
