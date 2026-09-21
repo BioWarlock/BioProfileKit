@@ -9,7 +9,7 @@ import os
 # ---------------------------------------------------------------------------
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from analysis.numeric_analysis import numeric_columns
+from analysis.numeric_analysis import numeric_columns, _safe_round
 
 
 # ---------------------------------------------------------------------------
@@ -385,3 +385,63 @@ class TestCoverageDepth:
     def test_outliers_detected_in_spiked_coverage(self, coverage_df):
         result = numeric_columns(coverage_df, "coverage")
         assert result.outliers is not None
+
+
+class TestSafeRound:
+    def test_rounds_to_default_two_decimals(self):
+        assert _safe_round(3.14159) == 3.14
+
+    def test_rounds_to_custom_decimals(self):
+        assert _safe_round(3.14159, decimals=4) == 3.1416
+
+    def test_returns_nan_for_nan_input(self):
+        assert np.isnan(_safe_round(np.nan))
+
+    def test_returns_nan_for_infinite_input(self):
+        assert np.isnan(_safe_round(np.inf))
+        assert np.isnan(_safe_round(-np.inf))
+
+    def test_returns_zero_unchanged(self):
+        assert _safe_round(0.0) == 0.0
+
+    def test_returns_negative_value_rounded(self):
+        assert _safe_round(-2.71828) == -2.72
+
+
+# ---------------------------------------------------------------------------
+# Non-numeric / object-dtype columns (root cause of the all-NaN TypeError)
+# ---------------------------------------------------------------------------
+
+class TestNonNumericCoercion:
+    def test_object_dtype_all_none_does_not_raise(self):
+        """dtype=object all-None column must not crash np.isfinite (the
+        original bug: an all-None column defaults to dtype=object, and
+        np.isfinite raises TypeError on object dtype even when empty)."""
+        df = pd.DataFrame({"val": pd.Series([None, None, None], dtype=object)})
+        result = numeric_columns(df, "val")
+        assert np.isnan(result.mean)
+        assert result.outliers is None
+
+    def test_mixed_numeric_and_unparseable_strings_are_dropped(self):
+        """Non-numeric strings mixed with numeric-looking values must be
+        coerced to NaN and excluded, not crash or corrupt the statistics."""
+        df = pd.DataFrame({"val": [1.0, 2.0, 3.0, "not_a_number", "also_bad"]})
+        result = numeric_columns(df, "val")
+        assert result.mean == pytest.approx(2.0, abs=0.01)
+        assert result.min == pytest.approx(1.0, abs=0.01)
+        assert result.max == pytest.approx(3.0, abs=0.01)
+
+    def test_numeric_strings_are_parsed(self):
+        """String-encoded numbers (e.g. read from CSV) should still be
+        treated as numeric values."""
+        df = pd.DataFrame({"val": ["1.0", "2.0", "3.0", "4.0"]})
+        result = numeric_columns(df, "val")
+        assert result.mean == pytest.approx(2.5, abs=0.01)
+        assert result.zero_count == 0
+
+    def test_all_unparseable_strings_returns_nan_metrics(self):
+        df = pd.DataFrame({"val": ["foo", "bar", "baz"]})
+        result = numeric_columns(df, "val")
+        assert np.isnan(result.mean)
+        assert result.value_counts == {}
+        assert result.outliers is None

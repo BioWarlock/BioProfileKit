@@ -104,26 +104,37 @@ class TestEntropyThresholds:
 # ---------------------------------------------------------------------------
 
 class TestGetInvalid:
-    def test_returns_empty_list_for_no_indices(self):
-        assert _get_invalid(["A", "B", "C"], []) == []
+    def test_returns_empty_list_for_no_positions(self):
+        assert _get_invalid(["A", "B", "C"], [0, 1, 2], []) == []
 
-    def test_returns_empty_list_for_none_indices(self):
-        assert _get_invalid(["A", "B", "C"], None) == []
+    def test_returns_empty_list_for_none_positions(self):
+        assert _get_invalid(["A", "B", "C"], [0, 1, 2], None) == []
 
-    def test_returns_values_at_given_indices(self):
+    def test_returns_index_value_pairs_at_given_positions(self):
         values = ["ATCG", "XXXX", "GCTA", "????"]
-        result = _get_invalid(values, [1, 3])
-        assert result == ["XXXX", "????"]
+        indices = [10, 11, 12, 13]
+        result = _get_invalid(values, indices, [1, 3])
+        assert result == [(11, "XXXX"), (13, "????")]
 
-    def test_single_invalid_index(self):
+    def test_single_invalid_position(self):
         values = ["ATCG", "INVALID"]
-        result = _get_invalid(values, [1])
-        assert result == ["INVALID"]
+        indices = [0, 1]
+        result = _get_invalid(values, indices, [1])
+        assert result == [(1, "INVALID")]
 
-    def test_all_indices_invalid(self):
+    def test_all_positions_invalid(self):
         values = ["A", "B", "C"]
-        result = _get_invalid(values, [0, 1, 2])
-        assert result == ["A", "B", "C"]
+        indices = [0, 1, 2]
+        result = _get_invalid(values, indices, [0, 1, 2])
+        assert result == [(0, "A"), (1, "B"), (2, "C")]
+
+    def test_uses_original_dataframe_indices_not_positions(self):
+        """indices may differ from list positions after NaNs were dropped —
+        the returned tuples must carry the original index, not the position."""
+        values = ["ATCG", "XXXX", "GCTA"]
+        indices = [5, 8, 9]  # e.g. rows 6 and 7 were dropped as NaN
+        result = _get_invalid(values, indices, [1])
+        assert result == [(8, "XXXX")]
 
 
 # ---------------------------------------------------------------------------

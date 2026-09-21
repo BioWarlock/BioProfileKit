@@ -46,18 +46,18 @@ def annotation_flags(df, col, annotation_type) -> AnnotationFlags | None:
     if annotation_type == "cog":
         cog_df = get_clusters_of_orthologous_groups()
         id_results = validate_annotation(df[col], cog_df, "COG_ID")
-        name_results = validate_annotation(df[col], cog_df, "COG name")
         if id_results is not None:
             results = id_results
             matched_column = "COG_ID"
-        elif name_results is not None:
+        elif "COG name" in cog_df.columns:
+            name_results = validate_annotation(df[col], cog_df, "COG name")
             results = name_results
-            matched_column = "COG name"
+            matched_column = "COG name" if name_results is not None else None
         else:
             results = None
             matched_column = None
 
-        if matched_column is not None:
+        if matched_column is not None and "Functional Category" in cog_df.columns:
             counts_df, cog_invalid = build_cog_counts(df[col], cog_df, cog_col=matched_column)
             cog_barchart = cog_category_barchart(counts_df)
             cog_group = cog_group_donut(counts_df)
@@ -65,17 +65,17 @@ def annotation_flags(df, col, annotation_type) -> AnnotationFlags | None:
     elif annotation_type == "go":
         go_df = get_gene_ontology()
         go_id_res = validate_annotation(df[col], go_df, "GO_ID")
-        go_name_res = validate_annotation(df[col], go_df, "Name")
         if go_id_res is not None:
             results = go_id_res
             matched_column = "GO_ID"
-        elif go_name_res is not None:
+        elif "Name" in go_df.columns:
+            go_name_res = validate_annotation(df[col], go_df, "Name")
             results = go_name_res
-            matched_column = "Name"
+            matched_column = "Name" if go_name_res is not None else None
         else:
             results = None
             matched_column = None
-        if matched_column is not None:
+        if matched_column is not None and "Namespace" in go_df.columns:
             term_counts, namespace_counts, go_invalid = build_go_counts(df[col], go_df, matched_column)
             go_bar = go_term_barchart(term_counts, id_column=matched_column)
             go_name_count = go_namespace_donut(namespace_counts)
@@ -206,7 +206,7 @@ def build_go_counts(col: pd.Series, go_df: pd.DataFrame, go_col: str = "GO_ID", 
 
     matched = values.merge(go_df, on=go_col, how="inner")
     if matched.empty:
-        return pd.DataFrame(columns=list(go_df.columns+["count"])),pd.DataFrame(columns=["Namespace", "count"]), invalid_values
+        return pd.DataFrame(columns=list(go_df.columns) + ["count"]), pd.DataFrame(columns=["Namespace", "count"]), invalid_values
 
     term_counts = matched.groupby(list(go_df.columns)).size().reset_index(name="count").sort_values(by="count", ascending=False).head(top_n)
     namespace_counts = matched["Namespace"].value_counts().rename_axis("Namespace").reset_index(name="count")
