@@ -175,7 +175,9 @@
                                     <button class="btn btn-sm cbf-success"   data-quality="taxonomyvalid"        title="Taxonomy validated successfully">Taxonomy Valid</button>
                                     <button class="btn btn-sm cbf-warning"   data-quality="taxonomynotchecked"   title="Taxonomy candidate column detected but not validated — run with --tax">Taxonomy Not Checked</button>
                                     <button class="btn btn-sm cbf-secondary" data-quality="taxonomy"             title="All columns with taxonomy (valid, invalid or unchecked)">Taxonomy (All)</button>
-                                    <button class="btn btn-sm cbf-danger"    data-quality="annotationinvalid"    title="Functional annotation failed controlled vocabulary check">Annotation Invalid</button>
+                                    <button class="btn btn-sm cbf-danger"    data-quality="annotationinvalid"    title="Functional annotation (COG/GO) failed controlled vocabulary check">Annotation Invalid</button>
+                                    <button class="btn btn-sm cbf-success"   data-quality="annotationvalid"      title="Functional annotation (COG/GO) validated successfully">Annotation Valid</button>
+                                    <button class="btn btn-sm cbf-secondary" data-quality="annotation"           title="All columns with functional annotation (valid or invalid)">Annotation (All)</button>
                                     <button class="btn btn-sm cbf-danger"    data-quality="uniprotinvalid"       title="UniProt/SwissProt identifiers failed validation">UniProt Invalid</button>
                                     <button class="btn btn-sm cbf-success"   data-quality="uniprotvalid"         title="UniProt/SwissProt validated successfully">UniProt Valid</button>
                                     <button class="btn btn-sm cbf-secondary" data-quality="uniprot"              title="All columns with UniProt/SwissProt metadata (valid or invalid)">UniProt (All)</button>
@@ -215,7 +217,37 @@
             <div id="columns-container">
                 {% for col in columns %}
                     {# fns = filter namespace — separate from badge ns #}
-                    {% set fns = namespace(has_inf='no',is_sparse='no',has_outliers='no',imbalanced='no',nzv='no',rare='no',ambiguous_bases='no',rc_duplicates='no',low_complexity='no',mixed_values='no',data_anomalies='no',taxonomy_invalid='no',taxonomy_valid='no',taxonomy_not_checked='no',annotation_invalid='no',uniprot_invalid='no',uniprot_valid='no',skewed='no',diff_seq_length='no',diff_units='no') %}
+                    {% set fns = namespace(has_inf='no',is_sparse='no',has_outliers='no',imbalanced='no',nzv='no',rare='no',ambiguous_bases='no',rc_duplicates='no',low_complexity='no',mixed_values='no',data_anomalies='no',taxonomy_invalid='no',taxonomy_valid='no',taxonomy_not_checked='no',annotation_invalid='no',annotation_valid='no',uniprot_invalid='no',uniprot_valid='no',skewed='no',diff_seq_length='no',diff_units='no') %}
+                    {# anno = the single AnnotationFlags object — app.py stores it wrapped in a
+                       one-item list (col_ov.annotation = [annotation_flags(...)]), so unwrap it
+                       once here rather than repeating the [0] indexing everywhere below. #}
+                    {% set anno = col.annotation[0] if col.annotation else none %}
+                    {% set anno_status = namespace(invalid=false, valid=false, invalid_count=0, kind=none) %}
+                    {% if anno and anno.is_annotation %}
+                        {% if anno.valid_annotation is string %}
+                            {% set anno_status.valid = true %}
+                        {% else %}
+                            {% set anno_status.invalid = true %}
+                            {% set anno_status.invalid_count = anno.valid_annotation | length %}
+                        {% endif %}
+                        {% if anno.cog_bar or anno.cog_group %}
+                            {% set anno_status.kind = 'cog' %}
+                        {% elif anno.go_bar or anno.go_name_count %}
+                            {% set anno_status.kind = 'go' %}
+                        {% endif %}
+                    {% endif %}
+                    {# anno_label / anno_label_lc = display name for the annotation type,
+                       computed once as plain if/elif/else (not a chained ternary — some
+                       template parsers choke on "'a' if x else 'b' if y else 'c'"). #}
+                    {% set anno_label = 'Functional Annotation' %}
+                    {% set anno_label_lc = 'functional annotation' %}
+                    {% if anno_status.kind == 'cog' %}
+                        {% set anno_label = 'COG' %}
+                        {% set anno_label_lc = 'COG' %}
+                    {% elif anno_status.kind == 'go' %}
+                        {% set anno_label = 'GO' %}
+                        {% set anno_label_lc = 'GO' %}
+                    {% endif %}
                     {% for ov in overview %}{% if ov.name == col.name %}
                         {% set _n = col.number if col.number and col.number > 0 else 1 %}
                         {% if ov.infinity is defined and ov.infinity > 0 %}{% set fns.has_inf = 'yes' %}{% endif %}
@@ -267,7 +299,8 @@
                     {% if tax_status.invalid %}{% set fns.taxonomy_invalid = 'yes' %}{% endif %}
                     {% if tax_status.valid %}{% set fns.taxonomy_valid = 'yes' %}{% endif %}
                     {% if col.taxonomy is defined and col.taxonomy is none and col.taxonomy_candidate %}{% set fns.taxonomy_not_checked = 'yes' %}{% endif %}
-                    {% if col.annotation and col.annotation.is_annotation and col.taxonomy.valid_annotation is not string %}{% set fns.annotation_invalid = 'yes' %}{% endif %}
+                    {% if anno_status.invalid %}{% set fns.annotation_invalid = 'yes' %}{% endif %}
+                    {% if anno_status.valid %}{% set fns.annotation_valid = 'yes' %}{% endif %}
                     {% if col.uniprot and col.uniprot.is_uniprot and col.uniprot.invalid_values %}{% set fns.uniprot_invalid = 'yes' %}{% endif %}
                     {% if col.uniprot and col.uniprot.is_uniprot and not col.uniprot.invalid_values %}{% set fns.uniprot_valid = 'yes' %}{% endif %}
                     <div class="card row mt-3 column-item" data-index="{{ loop.index0 }}"
@@ -296,6 +329,7 @@
                          data-taxonomyvalid="{{ fns.taxonomy_valid }}"
                          data-taxonomynotchecked="{{ fns.taxonomy_not_checked }}"
                          data-annotationinvalid="{{ fns.annotation_invalid }}"
+                         data-annotationvalid="{{ fns.annotation_valid }}"
                          data-uniprotinvalid="{{ fns.uniprot_invalid }}"
                          data-uniprotvalid="{{ fns.uniprot_valid }}"
                          style="display: {% if loop.index0 < items_per_page %}block{% else %}none{% endif %};">
@@ -314,8 +348,10 @@
                                 {% elif col.taxonomy is defined and col.taxonomy is none and col.taxonomy_candidate %}
                                     <span class="badge bg-warning text-dark me-2" title="Run with --tax to validate">Taxonomy Not Checked</span>
                                 {% endif %}
-                                {% if col.annotation and col.annotation.is_annotation and col.taxonomy.valid_annotation is not string %}
-                                    <span class="badge bg-danger me-2">Annotation invalid</span>
+                                {% if anno_status.invalid %}
+                                    <span class="badge bg-danger me-2" title="{{ anno_label_lc }} terms failed controlled vocabulary check">Annotation Invalid</span>
+                                {% elif anno_status.valid %}
+                                    <span class="badge bg-success me-2" title="{{ anno_label_lc }} terms validated successfully">Annotation Valid</span>
                                 {% endif %}
                                 {% if col.uniprot and col.uniprot.is_uniprot and col.uniprot.invalid_values %}
                                     <span class="badge bg-danger me-2" title="UniProt/SwissProt match type: {{ col.uniprot.match_type.replace('_', ' ') }}">UniProt Invalid</span>
@@ -579,11 +615,16 @@
                                                 <small>(run with <code>--tax</code> to enable)</small>
                                             </span><br>
                                         {% endif %}
-                                        {% if col.annotation and col.annotation.is_annotation %}
-                                            {% if col.annotation.valid_annotation is string %}
-                                                <strong>Functional Annotation:</strong> {{ col.annotation.valid_annotation }}<br>
-                                            {% else %}
-                                                <strong>Functional Annotation:</strong> Invalid<br>
+                                        {% if anno and anno.is_annotation %}
+                                            {% if anno_status.valid %}
+                                                <strong>Functional Annotation:</strong>
+                                                <span class="text-success">Valid</span><br>
+                                            {% elif anno_status.invalid %}
+                                                <strong>Functional Annotation:</strong>
+                                                <span class="text-danger">{{ anno_status.invalid_count }} invalid entr{{ 'y' if anno_status.invalid_count == 1 else 'ies' }}</span><br>
+                                            {% endif %}
+                                            {% if anno_status.kind %}
+                                                <strong>Annotation type:</strong> {{ 'COG' if anno_status.kind == 'cog' else 'GO' }}<br>
                                             {% endif %}
                                         {% endif %}
                                         {% if col.uniprot and col.uniprot.is_uniprot %}
@@ -695,6 +736,21 @@
                                                         type="button" role="tab">
                                                     UniProt
                                                     {% if col.uniprot.invalid_values %}
+                                                        <span class="badge bg-danger ms-1" style="font-size:.7em;">Invalid</span>
+                                                    {% else %}
+                                                        <span class="badge bg-success ms-1" style="font-size:.7em;">Valid</span>
+                                                    {% endif %}
+                                                </button>
+                                            </li>
+                                        {% endif %}
+
+                                        {% if anno and anno.is_annotation %}
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="anno-stats-tab{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
+                                                        data-bs-toggle="tab" data-bs-target="#annoStats{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
+                                                        type="button" role="tab">
+                                                    {{ anno_label }}
+                                                    {% if anno_status.invalid %}
                                                         <span class="badge bg-danger ms-1" style="font-size:.7em;">Invalid</span>
                                                     {% else %}
                                                         <span class="badge bg-success ms-1" style="font-size:.7em;">Valid</span>
@@ -1102,6 +1158,146 @@
                                                                             <tr>
                                                                                 <td class="text-warning-emphasis">{{ used }}</td>
                                                                                 <td class="fst-italic">{{ current }}</td>
+                                                                            </tr>
+                                                                        {% endfor %}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                            </div>
+                                                        {% endif %}
+
+                                                    </div>{# /tab-content #}
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                        <!-- Functional Annotation Tab (COG / GO) -->
+                                        {% if anno and anno.is_annotation %}
+                                            {% set acid = col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize %}
+                                            {% set anno_invalid_list = anno.cog_invalid if anno.cog_invalid else anno.go_invalid %}
+                                            <div class="tab-pane fade" id="annoStats{{ acid }}" role="tabpanel"
+                                                 aria-labelledby="anno-stats-tab{{ acid }}">
+                                                <div class="mt-3">
+
+                                                    {# ── Status banner ── #}
+                                                    {% if anno_status.valid %}
+                                                        <div class="alert alert-success d-flex align-items-center gap-2 py-2">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>
+                                                            All {{ anno_label_lc }} entries validated successfully.
+                                                        </div>
+                                                    {% else %}
+                                                        <div class="alert alert-danger d-flex align-items-center gap-2 py-2">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
+                                                            <span>{{ anno_status.invalid_count }} invalid {{ anno_label_lc }} entr{{ 'y' if anno_status.invalid_count == 1 else 'ies' }} detected.</span>
+                                                        </div>
+                                                    {% endif %}
+
+                                                    {# ── Sub-tabs ── #}
+                                                    <ul class="nav nav-tabs mt-2" id="annoSubTab{{ acid }}" role="tablist">
+                                                        {% if anno.cog_bar %}
+                                                            <li class="nav-item" role="presentation">
+                                                                <button class="nav-link active" data-bs-toggle="tab"
+                                                                        data-bs-target="#annoCogBar{{ acid }}" type="button" role="tab">
+                                                                    Category Distribution
+                                                                </button>
+                                                            </li>
+                                                        {% endif %}
+                                                        {% if anno.cog_group %}
+                                                            <li class="nav-item" role="presentation">
+                                                                <button class="nav-link {% if not anno.cog_bar %}active{% endif %}" data-bs-toggle="tab"
+                                                                        data-bs-target="#annoCogGroup{{ acid }}" type="button" role="tab">
+                                                                    Group Distribution
+                                                                </button>
+                                                            </li>
+                                                        {% endif %}
+                                                        {% if anno.go_bar %}
+                                                            <li class="nav-item" role="presentation">
+                                                                <button class="nav-link active" data-bs-toggle="tab"
+                                                                        data-bs-target="#annoGoBar{{ acid }}" type="button" role="tab">
+                                                                    Top GO Terms
+                                                                </button>
+                                                            </li>
+                                                        {% endif %}
+                                                        {% if anno.go_name_count %}
+                                                            <li class="nav-item" role="presentation">
+                                                                <button class="nav-link {% if not anno.go_bar %}active{% endif %}" data-bs-toggle="tab"
+                                                                        data-bs-target="#annoGoNamespace{{ acid }}" type="button" role="tab">
+                                                                    Namespace Distribution
+                                                                </button>
+                                                            </li>
+                                                        {% endif %}
+                                                        {% if anno_invalid_list %}
+                                                            <li class="nav-item" role="presentation">
+                                                                <button class="nav-link {% if not (anno.cog_bar or anno.go_bar) %}active{% endif %}" data-bs-toggle="tab"
+                                                                        data-bs-target="#annoInvalid{{ acid }}" type="button" role="tab">
+                                                                    Invalid Entries
+                                                                    <span class="badge bg-danger ms-1" style="font-size:.7em;">{{ anno_invalid_list | length }}</span>
+                                                                </button>
+                                                            </li>
+                                                        {% endif %}
+                                                    </ul>
+
+                                                    <div class="tab-content mt-2" id="annoSubContent{{ acid }}">
+
+                                                        {# ── COG Category Distribution (bar) ── #}
+                                                        {% if anno.cog_bar %}
+                                                            <div class="tab-pane fade show active" id="annoCogBar{{ acid }}" role="tabpanel">
+                                                                <div class="plot-container mt-2" style="max-height: fit-content; overflow-x: auto;">
+                                                                    <figure role="img" aria-label="COG functional category distribution for column {{ col.name }}" style="width:100%;">
+                                                                        {{ anno.cog_bar | safe }}
+                                                                    </figure>
+                                                                </div>
+                                                            </div>
+                                                        {% endif %}
+
+                                                        {# ── COG Group Distribution (donut) ── #}
+                                                        {% if anno.cog_group %}
+                                                            <div class="tab-pane fade {% if not anno.cog_bar %}show active{% endif %}" id="annoCogGroup{{ acid }}" role="tabpanel">
+                                                                <div class="plot-container mt-2" style="max-height: fit-content; overflow-x: auto; display:flex; justify-content:center;">
+                                                                    <figure role="img" aria-label="COG group distribution for column {{ col.name }}" style="width:100%; max-width:600px;">
+                                                                        {{ anno.cog_group | safe }}
+                                                                    </figure>
+                                                                </div>
+                                                            </div>
+                                                        {% endif %}
+
+                                                        {# ── Top GO Terms (bar) ── #}
+                                                        {% if anno.go_bar %}
+                                                            <div class="tab-pane fade show active" id="annoGoBar{{ acid }}" role="tabpanel">
+                                                                <div class="plot-container mt-2" style="max-height: fit-content; overflow-x: auto;">
+                                                                    <figure role="img" aria-label="Top GO terms for column {{ col.name }}" style="width:100%;">
+                                                                        {{ anno.go_bar | safe }}
+                                                                    </figure>
+                                                                </div>
+                                                            </div>
+                                                        {% endif %}
+
+                                                        {# ── GO Namespace Distribution (donut) ── #}
+                                                        {% if anno.go_name_count %}
+                                                            <div class="tab-pane fade {% if not anno.go_bar %}show active{% endif %}" id="annoGoNamespace{{ acid }}" role="tabpanel">
+                                                                <div class="plot-container mt-2" style="max-height: fit-content; overflow-x: auto; display:flex; justify-content:center;">
+                                                                    <figure role="img" aria-label="GO namespace distribution for column {{ col.name }}" style="width:100%; max-width:600px;">
+                                                                        {{ anno.go_name_count | safe }}
+                                                                    </figure>
+                                                                </div>
+                                                            </div>
+                                                        {% endif %}
+
+                                                        {# ── Invalid Entries ── #}
+                                                        {% if anno_invalid_list %}
+                                                            <div class="tab-pane fade {% if not (anno.cog_bar or anno.go_bar) %}show active{% endif %}" id="annoInvalid{{ acid }}" role="tabpanel">
+                                                                <div class="alert alert-warning small py-2 mt-2">
+                                                                    These entries could not be matched against the {{ anno_label_lc }} reference vocabulary. Check for spelling errors or outdated identifiers.
+                                                                </div>
+                                                                <div class="table-responsive mt-1" style="max-height: 350px; overflow-y: auto;">
+                                                                    <table class="table table-sm table-striped w-100">
+                                                                        <thead class="sticky-top bg-light">
+                                                                        <tr><th>#</th><th>Entry</th></tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                        {% for entry in anno_invalid_list %}
+                                                                            <tr>
+                                                                                <td class="text-muted">{{ loop.index }}</td>
+                                                                                <td>{{ entry }}</td>
                                                                             </tr>
                                                                         {% endfor %}
                                                                         </tbody>
@@ -2826,6 +3022,7 @@ document.addEventListener('shown.bs.tab', function (e) {
         const COMPOSITE_QUALITY = {
             'taxonomy': ['taxonomyinvalid', 'taxonomyvalid', 'taxonomynotchecked'],
             'uniprot': ['uniprotinvalid', 'uniprotvalid'],
+            'annotation': ['annotationinvalid', 'annotationvalid'],
         };
 
         function matchesQuality(card, q) {
