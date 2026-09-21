@@ -21,6 +21,13 @@ from biological.sequence_data import (
     _normalized_shanon_entropy,
     _dinucleotide_oe,
     protein_descriptors,
+    _aa_group_distribution,
+    _gravy,
+    plot_overview,
+    dna_rna_columns,
+    protein_columns,
+    AA_GROUPS,
+    KYTE_DOOLITTLE,
 )
 
 
@@ -388,3 +395,234 @@ class TestProteinDescriptors:
         result = protein_descriptors("A")
         assert result["seq"] == "A"
         assert result["mol"] > 0
+
+
+# ---------------------------------------------------------------------------
+# _aa_group_distribution
+# ---------------------------------------------------------------------------
+
+class TestAaGroupDistribution:
+    def test_all_five_groups_present(self):
+        seqs = pd.Series(["ACDEFGHIKLMNPQRSTVWY"])
+        result = _aa_group_distribution(seqs)
+        assert set(result.keys()) == set(AA_GROUPS.keys())
+
+    def test_empty_series_returns_all_zero(self):
+        seqs = pd.Series([], dtype=str)
+        result = _aa_group_distribution(seqs)
+        assert all(v == 0.0 for v in result.values())
+
+    def test_single_group_composition(self):
+        """GAVL are all in the 'Unpolar' group only."""
+        seqs = pd.Series(["GAVL"])
+        result = _aa_group_distribution(seqs)
+        assert result["Unpolar"] == pytest.approx(1.0)
+        for group in AA_GROUPS:
+            if group != "Unpolar":
+                assert result[group] == 0.0
+
+    def test_mixed_composition_proportions(self):
+        # G,A -> Unpolar (2), F -> Aromatic (1), K -> Positive (1) => 4 total
+        seqs = pd.Series(["GAFK"])
+        result = _aa_group_distribution(seqs)
+        assert result["Unpolar"] == pytest.approx(0.5)
+        assert result["Aromatic"] == pytest.approx(0.25)
+        assert result["Positive"] == pytest.approx(0.25)
+        assert result["Polar"] == 0.0
+        assert result["Negative"] == 0.0
+
+    def test_values_rounded_to_4_decimals(self):
+        seqs = pd.Series(["ACDEFGHIKLMNPQRSTVWY"])
+        result = _aa_group_distribution(seqs)
+        for v in result.values():
+            assert round(v, 4) == v
+
+    def test_multiple_sequences_concatenated(self):
+        """Distribution is computed over the concatenation of all
+        sequences in the Series, not per-sequence."""
+        seqs = pd.Series(["GG", "FF"])  # 2 Unpolar + 2 Aromatic
+        result = _aa_group_distribution(seqs)
+        assert result["Unpolar"] == pytest.approx(0.5)
+        assert result["Aromatic"] == pytest.approx(0.5)
+
+
+# ---------------------------------------------------------------------------
+# _gravy — real BioPython ProteinAnalysis, including the ambiguous-residue
+# fallback to the local Kyte-Doolittle table
+# ---------------------------------------------------------------------------
+
+class TestGravy:
+    def test_empty_sequence_returns_zero(self):
+        assert _gravy("") == 0.0
+
+    def test_standard_sequence_uses_biopython(self):
+        """A sequence made only of standard amino acids should compute
+        cleanly via Bio.SeqUtils.ProtParam without hitting the fallback."""
+        result = _gravy("ACDEFGHIKLMNPQRSTVWY")
+        assert isinstance(result, float)
+        assert -4.5 <= result <= 4.5  # bounded by Kyte-Doolittle's own range
+
+    def test_single_hydrophobic_residue(self):
+        # Isoleucine is the most hydrophobic residue on the KD scale (4.5)
+        result = _gravy("I")
+        assert result == pytest.approx(4.5, abs=0.01)
+
+    def test_ambiguous_residue_falls_back_to_kyte_doolittle(self):
+        """'X' is not a standard residue — BioPython's GRAVY raises, and
+        the fallback averages KYTE_DOOLITTLE.get(aa, 0.0) manually."""
+        result = _gravy("AAX")
+        expected = (KYTE_DOOLITTLE["A"] + KYTE_DOOLITTLE["A"] + 0.0) / 3
+        assert result == pytest.approx(expected)
+
+    def test_stop_codon_marker_falls_back(self):
+        """'*' (stop codon) is not a valid residue either."""
+        result = _gravy("A*")
+        expected = (KYTE_DOOLITTLE["A"] + 0.0) / 2
+        assert result == pytest.approx(expected)
+
+    def test_fallback_matches_manual_kyte_doolittle_average(self):
+        seq = "AAXJUOB*"  # mix of one real + several ambiguous codes
+        result = _gravy(seq)
+        expected = sum(KYTE_DOOLITTLE.get(aa, 0.0) for aa in seq) / len(seq)
+        assert result == pytest.approx(expected)
+
+
+# ---------------------------------------------------------------------------
+# plot_overview (bar-chart variant, local to sequence_data.py — takes
+# parallel kmer/count lists, distinct from analysis.plot_utils.plot_overview
+# which takes a single column)
+# ---------------------------------------------------------------------------
+
+class TestPlotOverview:
+    def test_returns_html_string(self):
+        result = plot_overview(["AAA", "CCC", "GGG"], [5, 3, 1])
+        assert isinstance(result, str)
+        assert len(result) > 0
+
+    def test_single_kmer(self):
+        result = plot_overview(["AAA"], [10])
+        assert isinstance(result, str)
+
+
+# ---------------------------------------------------------------------------
+# dna_rna_columns — end-to-end with real plotting/outlier/plot_utils code.
+# Sequences deliberately have VARYING length so `plot` is built via the
+# k-mer overview path rather than make_logo (WebLogo), which needs a real
+# network call and is out of scope for a unit test.
+# ---------------------------------------------------------------------------
+
+class TestDnaRnaColumns:
+    def _seqs(self):
+        return pd.Series([
+            "ACGTACGT", "TTTTGGGGCCCC", "ATATATAT", "GCGCGCGCGC", "AAAACCCCGGGGTTTT",
+        ])
+
+    def test_returns_expected_shape(self):
+        result = dna_rna_columns(self._seqs(), k=3, top_n=20, top=5)
+        assert len(result.sequence) == 5
+        assert len(result.count) == 5
+        assert len(result.length) == 5
+
+    def test_uses_kmer_plot_for_varying_lengths(self):
+        result = dna_rna_columns(self._seqs(), k=3, top_n=20, top=5)
+        assert isinstance(result.plot, str)
+
+    def test_invalid_sequences_are_filtered_out(self):
+        seqs = pd.concat([self._seqs(), pd.Series(["BADSEQXYZ"])], ignore_index=True)
+        result = dna_rna_columns(seqs, k=3, top_n=20, top=5, invalid=[(5, "BADSEQXYZ")])
+        assert "BADSEQXYZ" not in result.sequence
+
+    def test_gc_content_within_valid_percentage_range(self):
+        result = dna_rna_columns(self._seqs(), k=3, top_n=20, top=5)
+        assert 0.0 <= result.gc_content.min
+        assert result.gc_content.max <= 100.0
+
+    def test_length_distribution_plot_present_for_varying_lengths(self):
+        result = dna_rna_columns(self._seqs(), k=3, top_n=20, top=5)
+        assert result.length_distribution is not None
+
+    def test_length_distribution_plot_absent_for_uniform_lengths(self):
+        """`length_distribution` is only built when there is more than one
+        distinct sequence length across the whole column. All sequences
+        here share one length, which also routes `plot` through
+        make_logo/WebLogo, so it needs Bio.motifs' real weblogo() call —
+        left untested here since it needs network access."""
+        seqs = pd.Series(["ACGT", "TTTT", "GGGG", "CCCC", "ATAT", "GCGC"])
+        with patch("biological.sequence_data.make_logo", return_value="<svg></svg>"):
+            result = dna_rna_columns(seqs, k=2, top_n=20, top=5)
+        assert result.length_distribution is None
+
+    def test_ambiguous_distribution_present_when_ambiguous_bases_exist(self):
+        seqs = pd.Series(["ACGTN", "TTTTR", "GGGGY", "AAAACCCC", "TTTTGGGG"])
+        result = dna_rna_columns(seqs, k=2, top_n=20, top=5)
+        assert result.ambiguous_distribution is not None
+
+    def test_ambiguous_distribution_absent_without_ambiguous_bases(self):
+        result = dna_rna_columns(self._seqs(), k=3, top_n=20, top=5)
+        assert result.ambiguous_distribution is None
+
+    def test_reverse_complement_ratio_is_a_percentage(self):
+        result = dna_rna_columns(self._seqs(), k=3, top_n=20, top=5)
+        assert 0.0 <= result.reverse_complement_ratio <= 100.0
+
+    def test_gc_distribution_and_at_gc_skewness_plots_present(self):
+        """These two plots are always built, regardless of length uniformity."""
+        result = dna_rna_columns(self._seqs(), k=3, top_n=20, top=5)
+        assert result.gc_distribution is not None
+        assert result.at_gc_skewness is not None
+
+
+# ---------------------------------------------------------------------------
+# protein_columns — end-to-end with real peptides/BioPython calls.
+# Sequences have varying length to route `plot` through the k-mer path
+# instead of make_logo.
+# ---------------------------------------------------------------------------
+
+class TestProteinColumns:
+    def _seqs(self):
+        return pd.Series([
+            "ACDEFGHIK", "LMNPQRSTVWY", "ACDEFGHIKLMNPQ", "GAVLIMPFWY", "STCNQKRHDE",
+        ])
+
+    def test_returns_expected_shape(self):
+        result = protein_columns(self._seqs(), k=3, top_n=20, top=5)
+        assert len(result.sequence) == 5
+        assert len(result.molecular_weight) == 5
+        assert len(result.hydrophobicity) == 5
+
+    def test_uses_kmer_plot_for_varying_lengths(self):
+        result = protein_columns(self._seqs(), k=3, top_n=20, top=5)
+        assert isinstance(result.plot, str)
+
+    def test_stop_codon_ratio_reflects_asterisks(self):
+        seqs = pd.Series(["ACDEFGHIK*", "LMNPQRSTVWY", "ACDEFGHIKLMNPQ", "GAVLIMPFWY", "STCNQKRHDE"])
+        result = protein_columns(seqs, k=3, top_n=20, top=5)
+        assert result.stop_codon_ratio == pytest.approx(20.0)  # 1 of 5 sequences
+
+    def test_invalid_sequences_filtered_out(self):
+        seqs = pd.concat([self._seqs(), pd.Series(["ZZZINVALID"])], ignore_index=True)
+        result = protein_columns(seqs, k=3, top_n=20, top=5, invalid=[(5, "ZZZINVALID")])
+        assert "ZZZINVALID" not in result.sequence
+
+    def test_aa_group_distribution_populated(self):
+        result = protein_columns(self._seqs(), k=3, top_n=20, top=5)
+        assert set(result.aa_group_distribution.keys()) == set(AA_GROUPS.keys())
+        assert isinstance(result.aa_group_plot, str)
+
+    def test_descriptor_lists_match_number_of_top_entries(self):
+        result = protein_columns(self._seqs(), k=3, top_n=20, top=5)
+        n = len(result.sequence)
+        assert len(result.frequency) == n
+        assert len(result.charge) == n
+        assert len(result.isoelectric_point) == n
+        assert len(result.aliphatic_index) == n
+        assert len(result.boman) == n
+        assert len(result.aromaticity) == n
+        assert len(result.instability) == n
+
+    def test_ambiguous_residues_do_not_crash_gravy_computation(self):
+        """A sequence containing 'X' must not crash protein_columns —
+        _gravy's Kyte-Doolittle fallback should kick in transparently."""
+        seqs = pd.concat([self._seqs(), pd.Series(["ACDEFGHIKX"])], ignore_index=True)
+        result = protein_columns(seqs, k=3, top_n=20, top=5)
+        assert result.gravy is not None
