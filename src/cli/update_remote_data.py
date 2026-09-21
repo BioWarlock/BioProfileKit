@@ -23,8 +23,8 @@ def update(tax: bool, go: bool, cog: bool, uniprot:bool, download_all: bool, for
     if download_all:
         tax = go = cog = uniprot = True
 
-    if not any([tax, go, cog]):
-        click.echo("Nothing selected. Use --tax/ --go/ --cog/ --all")
+    if not any([tax, go, cog, uniprot]):
+        click.echo("Nothing selected. Use --tax/ --go/ --cog/ --uniprot/ --all")
         return
 
     print(f"\n{'=' * 90}")
