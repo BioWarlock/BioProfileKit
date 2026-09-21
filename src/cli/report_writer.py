@@ -1,4 +1,5 @@
 import shutil
+from datetime import datetime
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
@@ -29,6 +30,10 @@ def write_report(output_path: Path, general, plots, dup_groups,
                  top_n, quality=None):
     output_path.mkdir(parents=True, exist_ok=True)
     shutil.copytree(str(STATIC_DIR), str(output_path / "static"), dirs_exist_ok=True)
+
+    # Available in every template (footer copyright) without having to pass
+    # it through each individual _render_to_file() call below.
+    env.globals["current_year"] = datetime.now().year
 
     _resolve_detail_links(quality)
 
