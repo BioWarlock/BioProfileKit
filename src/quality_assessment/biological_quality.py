@@ -124,3 +124,27 @@ def _check_uniprot_validity(column_overviews) -> QualityCheck:
     return QualityCheck(name="UniProt Validity", status=status,
                         message="; ".join(notes) if notes else "UniProt-matched columns valid",
                         detail_link="#columns")
+
+def _check_functional_annotation_validity(column_overviews) -> QualityCheck:
+    anno_cols = [c for c in column_overviews if getattr(c, "annotation", None) and c.annotation[0].is_annotation]
+
+    if not anno_cols:
+        return QualityCheck(name="Functional Annotation Validity", status="pass",
+                            message="No COG/GO-matched columns present", detail_link=None)
+    statuses, notes = [], []
+
+    for c in anno_cols:
+        flags = c.annotation[0]
+        invalid = flags.cog_invalid or flags.go_invalid
+        n_invalid = len(invalid) if invalid else 0
+        if n_invalid > (c.unique/2):
+            statuses.append("fail")
+            notes.append(f"{c.name}: {n_invalid} invalid")
+        elif n_invalid >= 1:
+            statuses.append("warn")
+            notes.append(f"{c.name}: {n_invalid} invalid")
+
+    status = _worst(statuses) if statuses else "pass"
+    return QualityCheck(name="Functional Annotation Validity", status=status,
+                        message="; ".join(notes) if notes else "Functional annotations valid",
+                        detail_link="#columns")
