@@ -22,6 +22,7 @@ class DatasetSummary:
     n_taxonomy: int = 0
     n_unit: int = 0
     n_functional: int = 0
+    n_uniprot: int = 0
     n_categorical: int = 0
     n_empty: int = 0
 

@@ -107,6 +107,8 @@ def cli(input: str, tax: bool = False, uniprot: bool = False, func: str = None,
         if func is not None:
             col_ov.annotation = [annotation_flags(df, col_ov.name, func)]
             is_func_anno = col_ov.annotation is not None
+        else:
+            is_func_anno = False
 
         if hasattr(col_ov, "top_10") and isinstance(col_ov.top_10, pd.Series):
             col_ov.top_10_items = list(col_ov.top_10.items())
@@ -181,14 +183,11 @@ def cli(input: str, tax: bool = False, uniprot: bool = False, func: str = None,
     general.n_dna = sum(1 for col in column_overviews if col.sequence == 'dna')
     general.n_rna = sum(1 for col in column_overviews if col.sequence == 'rna')
     general.n_protein = sum(1 for col in column_overviews if col.sequence == 'protein')
-    general.n_taxonomy = sum(1 for col in column_overviews
-                             if getattr(col, 'taxonomy', None) and col.taxonomy.is_taxonomy)
+    general.n_taxonomy = sum(1 for col in column_overviews if getattr(col, 'taxonomy', None) and col.taxonomy.is_taxonomy)
     general.n_unit = sum(1 for col in column_overviews if col.measurement_data is not None)
-    general.n_functional = sum(1 for col in column_overviews if getattr(col, 'annotation', None))
-    general.n_taxonomy_candidates = sum(
-        1 for col in column_overviews
-        if getattr(col, 'taxonomy_candidate', False)
-    )
+    general.n_functional = sum(1 for col in column_overviews if getattr(col, 'annotation', None) and col.annotation[0].is_annotation)
+    general.n_taxonomy_candidates = sum(1 for col in column_overviews if getattr(col, 'taxonomy_candidate', False))
+    general.n_uniprot = sum(1 for col in column_overviews if getattr(col, 'uniprot', False) and col.uniprot.is_uniprot)
     #ToDo: Check Windows
     output_path = Path(input_path.stem + "_renders")
     done = print_step("Writing report")
