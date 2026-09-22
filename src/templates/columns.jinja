@@ -609,7 +609,7 @@
                                             {% if col.taxonomy.outdated_names %}
                                                 <strong>Outdated names:</strong> {{ col.taxonomy.outdated_names | length }}<br>
                                             {% endif %}
-                                        {% elif col.taxonomy is defined and col.taxonomy is none %}
+                                        {% elif col.taxonomy is defined and col.taxonomy is none and col.taxonomy_candidate %}
                                             <strong>Taxonomy:</strong>
                                             <span class="text-muted">Not checked
                                                 <small>(run with <code>--tax</code> to enable)</small>
@@ -717,14 +717,6 @@
                                                     {% else %}
                                                         <span class="badge bg-success ms-1" style="font-size:.7em;">Valid</span>
                                                     {% endif %}
-                                                </button>
-                                            </li>
-                                        {% elif col.taxonomy is defined and col.taxonomy is none %}
-                                            <li class="nav-item" role="presentation">
-                                                <button class="nav-link disabled" type="button" role="tab"
-                                                        title="Taxonomy analysis not enabled — run with --tax">
-                                                    Taxonomy
-                                                    <span class="badge bg-secondary ms-1" style="font-size:.7em;">–</span>
                                                 </button>
                                             </li>
                                         {% endif %}
