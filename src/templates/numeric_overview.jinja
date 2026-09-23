@@ -332,14 +332,68 @@
           {% endif %}
 
           {% if general.dup_row > 0 %}
+            {% set dup_columns = dup_groups[0].row.keys() | list %}
+            {# 3 fixed visible columns (Count, Row values, Indices) come first;
+               the per-dataset-column cells below are appended after them and
+               stay hidden — they exist only so DataTables can filter/sort on
+               real column values without exploding the visible table width. #}
+            {% set fixed_col_count = 3 %}
+
+            <div class="card bg-light border mb-3">
+              <div class="card-body py-2 px-3">
+                <div class="row gy-2 gx-3 align-items-end">
+                  <div class="col-auto">
+                    <label for="dupFilterColumn" class="form-label mb-1" style="font-size:.75rem;">Search in</label>
+                    <select id="dupFilterColumn" class="form-select form-select-sm">
+                      <option value="all" selected>All columns</option>
+                      {% for col_name in dup_columns %}
+                        <option value="{{ fixed_col_count + loop.index0 }}">{{ col_name }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div class="col-auto">
+                    <label for="dupFilterValue" class="form-label mb-1" style="font-size:.75rem;">Search value</label>
+                    <input type="text" id="dupFilterValue" class="form-control form-control-sm"
+                           style="width:14rem;" placeholder="Search…">
+                  </div>
+                  <div class="col-auto">
+                    <label for="dupSortColumn" class="form-label mb-1" style="font-size:.75rem;">Sort by column</label>
+                    <select id="dupSortColumn" class="form-select form-select-sm">
+                      <option value="">Default</option>
+                      {% for col_name in dup_columns %}
+                        <option value="{{ fixed_col_count + loop.index0 }}">{{ col_name }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div class="col-auto">
+                    <button type="button" id="dupSortDir" class="btn btn-sm btn-outline-secondary" data-dir="asc" disabled>
+                      Ascending
+                    </button>
+                  </div>
+                  <div class="col-auto">
+                    <button type="button" id="dupFilterReset" class="btn btn-sm btn-outline-secondary">
+                      Reset
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div class="table-responsive mb-5">
-              <table id="dup_table" class="table table-sm table-hover table-bordered" style="width:100%">
+              <table id="dup_table" class="table table-sm table-hover table-bordered" style="width:100%; table-layout:fixed;">
                 <caption class="visually-hidden">Duplicate row groups</caption>
                 <thead>
                   <tr>
+                    {# table-layout:fixed makes these widths authoritative — Count and
+                       Indices get a modest, fixed share and "Row values" (no width set)
+                       automatically absorbs the rest, since that's where most of the
+                       content actually is. #}
                     <th style="width:5rem;">Count</th>
                     <th>Row values</th>
-                    <th style="width:20rem;">Indices</th>
+                    <th style="width:12rem;">Indices</th>
+                    {% for col_name in dup_columns %}
+                      <th>{{ col_name }}</th>
+                    {% endfor %}
                   </tr>
                 </thead>
                 <tbody>
@@ -364,6 +418,9 @@
                         </span>
                       {% endif %}
                     </td>
+                    {% for key, value in group.row.items() %}
+                      <td>{{ value if value is not none else '' }}</td>
+                    {% endfor %}
                   </tr>
                   {% endfor %}
                 </tbody>
@@ -427,21 +484,108 @@
 <script>
   $(document).ready(function () {
     {% if general.dup_row > 0 %}
-    $('#dup_table').DataTable({
+    var dupTable = $('#dup_table').DataTable({
       paging:       true,
       searching:    true,
       ordering:     true,
       info:         false,
       lengthChange: false,
       responsive:   false,
-      scrollX:      1200,
-      scroller:     true,
-      scrollCollapse: true,
+      // Only 3 columns are ever visible now (the rest are hidden helper
+      // columns for filter/sort), so a fixed-width horizontal scroll region
+      // is no longer needed — it used to cap the table at 1200px instead of
+      // letting it fill the page. autoWidth: false lets the table use plain
+      // CSS sizing (Bootstrap's `.table { width: 100% }` plus the explicit
+      // per-column widths already set on the visible <th> elements).
+      autoWidth:    false,
       pageLength:   15,
       stateSave:    true,
-      language: {
-        search: 'Search:'
+      // No built-in search box: the "Search in" / "Search value" controls
+      // above the table replace it (global search via "All columns", or a
+      // per-column search once a specific column is selected). The explicit
+      // row/col wrapper below keeps the table full-width and the pagination
+      // right-aligned with its usual top margin — both of which a bare
+      // 'rtp' dom string drops, since it skips the wrapping divs Bootstrap's
+      // styling relies on.
+      dom: "<'row'<'col-12'tr>>" +
+           "<'row mt-3'<'col-12 d-flex justify-content-end'p>>",
+      columnDefs: [
+        { targets: Array.from({ length: {{ dup_columns | length }} }, function (_, i) { return {{ fixed_col_count }} + i; }), visible: false }
+      ],
+      // A previously saved state (localStorage, keyed by this page's URL) can
+      // predate the hidden helper columns and would otherwise restore them as
+      // visible. Force those columns back to hidden regardless of what was
+      // cached, so column visibility never depends on browser history.
+      stateLoadParams: function (settings, data) {
+        if (data && Array.isArray(data.columns)) {
+          data.columns.forEach(function (col, idx) {
+            if (idx >= {{ fixed_col_count }}) {
+              col.visible = false;
+            }
+          });
+        }
       }
+    });
+
+    var $filterColumn = $('#dupFilterColumn');
+    var $filterValue  = $('#dupFilterValue');
+    var $sortColumn   = $('#dupSortColumn');
+    var $sortDir      = $('#dupSortDir');
+    var $reset        = $('#dupFilterReset');
+
+    function applyFilter() {
+      var idx = $filterColumn.val();
+      var val = $filterValue.val();
+      if (idx === 'all') {
+        // Global search across every column (including the hidden helper
+        // ones) — this is what the default DataTables search box used to do.
+        dupTable.columns().search('');
+        dupTable.search(val).draw();
+      } else {
+        // Search a single (hidden) dataset column only; clear the global
+        // search so the two modes never fight each other.
+        dupTable.search('');
+        dupTable.columns().search('');
+        dupTable.column(parseInt(idx, 10)).search(val).draw();
+      }
+    }
+
+    $filterColumn.on('change', function () {
+      $filterValue.attr('placeholder', $(this).val() === 'all' ? 'Search…' : 'Value contains…').trigger('focus');
+      applyFilter();
+    });
+
+    $filterValue.on('keyup change', applyFilter);
+
+    function applySort() {
+      var idx = $sortColumn.val();
+      if (idx === '') {
+        dupTable.order([]).draw();
+        return;
+      }
+      dupTable.order([parseInt(idx, 10), $sortDir.attr('data-dir')]).draw();
+    }
+
+    $sortColumn.on('change', function () {
+      var idx = $(this).val();
+      $sortDir.prop('disabled', idx === '');
+      applySort();
+    });
+
+    $sortDir.on('click', function () {
+      var next = $(this).attr('data-dir') === 'asc' ? 'desc' : 'asc';
+      $(this).attr('data-dir', next).text(next === 'asc' ? 'Ascending' : 'Descending');
+      applySort();
+    });
+
+    $reset.on('click', function () {
+      $filterColumn.val('all');
+      $filterValue.val('').attr('placeholder', 'Search…');
+      $sortColumn.val('');
+      $sortDir.attr('data-dir', 'asc').text('Ascending').prop('disabled', true);
+      dupTable.search('');
+      dupTable.columns().search('');
+      dupTable.order([]).draw();
     });
     {% endif %}
   });
