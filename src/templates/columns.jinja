@@ -252,7 +252,7 @@
                         {% set _n = col.number if col.number and col.number > 0 else 1 %}
                         {% if ov.infinity is defined and ov.infinity > 0 %}{% set fns.has_inf = 'yes' %}{% endif %}
                         {% if ov.zero_count is defined and (ov.zero_count / _n) >= 0.5 %}{% set fns.is_sparse = 'yes' %}{% endif %}
-                        {% if ov.outliers %}{% set _out_n = (ov.outliers.basic_lower_iqr + ov.outliers.basic_upper_iqr) if (-0.5 <= ov.outliers.medcouple <= 0.5) else (ov.outliers.n_lower_iqr + ov.outliers.n_upper_iqr) %}{% if (_out_n / _n) >= 0.05 %}{% set fns.has_outliers = 'yes' %}{% endif %}{% endif %}
+                        {% if ov.outliers %}{% set _sk_adj = ov.skewness is not none and (ov.skewness | abs) > 0.5 %}{% set _out_n = (ov.outliers.n_lower_iqr + ov.outliers.n_upper_iqr) if _sk_adj else (ov.outliers.basic_lower_iqr + ov.outliers.basic_upper_iqr) %}{% if (_out_n / _n) >= 0.05 %}{% set fns.has_outliers = 'yes' %}{% endif %}{% endif %}
                         {% if ov.skewness is not none and (ov.skewness | abs) > 0.5 %}{% set fns.skewed = 'yes' %}{% endif %}
                     {% endif %}{% endfor %}
                     {% for cat in categorical %}{% if cat.name == col.name %}
@@ -543,12 +543,13 @@
                                         {% endif %}
                                         {# Outliers — Adjusted IQR (medcouple-based, out.lower_bound/upper_bound
                                            + n_lower_iqr/n_upper_iqr) only once the distribution is skewed
-                                           enough (|medcouple| > 0.5); otherwise fall back to the literal
-                                           standard-IQR fields the model already provides
-                                           (basic_lower_bound/basic_upper_bound + basic_lower_iqr/basic_upper_iqr),
-                                           rather than the adjusted formula's near-identical approximation. #}
+                                           enough (|skewness| > 0.5, same measure/threshold as the Skewed
+                                           badges above); otherwise fall back to the literal standard-IQR
+                                           fields the model already provides (basic_lower_bound/
+                                           basic_upper_bound + basic_lower_iqr/basic_upper_iqr), rather than
+                                           the adjusted formula's near-identical approximation. #}
                                         {% if ov.outliers %}
-                                            {% set is_adjusted = not (-0.5 <= ov.outliers.medcouple <= 0.5) %}
+                                            {% set is_adjusted = ov.skewness is not none and (ov.skewness | abs) > 0.5 %}
                                             {% set n_out = (ov.outliers.n_lower_iqr + ov.outliers.n_upper_iqr) if is_adjusted else (ov.outliers.basic_lower_iqr + ov.outliers.basic_upper_iqr) %}
                                             {% set out_pct = (n_out / n_total * 100) | round(1) %}
                                             {% set iqr_label = 'adjusted' if is_adjusted else 'standard' %}
@@ -1419,12 +1420,14 @@
                                                             {% if ov.outliers %}
                                                                 {% set out = ov.outliers %}
                                                                 {# Adjusted IQR (medcouple-based) only once the distribution is
-                                                                   skewed enough (|medcouple| > 0.5); otherwise use the model's
-                                                                   own literal standard-IQR fields (basic_lower_bound /
-                                                                   basic_upper_bound / basic_lower_iqr / basic_upper_iqr) instead
-                                                                   of out.lower_bound / out.upper_bound / n_lower_iqr /
-                                                                   n_upper_iqr, which are always the adjusted formula's output. #}
-                                                                {% set is_adjusted = not (-0.5 <= out.medcouple <= 0.5) %}
+                                                                   skewed enough per the moment-based Skewness measure
+                                                                   (|skewness| > 0.5 — same measure/threshold as the Skewed
+                                                                   badges elsewhere); otherwise use the model's own literal
+                                                                   standard-IQR fields (basic_lower_bound / basic_upper_bound /
+                                                                   basic_lower_iqr / basic_upper_iqr) instead of out.lower_bound /
+                                                                   out.upper_bound / n_lower_iqr / n_upper_iqr, which are always
+                                                                   the adjusted formula's output. #}
+                                                                {% set is_adjusted = ov.skewness is not none and (ov.skewness | abs) > 0.5 %}
                                                                 {% set n_lower = out.n_lower_iqr if is_adjusted else out.basic_lower_iqr %}
                                                                 {% set n_upper = out.n_upper_iqr if is_adjusted else out.basic_upper_iqr %}
                                                                 {% set lo_bound = out.lower_bound if is_adjusted else out.basic_lower_bound %}
@@ -1440,10 +1443,10 @@
                                                                     <td>
                                                                         {% if is_adjusted %}
                                                                             Outliers — Adjusted IQR
-                                                                            <small class="text-muted d-block">Hubert &amp; Vandervieren (2008); bounds adjusted via Medcouple</small>
+                                                                            <small class="text-muted d-block">Hubert &amp; Vandervieren (2008); bounds adjusted via Medcouple, applied because |Skewness| &gt; 0.5</small>
                                                                         {% else %}
                                                                             Outliers — Standard IQR
-                                                                            <small class="text-muted d-block">Tukey (1977); Medcouple-based adjustment not triggered (|MC| &le; 0.5) — see Skewness above for the moment-based measure</small>
+                                                                            <small class="text-muted d-block">Tukey (1977); |Skewness| &le; 0.5, distribution not skewed enough to adjust</small>
                                                                         {% endif %}
                                                                     </td>
                                                                     <td>
@@ -1821,7 +1824,7 @@
                                                             {% endif %}
                                                             {% if d.length_outliers is defined and d.length_outliers %}
                                                             {% set lo = d.length_outliers %}
-                                                            {% set lo_adjusted = not (-0.5 <= lo.medcouple <= 0.5) %}
+                                                            {% set lo_adjusted = d.length_skewness is defined and d.length_skewness is not none and (d.length_skewness | abs) > 0.5 %}
                                                             <tr>
                                                                 <td colspan="4">
                                                                     <small class="text-muted">
@@ -2353,7 +2356,7 @@
                                                             {% endif %}
                                                             {% if pd.length_outliers is defined and pd.length_outliers %}
                                                             {% set lo = pd.length_outliers %}
-                                                            {% set lo_adjusted = not (-0.5 <= lo.medcouple <= 0.5) %}
+                                                            {% set lo_adjusted = pd.length_skewness is defined and pd.length_skewness is not none and (pd.length_skewness | abs) > 0.5 %}
                                                             <tr>
                                                                 <td colspan="4">
                                                                     <small class="text-muted">
