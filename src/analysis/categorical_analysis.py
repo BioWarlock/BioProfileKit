@@ -4,7 +4,7 @@ import pandas as pd
 from models.categorical import CategoricalColumns
 
 
-def categorical_columns(df: pd.DataFrame, col: str) -> CategoricalColumns:
+def categorical_columns(df: pd.DataFrame, col: str, top_n: int = 20) -> CategoricalColumns:
     value_counts = df[col].value_counts()
     n = int(df[col].notna().sum())
     frequencies = value_counts / n if n > 0 else value_counts
@@ -31,10 +31,10 @@ def categorical_columns(df: pd.DataFrame, col: str) -> CategoricalColumns:
         unique_categories=df[col].nunique(),
         mode=mode_value,
         entropy=round(entropy, 2),
-        frequencies=df[col].value_counts(normalize=True).head(20).to_dict(),
+        frequencies=df[col].value_counts(normalize=True).head(top_n).to_dict(),
         gini=round(gini, 2),
         simpson_diversity=round(simpson, 2),
-        value_counts=df[col].value_counts().head(20).to_dict(),
+        value_counts=df[col].value_counts().head(top_n).to_dict(),
         max_category_length=lengths.max(),
         min_category_length=lengths.min(),
         cardinality_ratio=round(cardinality_ratio, 3),

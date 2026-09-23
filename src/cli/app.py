@@ -33,12 +33,12 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option("-i", "--input", type=click.Path(exists=True, resolve_path=True), required=True,
               help="Input file as .tsv, .csv or .json")
 @click.option('-t', '--tax', is_flag=True, help='Enable taxonomy analysis')
-@click.option('-u', '--uniprot', type=click.Choice(["swissprot", "trembl"]), help='Enable uniprot analysis against Swiss-port or TrEMBL')
+@click.option('-u', '--uniprot', type=click.Choice(["swissprot", "trembl"]), help='Enable uniprot analysis against Swiss-Prot or TrEMBL')
 @click.option('-f', '--func', type=click.Choice(['cog', 'go']),
               help='Enable functional annotation analysis. Choose between cog or go')
 @click.option('-tc', '--target_column', type=str, help='Target column for Analysis')
 @click.option('-k', '--kmer', type=int, default=3, help="K-mer Size for sequence analysis")
-@click.option('-n', '--top_n', type=int, default=20, help="Top N entries analysis")
+@click.option('-n', '--top_n', type=click.IntRange(1,25, clamp=True), default=20, help="Top N entries analysis (max 25)")
 def cli(input: str, tax: bool = False, uniprot: bool = False, func: str = None,
         target_column: str = None, kmer: int = None, top_n: int = None):
     run_start = time.perf_counter()
@@ -158,13 +158,13 @@ def cli(input: str, tax: bool = False, uniprot: bool = False, func: str = None,
     numeric_cols = [col for col in df.select_dtypes(include="number").columns
                     if col not in empty_cols and col not in sequence_cols]
     done = print_step(f"Numeric analysis ({len(numeric_cols)} columns)")
-    numeric_overviews = [numeric_columns(df, col) for col in numeric_cols]
+    numeric_overviews = [numeric_columns(df, col, top_n) for col in numeric_cols]
     done()
 
     cat_columns = [col for col in df.select_dtypes(include=['str', 'object', 'bool']).columns
                    if col not in empty_cols and col not in sequence_cols]
     done = print_step(f"Categorical analysis ({len(cat_columns)} columns)")
-    categorical_overviews = [categorical_columns(df, col) for col in cat_columns]
+    categorical_overviews = [categorical_columns(df, col, top_n) for col in cat_columns]
     done()
 
     done = print_step("Multivariate analysis")
