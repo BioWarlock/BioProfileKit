@@ -38,7 +38,7 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
               help='Enable functional annotation analysis. Choose between cog or go')
 @click.option('-tc', '--target_column', type=str, help='Target column for Analysis')
 @click.option('-k', '--kmer', type=int, default=3, help="K-mer Size for sequence analysis")
-@click.option('-n', '--top_n', type=click.IntRange(1,25, clamp=True), default=20, help="Top N entries analysis (max 25)")
+@click.option('-n', '--top_n', type=click.IntRange(1,20, clamp=True), default=20, help="Top N entries analysis (max 20)")
 def cli(input: str, tax: bool = False, uniprot: bool = False, func: str = None,
         target_column: str = None, kmer: int = None, top_n: int = None):
     run_start = time.perf_counter()
