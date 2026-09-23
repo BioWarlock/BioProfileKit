@@ -156,7 +156,7 @@
                                     <!-- Numeric -->
                                     <button class="btn btn-sm cbf-danger"    data-quality="infinity"      title="Contains Inf/-Inf — will crash most ML pipelines">∞ Infinity</button>
                                     <button class="btn btn-sm cbf-warning"   data-quality="sparse"        title="≥ 50% zero values — sparse feature">Sparse</button>
-                                    <button class="btn btn-sm cbf-warning"   data-quality="outliers"      title="≥ 5% outliers detected (adjusted IQR)">Outliers</button>
+                                    <button class="btn btn-sm cbf-warning"   data-quality="outliers"      title="≥ 5% outliers detected (IQR-based; adjusted for skewed distributions)">Outliers</button>
                                     <button class="btn btn-sm cbf-secondary" data-quality="skewed"        title="|skewness| > 0.5 — asymmetric distribution">Skewed</button>
                                     <!-- Categorical -->
                                     <button class="btn btn-sm cbf-warning"   data-quality="imbalanced"    title="Class imbalance ratio > 3">Imbalanced</button>
@@ -252,7 +252,7 @@
                         {% set _n = col.number if col.number and col.number > 0 else 1 %}
                         {% if ov.infinity is defined and ov.infinity > 0 %}{% set fns.has_inf = 'yes' %}{% endif %}
                         {% if ov.zero_count is defined and (ov.zero_count / _n) >= 0.5 %}{% set fns.is_sparse = 'yes' %}{% endif %}
-                        {% if ov.outliers and ((ov.outliers.n_lower_iqr + ov.outliers.n_upper_iqr) / _n) >= 0.05 %}{% set fns.has_outliers = 'yes' %}{% endif %}
+                        {% if ov.outliers %}{% set _out_n = (ov.outliers.basic_lower_iqr + ov.outliers.basic_upper_iqr) if (-0.5 <= ov.outliers.medcouple <= 0.5) else (ov.outliers.n_lower_iqr + ov.outliers.n_upper_iqr) %}{% if (_out_n / _n) >= 0.05 %}{% set fns.has_outliers = 'yes' %}{% endif %}{% endif %}
                         {% if ov.skewness is not none and (ov.skewness | abs) > 0.5 %}{% set fns.skewed = 'yes' %}{% endif %}
                     {% endif %}{% endfor %}
                     {% for cat in categorical %}{% if cat.name == col.name %}
@@ -541,18 +541,25 @@
                                                 </span>
                                             {% endif %}
                                         {% endif %}
-                                        {# Outliers (Adj. IQR) #}
+                                        {# Outliers — Adjusted IQR (medcouple-based, out.lower_bound/upper_bound
+                                           + n_lower_iqr/n_upper_iqr) only once the distribution is skewed
+                                           enough (|medcouple| > 0.5); otherwise fall back to the literal
+                                           standard-IQR fields the model already provides
+                                           (basic_lower_bound/basic_upper_bound + basic_lower_iqr/basic_upper_iqr),
+                                           rather than the adjusted formula's near-identical approximation. #}
                                         {% if ov.outliers %}
-                                            {% set n_out = ov.outliers.n_lower_iqr + ov.outliers.n_upper_iqr %}
+                                            {% set is_adjusted = not (-0.5 <= ov.outliers.medcouple <= 0.5) %}
+                                            {% set n_out = (ov.outliers.n_lower_iqr + ov.outliers.n_upper_iqr) if is_adjusted else (ov.outliers.basic_lower_iqr + ov.outliers.basic_upper_iqr) %}
                                             {% set out_pct = (n_out / n_total * 100) | round(1) %}
+                                            {% set iqr_label = 'adjusted' if is_adjusted else 'standard' %}
                                             {% if out_pct >= 10 %}
                                                 <span class="badge bg-danger me-2"
-                                                      title="{{ n_out }} outlier(s) outside adjusted IQR bounds ({{ out_pct }}%)">
+                                                      title="{{ n_out }} outlier(s) outside {{ iqr_label }} IQR bounds ({{ out_pct }}%)">
                                                     Outliers ({{ out_pct }}%)
                                                 </span>
                                             {% elif out_pct >= 5 %}
                                                 <span class="badge bg-warning text-dark me-2"
-                                                      title="{{ n_out }} outlier(s) outside adjusted IQR bounds ({{ out_pct }}%)">
+                                                      title="{{ n_out }} outlier(s) outside {{ iqr_label }} IQR bounds ({{ out_pct }}%)">
                                                     Outliers ({{ out_pct }}%)
                                                 </span>
                                             {% endif %}
@@ -1411,18 +1418,33 @@
                                                             {# Outliers — only if detect_outliers returned a result #}
                                                             {% if ov.outliers %}
                                                                 {% set out = ov.outliers %}
-                                                                {% set n_iqr = out.n_lower_iqr + out.n_upper_iqr %}
+                                                                {# Adjusted IQR (medcouple-based) only once the distribution is
+                                                                   skewed enough (|medcouple| > 0.5); otherwise use the model's
+                                                                   own literal standard-IQR fields (basic_lower_bound /
+                                                                   basic_upper_bound / basic_lower_iqr / basic_upper_iqr) instead
+                                                                   of out.lower_bound / out.upper_bound / n_lower_iqr /
+                                                                   n_upper_iqr, which are always the adjusted formula's output. #}
+                                                                {% set is_adjusted = not (-0.5 <= out.medcouple <= 0.5) %}
+                                                                {% set n_lower = out.n_lower_iqr if is_adjusted else out.basic_lower_iqr %}
+                                                                {% set n_upper = out.n_upper_iqr if is_adjusted else out.basic_upper_iqr %}
+                                                                {% set lo_bound = out.lower_bound if is_adjusted else out.basic_lower_bound %}
+                                                                {% set hi_bound = out.upper_bound if is_adjusted else out.basic_upper_bound %}
+                                                                {% set n_iqr = n_lower + n_upper %}
                                                                 {% set n_mz  = out.n_lower_mzscore + out.n_upper_mzscore %}
                                                                 {% set n_z   = out.n_lower_zscore  + out.n_upper_zscore %}
                                                                 {% set iqr_pct = (n_iqr / n_total * 100) | round(1) %}
                                                                 {% set mz_pct  = (n_mz  / n_total * 100) | round(1) %}
                                                                 {% set z_pct   = (n_z   / n_total * 100) | round(1) %}
 
-                                                                {# Adjusted IQR (Hubert & Vandervieren, 2008) #}
                                                                 <tr {% if iqr_pct >= 5 %}class="table-warning"{% endif %}>
                                                                     <td>
-                                                                        Outliers — Adjusted IQR
-                                                                        <small class="text-muted d-block">Hubert &amp; Vandervieren (2008); bounds adjusted via Medcouple</small>
+                                                                        {% if is_adjusted %}
+                                                                            Outliers — Adjusted IQR
+                                                                            <small class="text-muted d-block">Hubert &amp; Vandervieren (2008); bounds adjusted via Medcouple</small>
+                                                                        {% else %}
+                                                                            Outliers — Standard IQR
+                                                                            <small class="text-muted d-block">Tukey (1977); Medcouple-based adjustment not triggered (|MC| &le; 0.5) — see Skewness above for the moment-based measure</small>
+                                                                        {% endif %}
                                                                     </td>
                                                                     <td>
                                                                         {{ n_iqr }} <span class="text-muted">({{ iqr_pct }}%)</span>
@@ -1430,8 +1452,8 @@
                                                                         {% elif iqr_pct >= 5 %}<span class="badge bg-warning text-dark ms-2">Moderate</span>
                                                                         {% endif %}
                                                                         <small class="text-muted d-block">
-                                                                            ↓ {{ out.n_lower_iqr }} below {{ out.lower_bound }}
-                                                                            &ensp;↑ {{ out.n_upper_iqr }} above {{ out.upper_bound }}
+                                                                            ↓ {{ n_lower }} below {{ lo_bound }}
+                                                                            &ensp;↑ {{ n_upper }} above {{ hi_bound }}
                                                                             &ensp;MC: {{ out.medcouple }}
                                                                         </small>
                                                                     </td>
@@ -1798,13 +1820,15 @@
                                                             </tr>
                                                             {% endif %}
                                                             {% if d.length_outliers is defined and d.length_outliers %}
+                                                            {% set lo = d.length_outliers %}
+                                                            {% set lo_adjusted = not (-0.5 <= lo.medcouple <= 0.5) %}
                                                             <tr>
                                                                 <td colspan="4">
                                                                     <small class="text-muted">
-                                                                        <strong>Length Outliers (Adj. IQR):</strong>
-                                                                        {{ d.length_outliers.n_lower_iqr }} below {{ d.length_outliers.lower_bound }} bp &nbsp;|&nbsp;
-                                                                        {{ d.length_outliers.n_upper_iqr }} above {{ d.length_outliers.upper_bound }} bp &nbsp;|&nbsp;
-                                                                        Medcouple: {{ d.length_outliers.medcouple }}
+                                                                        <strong>Length Outliers ({{ 'Adj.' if lo_adjusted else 'Standard' }} IQR):</strong>
+                                                                        {{ lo.n_lower_iqr if lo_adjusted else lo.basic_lower_iqr }} below {{ lo.lower_bound if lo_adjusted else lo.basic_lower_bound }} bp &nbsp;|&nbsp;
+                                                                        {{ lo.n_upper_iqr if lo_adjusted else lo.basic_upper_iqr }} above {{ lo.upper_bound if lo_adjusted else lo.basic_upper_bound }} bp &nbsp;|&nbsp;
+                                                                        Medcouple: {{ lo.medcouple }}
                                                                     </small>
                                                                 </td>
                                                             </tr>
@@ -2328,13 +2352,15 @@
                                                             </tr>
                                                             {% endif %}
                                                             {% if pd.length_outliers is defined and pd.length_outliers %}
+                                                            {% set lo = pd.length_outliers %}
+                                                            {% set lo_adjusted = not (-0.5 <= lo.medcouple <= 0.5) %}
                                                             <tr>
                                                                 <td colspan="4">
                                                                     <small class="text-muted">
-                                                                        <strong>Length Outliers (Adj. IQR):</strong>
-                                                                        {{ pd.length_outliers.n_lower_iqr }} below {{ pd.length_outliers.lower_bound }} AA &nbsp;|&nbsp;
-                                                                        {{ pd.length_outliers.n_upper_iqr }} above {{ pd.length_outliers.upper_bound }} AA &nbsp;|&nbsp;
-                                                                        Medcouple: {{ pd.length_outliers.medcouple }}
+                                                                        <strong>Length Outliers ({{ 'Adj.' if lo_adjusted else 'Standard' }} IQR):</strong>
+                                                                        {{ lo.n_lower_iqr if lo_adjusted else lo.basic_lower_iqr }} below {{ lo.lower_bound if lo_adjusted else lo.basic_lower_bound }} AA &nbsp;|&nbsp;
+                                                                        {{ lo.n_upper_iqr if lo_adjusted else lo.basic_upper_iqr }} above {{ lo.upper_bound if lo_adjusted else lo.basic_upper_bound }} AA &nbsp;|&nbsp;
+                                                                        Medcouple: {{ lo.medcouple }}
                                                                     </small>
                                                                 </td>
                                                             </tr>
