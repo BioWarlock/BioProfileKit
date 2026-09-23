@@ -53,6 +53,10 @@ def detect_outliers(values: np.ndarray) -> Optional[Outliers]:
     return Outliers(
         lower_bound=np.round(lower_iqr, 4).astype(np.float64),
         upper_bound=np.round(upper_iqr, 4).astype(np.float64),
+        basic_lower_bound=np.round(q1 - 1.5 * iqr, 4).astype(np.float64),
+        basic_upper_bound=np.round(q3 + 1.5 * iqr, 4).astype(np.float64),
+        basic_lower_iqr=int((values < (q1 - 1.5 * iqr)).sum()),
+        basic_upper_iqr=int((values > (q3 + 1.5 * iqr)).sum()),
         n_lower_iqr=int((values < lower_iqr).sum()),
         n_upper_iqr=int((values > upper_iqr).sum()),
         medcouple=np.round(mc, 4),
