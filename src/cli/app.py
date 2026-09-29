@@ -140,8 +140,6 @@ def cli(input: str, tax: bool = False, uniprot: bool = False, func: str = None,
         is_taxonomy = ((col_ov.taxonomy is not None and col_ov.taxonomy.is_taxonomy) or getattr(col_ov, 'taxonomy_candidate', None))
         is_measurement = col_ov.measurement_data is not None
 
-        #ToDo add GO & COG
-
         if uniprot_lookups and not is_sequence and not is_taxonomy and not is_measurement and not is_func_anno:
             result = uniprot_flags(df, col_ov.name, uniprot_lookups)
             col_ov.uniprot = result
@@ -155,14 +153,12 @@ def cli(input: str, tax: bool = False, uniprot: bool = False, func: str = None,
     empty_cols = [col for col in df.columns if df[col].isnull().all()]
     sequence_cols = {col.name for col in column_overviews if col.sequence in ('dna', 'rna', 'protein')}
 
-    numeric_cols = [col for col in df.select_dtypes(include="number").columns
-                    if col not in empty_cols and col not in sequence_cols]
+    numeric_cols = [col for col in df.select_dtypes(include="number").columns if col not in empty_cols and col not in sequence_cols]
     done = print_step(f"Numeric analysis ({len(numeric_cols)} columns)")
     numeric_overviews = [numeric_columns(df, col, top_n) for col in numeric_cols]
     done()
 
-    cat_columns = [col for col in df.select_dtypes(include=['str', 'object', 'bool']).columns
-                   if col not in empty_cols and col not in sequence_cols]
+    cat_columns = [col for col in df.select_dtypes(include=['str', 'object', 'bool']).columns if col not in empty_cols and col not in sequence_cols]
     done = print_step(f"Categorical analysis ({len(cat_columns)} columns)")
     categorical_overviews = [categorical_columns(df, col, top_n) for col in cat_columns]
     done()
@@ -172,8 +168,7 @@ def cli(input: str, tax: bool = False, uniprot: bool = False, func: str = None,
     done()
 
     done = print_step("Quality assessment")
-    quality = quality_assessment(general, column_overviews, numeric_overviews,
-                                 categorical_overviews, plots)
+    quality = quality_assessment(general, column_overviews, numeric_overviews, categorical_overviews, plots)
     done()
     print_quality_report(quality)
 
@@ -195,10 +190,8 @@ def cli(input: str, tax: bool = False, uniprot: bool = False, func: str = None,
     parameters = {k: v for k, v in ctx.params.items() if k != "input"}
     parameters["input_file"] = Path(input).name
 
-    write_report(output_path, general, plots, dup_groups,
-                 column_overviews, numeric_overviews, categorical_overviews, top_n, quality)
-    write_result_json(output_path / "results.json", general, column_overviews,
-                      numeric_overviews, categorical_overviews, plots, quality, empty_cols, parameters)
+    write_report(output_path, general, plots, dup_groups, column_overviews, numeric_overviews, categorical_overviews, top_n, quality)
+    write_result_json(output_path / "results.json", general, column_overviews, numeric_overviews, categorical_overviews, plots, quality, empty_cols, parameters)
     done(f"→ {output_path}/")
 
     total = _fmt_duration(time.perf_counter() - run_start)
