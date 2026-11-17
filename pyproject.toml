@@ -28,19 +28,19 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 dependencies = [
-    "cython==3.3.0",
-    "click>=8.5.0",
+    "cython==3.3.1",
+    "click>=8.5.1",
     "Jinja2==3.1.6",
-    "numpy==2.5.4",
-    "pandas==3.0.6",
+    "numpy==2.5.5",
+    "pandas==3.1.1",
     "plotly==7.1.0",
     "scipy==1.18.1",
     "termcolor==3.3.0",
-    "pyarrow==26.0.0",
+    "pyarrow==26.0.1",
     "peptides==0.5.0",
     "iteration_utilities==0.13.0",
     "requests==2.34.2",
-    "goatools==1.6.5",
+    "goatools==1.6.9",
     "importlib_resources==7.1.0",
     "biopython==1.88",
     "weblogo==3.9.0",
@@ -53,7 +53,7 @@ Repository="https://github.com/BioWarlock/BioProfileKit/"
 [project.optional-dependencies]
 cli = ["click"]
 dev = [
-    "pytest>=9.1.1",
+    "pytest>=9.2.0",
     "pytest-cov>=7.1.0",
 ]
 
