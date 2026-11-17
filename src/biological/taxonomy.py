@@ -4,6 +4,8 @@ from typing import Tuple
 import pandas as pd
 import plotly.express as px
 
+from analysis import fig_html, _config
+
 SUNBURST_RANKS = ["domain", "kingdom", "phylum", "class", "order", "family", "genus", "species"]
 SUNBURST_PATH = ["superdomain"] + SUNBURST_RANKS
 RANK_ALIASES = {"superkingdom": "domain", "realm": "domain"}
@@ -243,5 +245,4 @@ def taxonomy_sunburst_plot(sunburst_df: pd.DataFrame):
         insidetextfont=dict(color="white")
     )
     fig.update_layout(title="Taxonomic Composition")
-    config['toImageButtonOptions']['filename'] = "taxonomic_composition"
-    return fig.to_html(full_html=False, include_plotlyjs=False, config=config)
+    return fig_html(fig, config=_config("taxonomic_composition", 1200, 1200))

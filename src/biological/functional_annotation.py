@@ -5,6 +5,7 @@ import plotly.graph_objs as go
 
 from data_utils.remote_data import get_clusters_of_orthologous_groups, get_gene_ontology
 from enums import COGColor, COG_GROUP_ORDER
+from analysis.plot_utils import fig_html, _config
 
 config = {
     'toImageButtonOptions': {
@@ -164,8 +165,7 @@ def cog_category_barchart(counts: pd.DataFrame):
         yaxis_title="Count",
         template="plotly_white"
     )
-    config['toImageButtonOptions']['filename'] = "cog_category_barchart"
-    return fig.to_html(full_html=False, include_plotlyjs=False, config=config)
+    return fig_html(fig, config=_config("cog_category_barchart", 1200, 1200))
 
 
 def cog_group_donut(counts: pd.DataFrame):
@@ -194,8 +194,7 @@ def cog_group_donut(counts: pd.DataFrame):
         template="plotly_white",
         legend=dict(orientation="h", y=-0.15),
     )
-    config['toImageButtonOptions']['filename'] = "cog_group_distribution"
-    return fig.to_html(full_html=False, include_plotlyjs=False, config=config)
+    return fig_html(fig, config=_config("cog_group_distribution", 1200, 1200))
 
 def build_go_counts(col: pd.Series, go_df: pd.DataFrame, go_col: str = "GO_ID", top_n: int = 15) -> tuple[pd.DataFrame, pd.DataFrame, list | None]:
     go_df = go_df.dropna(subset=[go_col])
@@ -248,8 +247,7 @@ def go_term_barchart(term_counts: pd.DataFrame, id_column: str = "GO_ID"):
         yaxis=dict(categoryorder="array", categoryarray=ordered[label_column].tolist()),
         template="plotly_white",
     )
-    config['toImageButtonOptions']['filename'] = "go_term_barchart"
-    return fig.to_html(full_html=False, include_plotlyjs=False, config=config)
+    return fig_html(fig, config=_config("go_term_barchart", 1200, 1200))
 
 def go_namespace_donut(namespace_counts: pd.DataFrame):
     if namespace_counts.empty:
@@ -270,5 +268,4 @@ def go_namespace_donut(namespace_counts: pd.DataFrame):
         template="plotly_white",
         legend=dict(orientation="h", y=-0.15),
     )
-    config['toImageButtonOptions']['filename'] = "go_namespace_distribution"
-    return fig.to_html(full_html=False, include_plotlyjs=False, config=config)
+    return fig_html(fig, config=_config("go_namespace_distribution", 1200, 1200))

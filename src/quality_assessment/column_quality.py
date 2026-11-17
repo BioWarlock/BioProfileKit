@@ -37,11 +37,14 @@ def _check_missing(column_overviews) -> list[QualityCheck]:
     if flagged:
         flagged.sort(key=lambda x: x[1], reverse=True)
         listed = ", ".join(f"{n} ({r*100:.0f}%)" for n, r in flagged)
+        items = [{"column": n, "value": r, "status": "fail" if r > MISSING_COL_FAIL else "warn"}
+                 for n, r in flagged]
         checks.append(QualityCheck("Missing Values", worst,
-                      f"Columns above 30% missing: {listed}", "#multivariate"))
+                      f"Columns above 30% missing: {listed}", "#multivariate", items))
     if empty:
         checks.append(QualityCheck("Empty Column", "fail",
-                      f"Empty column(s): {', '.join(empty)}", "#multivariate"))
+                      f"Empty column(s): {', '.join(empty)}", "#multivariate",
+                      [{"column": n, "value": 1.0, "status": "fail"} for n in empty]))
     if not checks:
         checks.append(QualityCheck("Missing Values", "pass",
                       "No column above 30% missing", "#multivariate"))
@@ -53,11 +56,13 @@ def _check_variance(column_overviews, categorical_overviews) -> QualityCheck:
              if c is not None and c.top_1_coverage is not None and c.top_1_coverage >= QUASI_CONSTANT_WARN]
     if constant_cols:
         return QualityCheck(name="Feature Variance", status="fail",
-                            message=f"Constant column(s): {', '.join(constant_cols)}", detail_link="#columns")
+                            message=f"Constant column(s): {', '.join(constant_cols)}", detail_link="#columns",
+                            items=[{"column": n, "status": "fail"} for n in constant_cols])
     if quasi:
         return QualityCheck(name="Feature Variance", status="warn",
                             message=f"Quasi-constant column(s) (top category ≥{QUASI_CONSTANT_WARN:.0%}): {', '.join(quasi)}",
-                            detail_link="#columns")
+                            detail_link="#columns",
+                            items=[{"column": n, "status": "warn"} for n in quasi])
     return QualityCheck(name="Feature Variance", status="pass",
                         message="No constant or quasi-constant columns", detail_link="#columns")
 
@@ -71,6 +76,7 @@ def _check_high_cardinality(column_overviews) -> QualityCheck:
         message=(f"High-cardinality column(s) (≥{HIGH_CARDINALITY_WARN:.0%} unique): {', '.join(flagged)}"
                  if flagged else "No high-cardinality columns"),
         detail_link="#columns",
+        items=[{"column": n, "status": "warn"} for n in flagged],
     )
 
 
@@ -81,6 +87,7 @@ def _check_mixed_types(column_overviews) -> QualityCheck:
         name="Mixed Types", status=status,
         message=(f"Mixed-type column(s): {', '.join(flagged)}" if flagged else "No mixed-type columns"),
         detail_link="#columns",
+        items=[{"column": n, "status": "fail"} for n in flagged],
     )
 
 
@@ -89,31 +96,36 @@ def _check_infinity(numeric_overviews) -> QualityCheck:
     status = "fail" if total_inf > 0 else "pass"
     return QualityCheck(name="Infinity Check", status=status,
                         message=(f"{total_inf} infinite value(s)" if total_inf else "No infinite values"),
-                        detail_link="#columns")
+                        detail_link="#columns",
+                        items=[{"column": n.name, "value": int(n.infinity), "status": "fail"}
+                               for n in numeric_overviews if n.infinity])
 
 
 def _check_skewness(numeric_overviews) -> QualityCheck:
-    statuses, notes = [], []
+    statuses, notes, items = [], [], []
     for n in numeric_overviews:
         skew = n.skewness if pd.notna(n.skewness) and np.isfinite(n.skewness) else 0.0
         s = abs(skew)
         if s > SKEW_FAIL:
             statuses.append("fail")
             notes.append(f"{n.name} ({skew:.1f})")
+            items.append({"column": n.name, "value": skew, "status": "fail"})
         elif s > SKEW_WARN:
             statuses.append("warn")
             notes.append(f"{n.name} ({skew:.1f})")
+            items.append({"column": n.name, "value": skew, "status": "warn"})
     status = _worst(statuses) if statuses else "pass"
     return QualityCheck(
         name="Skewness", status=status,
         message=(f"Strongly skewed (transform recommended): {', '.join(notes)}"
                  if notes else "No strongly skewed numeric columns"),
         detail_link="#columns",
+        items=items,
     )
 
 
 def _check_outliers(numeric_overviews, n_rows) -> QualityCheck:
-    statuses, notes = [], []
+    statuses, notes, items = [], [], []
     for n in numeric_overviews:
         o = n.outliers
         if o is None:
@@ -123,13 +135,16 @@ def _check_outliers(numeric_overviews, n_rows) -> QualityCheck:
         if rate > OUTLIER_FAIL:
             statuses.append("fail")
             notes.append(f"{n.name} ({rate * 100:.1f}%)")
+            items.append({"column": n.name, "value": rate, "status": "fail"})
         elif rate > OUTLIER_WARN:
             statuses.append("warn")
             notes.append(f"{n.name} ({rate * 100:.1f}%)")
+            items.append({"column": n.name, "value": rate, "status": "warn"})
     status = _worst(statuses) if statuses else "pass"
     return QualityCheck(
         name="Outliers (Adjusted IQR)", status=status,
         message=(f"High outlier share: {', '.join(notes)}" if notes
                  else "No columns with excessive outliers"),
         detail_link="#columns",
+        items=items,
     )

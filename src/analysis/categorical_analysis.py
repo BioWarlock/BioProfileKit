@@ -8,7 +8,7 @@ def categorical_columns(df: pd.DataFrame, col: str, top_n: int = 20) -> Categori
     value_counts = df[col].value_counts()
     n = int(df[col].notna().sum())
     frequencies = value_counts / n if n > 0 else value_counts
-    rare = np.sum(value_counts <= len(df[col]) * 0.01)
+    rare = np.sum(value_counts <= value_counts.sum() * 0.01)
     cib_ratio = value_counts.max()  / value_counts.min()
     top_coverage = df[col].value_counts(normalize=True).head(5).sum()
 

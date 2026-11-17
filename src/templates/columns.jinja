@@ -14,7 +14,9 @@
 
     <link rel="stylesheet" href="https://cdn.datatables.net/2.0.7/css/dataTables.bootstrap5.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/3.0.0/css/responsive.bootstrap5.min.css">
-    <script src="https://cdn.plot.ly/plotly-3.5.0.min.js" charset="utf-8"></script>
+    <script src="static/js/plotly.min.js" charset="utf-8"></script>
+    <script src="static/js/bpk_plot.js"></script>
+    <!--<script src="https://cdn.plot.ly/plotly-4.1.1.min.js" charset="utf-8"></script>-->
     <!-- Performance: pre-establish CDN connections while HTML is parsed -->
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link rel="preconnect" href="https://cdn.datatables.net" crossorigin>
@@ -2814,10 +2816,10 @@
    Note: Plotly uses class 'plotly-graph-div', not 'js-plotly-plot'. */
 document.addEventListener('shown.bs.tab', function (e) {
   const pane = document.querySelector(e.target.getAttribute('data-bs-target'));
-  if (!pane) return;
-  pane.querySelectorAll('.plotly-graph-div').forEach(function (plot) {
-    Plotly.relayout(plot, { autosize: true });
-  });
+  if (!pane) return
+    pane.querySelectorAll('.plotly-graph-div').forEach(function (plot) {
+        if (plot._fullLayout) Plotly.relayout(plot, { autosize: true });
+    });
 });
 </script>
 

@@ -15,7 +15,7 @@ import plotly.express as px
 import ssl
 
 from analysis.outlier_detection import detect_outliers
-from analysis.plot_utils import apply_standard_axes
+from analysis.plot_utils import apply_standard_axes, _config, fig_html
 from biological.plot_utils import length_distribution, gc_distribution, ambiguous_distribution, at_gc_skewness, \
     aa_group_distribution
 from models.sequence import DNARNAColumns, PROTEINColumns, SequenceMetricSummary
@@ -283,7 +283,7 @@ def protein_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5, 
     all_overview['sequence'] = seqs.str.upper()
     all_overview['lengths'] = all_overview['sequence'].str.len()
 
-    all_overview['ambiguous'] = all_overview['sequence'].str.count('[XJUVOBZ]')
+    all_overview['ambiguous'] = all_overview['sequence'].str.count('[XJUOBZ]')
     all_overview['ambiguous_ratio'] = np.round(np.where(all_overview['lengths'] > 0, all_overview['ambiguous'] / all_overview['lengths'] * 100, 0.0), 2)
 
     all_overview['stop_codon'] = all_overview['sequence'].str.count(r'\*')
@@ -463,4 +463,4 @@ def plot_overview(kmer, count):
     fig.update_layout(bargap=0.2, plot_bgcolor='white', xaxis_title='K-mers',
                       yaxis_title='Count')
     apply_standard_axes(fig, tick_angle=-45)
-    return fig.to_html(full_html=False, include_plotlyjs=False)
+    return fig_html(fig, config=_config("kmer_distribution"))

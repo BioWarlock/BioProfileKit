@@ -4,6 +4,7 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
 from importlib_resources import files
+from plotly.offline import get_plotlyjs
 
 TEMPLATE_DIR = files("templates").joinpath()
 STATIC_DIR = files("static").joinpath()
@@ -30,6 +31,9 @@ def write_report(output_path: Path, general, plots, dup_groups,
                  top_n, quality=None):
     output_path.mkdir(parents=True, exist_ok=True)
     shutil.copytree(str(STATIC_DIR), str(output_path / "static"), dirs_exist_ok=True)
+    js_dir = output_path / "static" / "js"
+    js_dir.mkdir(parents=True, exist_ok=True)
+    (js_dir / "plotly.min.js").write_text(get_plotlyjs(), encoding="utf-8")
 
     # Available in every template (footer copyright) without having to pass
     # it through each individual _render_to_file() call below.

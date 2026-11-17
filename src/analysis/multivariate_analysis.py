@@ -6,7 +6,7 @@ from scipy.sparse import coo_matrix
 from scipy.stats import chi2_contingency
 
 from models.multivariate import MultivariateAnalysis
-from .plot_utils import apply_standard_axes
+from .plot_utils import apply_standard_axes, fig_html
 
 
 def multivariate_analysis(df: pd.DataFrame, target: str) -> MultivariateAnalysis:
@@ -339,6 +339,13 @@ def top_associations(values, methods, threshold=0.7):
     return sorted(pairs, key=lambda p: abs(p["value"]), reverse=True) or None
 
 
+def _is_discrete_target(series, column_type):
+    if column_type == 'categorical':
+        return True
+    values = series.dropna()
+    return values.nunique() <= 10 and np.all(np.mod(values, 1) == 0)
+
+
 def mutual_information(df: pd.DataFrame, target: str) -> dict | None:
     from sklearn.feature_selection import mutual_info_classif, mutual_info_regression
 
@@ -352,28 +359,37 @@ def mutual_information(df: pd.DataFrame, target: str) -> dict | None:
     if not features:
         return None
 
-    work = df[features + [target]].dropna()
-    if len(work) < 3:
-        return None
+    target_values = df[target].replace([np.inf, -np.inf], np.nan)
+    discrete_target = _is_discrete_target(target_values, types[target])
 
-    X = work[features].copy()
-    discrete_features = []
+    result = {}
     for col in features:
-        if types[col] == 'categorical':
-            X[col], _ = X[col].factorize()
-            discrete_features.append(True)
+        discrete = types[col] == 'categorical'
+        x = df[col] if discrete else df[col].replace([np.inf, -np.inf], np.nan)
+        pair = pd.DataFrame({'x': x, 'y': target_values}).dropna()
+        if len(pair) < 3:
+            continue
+        if discrete:
+            codes, _ = pair['x'].factorize()
+            if np.bincount(codes).max() < 2:
+                continue
+            X = codes.reshape(-1, 1)
         else:
-            X[col] = X[col].astype(float)
-            discrete_features.append(False)
+            X = pair[['x']].astype(float).to_numpy()
+        try:
+            if discrete_target:
+                y, _ = pair['y'].factorize()
+                if len(np.unique(y)) < 2:
+                    continue
+                score = mutual_info_classif(X, y, discrete_features=[discrete], random_state=0)[0]
+            else:
+                score = mutual_info_regression(X, pair['y'].astype(float), discrete_features=[discrete],
+                                               random_state=0)[0]
+        except ValueError:
+            continue
+        result[col] = {'value': round(float(score), 4)}
 
-    if types[target] == 'categorical':
-        y, _ = work[target].factorize()
-        mi = mutual_info_classif(X, y, discrete_features=discrete_features, random_state=0)
-    else:
-        y = work[target].astype(float)
-        mi = mutual_info_regression(X, y, discrete_features=discrete_features, random_state=0)
-
-    return {feat: {'value': round(float(score), 4)} for feat, score in zip(features, mi)} or None
+    return result or None
 
 
 def mutual_information_plot(mi: dict | None):
@@ -462,7 +478,7 @@ def littles_mcar_test(df: pd.DataFrame):
     return {"Hello":"World"}
 
 def missing_matrix(df: pd.DataFrame):
-    missing_values = df.isnull().astype(int)
+    missing_values = df.isna().astype(np.uint8).reindex()
     fig = px.imshow(missing_values, labels=dict(color="Missing Values"),
                     aspect="auto", color_continuous_scale="blues_r",
                     title="Missing Values Matrix")
@@ -488,7 +504,7 @@ def balance_plot(df, target):
     return fig.to_html(full_html=False, include_plotlyjs=False)
 
 
-def boxplot(df: pd.DataFrame):
+"""def boxplot(df: pd.DataFrame):
     df = df.select_dtypes(include=['float64', 'int64']).dropna(axis=1, how='all')
     fig = go.Figure()
     for col in df:
@@ -500,10 +516,57 @@ def boxplot(df: pd.DataFrame):
         yaxis_title="Values", legend_title="Columns",
     )
     return fig.to_html(full_html=False, include_plotlyjs=False)
+"""
+def _compact(a) -> np.ndarray:
+    """Kleinster dtype, der die Werte exakt darstellt – sonst unverändert."""
+    a = np.asarray(a)
+    if a.dtype == bool:
+        return a.astype(np.uint8)
+    if np.issubdtype(a.dtype, np.integer) and a.size:
+        t = np.result_type(np.min_scalar_type(a.min()), np.min_scalar_type(a.max()))
+        return a.astype(t)
+    if a.dtype == np.float64:
+        f32 = a.astype(np.float32)
+        if np.array_equal(f32.astype(np.float64), a, equal_nan=True):
+            return f32          # nur wenn exakt rückwandelbar
+    return a
 
+def _compact_df(df: pd.DataFrame) -> pd.DataFrame:
+    return df.apply(lambda s: pd.Series(_compact(s.to_numpy()), index=s.index, name=s.name))
+
+CB_BLUE = ["#0F65A0", "#00447B", "#4082C0", "#65A1E1", "#87C1FF", "#A9E1FF",
+           "#3D4756", "#A1ACBD", "#932263", "#A83665", "#D27897", "#994564"]
+
+def boxplot(df: pd.DataFrame):
+    df = df.select_dtypes(include='number').dropna(axis=1, how='all')
+    fig = go.Figure()
+    for i, col in enumerate(df):
+        color = CB_BLUE[i % len(CB_BLUE)]
+        v = df[col].dropna().to_numpy()
+        q1, med, q3 = np.percentile(v, [25, 50, 75])
+        iqr = q3 - q1
+        lo = v[v >= q1 - 1.5 * iqr].min()
+        hi = v[v <= q3 + 1.5 * iqr].max()
+        fig.add_trace(go.Box(x=[col], name=col, q1=[q1], median=[med], q3=[q3],
+                             lowerfence=[lo], upperfence=[hi], boxpoints=False,
+                             marker_color=color, line_width=1.5,
+                             legendgroup=col))
+        out = np.unique(v[(v < lo) | (v > hi)])
+        if out.size:
+            fig.add_trace(go.Scatter(x=np.full(out.size, col), y=_compact(out), mode="markers",
+                                     marker=dict(size=4, color=color, opacity=0.6),
+                                     legendgroup=col, showlegend=False,
+                                     name=f"{col} outliers",
+                                     hovertemplate=f"{col}<br>%{{y}}<extra></extra>"))
+    fig.update_yaxes(type="log", title="Values (log)", showticklabels=False)
+    fig.update_layout(title="Boxplot", xaxis_title="Columns",
+                      legend_title="Columns", plot_bgcolor="white")
+    apply_standard_axes(fig)
+    return fig_html(fig)
 
 def scatter_matrix(df: pd.DataFrame):
-    df = df.select_dtypes(include=['float64', 'int64']).dropna(axis=1, how='all')
+    df = df.select_dtypes(include='number').dropna(axis=1, how='all')
+    df = df.apply(lambda s: pd.Series(_compact(s.to_numpy()), index=s.index))
     fig = px.scatter_matrix(df, color_discrete_sequence=["#0F65A0"], height=750)
     fig.update_traces(diagonal_visible=False,
                       marker=dict(size=2, opacity=0.5, color="#0F65A0"))

@@ -11,6 +11,7 @@ def _safe_round(val, decimals=2):
 
 
 def numeric_columns(df: pd.DataFrame, col, top_n: int = 20) -> NumericColumns:
+    print(col)
     series = df[col].dropna()
     series = pd.to_numeric(series, errors='coerce').dropna()
     infinity_count = int(series.isin([np.inf, -np.inf]).sum())

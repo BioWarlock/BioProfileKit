@@ -2,16 +2,7 @@ from pandas import DataFrame
 from plotly import express as px, graph_objs as go, graph_objects as go
 from plotly.subplots import make_subplots
 
-config = {
-  'toImageButtonOptions': {
-    'format': 'png', # one of png, svg, jpeg, webp
-    'filename': None,
-    'height': 1200,
-    'width': 1600,
-    'scale': 4
-  }
-}
-
+from analysis.plot_utils import fig_html, _config
 
 def length_distribution(all_overview: DataFrame, unit: str = "bp"):
     bins = 300 if all_overview.shape[0] > 10000 else all_overview.shape[0]
@@ -34,8 +25,9 @@ def length_distribution(all_overview: DataFrame, unit: str = "bp"):
         yaxis_title="Sequence Count",
         bargap=0.5
     )
-    config['toImageButtonOptions']['filename'] = "length_distribution"
-    return fig.to_html(full_html=False, include_plotlyjs=False, config=config)
+    #config['toImageButtonOptions']['filename'] = "length_distribution"
+    return fig_html(fig, config=_config("length_distribution"))
+
 
 def gc_distribution(all_overview: DataFrame):
     fig = px.violin(
@@ -65,8 +57,10 @@ def gc_distribution(all_overview: DataFrame):
             ticksuffix="%"
         )
     )
-    config['toImageButtonOptions']['filename'] = "gc_distribution"
-    return fig.to_html(full_html=False, include_plotlyjs=False, config=config)
+    #config['toImageButtonOptions']['filename'] = "gc_distribution"
+    #return fig.to_html(full_html=False, include_plotlyjs=False, config=config)
+    return fig_html(fig, config=_config("gc_distribution"))
+
 
 def ambiguous_distribution(all_overview: DataFrame, col: str = "ambiguous_count", label: str = "NRY-Count"):
     fig = go.Figure()
@@ -87,8 +81,7 @@ def ambiguous_distribution(all_overview: DataFrame, col: str = "ambiguous_count"
         yaxis=dict(rangemode="tozero")
     )
 
-    return fig.to_html(full_html=False, include_plotlyjs=False)
-
+    return fig_html(fig, config=_config("ambiguous_distribution"))
 
 def at_gc_skewness(all_overview: DataFrame):
     fig = make_subplots(
@@ -170,8 +163,10 @@ def at_gc_skewness(all_overview: DataFrame):
 
     fig.add_hline(y=0, line_dash="dash", line_color="rgba(0,0,0,0.2)", row=2, col=1)
     fig.add_vline(x=0, line_dash="dash", line_color="rgba(0,0,0,0.2)", row=2, col=1)
-    config['toImageButtonOptions']['filename'] = "at_gc_skewness"
-    return fig.to_html(full_html=False, include_plotlyjs=False, config=config)
+    #config['toImageButtonOptions']['filename'] = "at_gc_skewness"
+    #return fig.to_html(full_html=False, include_plotlyjs=False, config=config)
+    return fig_html(fig, config=_config("at_gc_skewness"))
+
 
 def aa_group_distribution(group_dist: dict):
     groups = list(group_dist.keys())
@@ -195,5 +190,7 @@ def aa_group_distribution(group_dist: dict):
         yaxis_title="Proportion (%)",
         bargap=0.3,
     )
-    config['toImageButtonOptions']['filename'] = "aa_group_distribution"
-    return fig.to_html(full_html=False, include_plotlyjs=False, config=config)
+    #config['toImageButtonOptions']['filename'] = "aa_group_distribution"
+    #return fig.to_html(full_html=False, include_plotlyjs=False, config=config)
+    #return fig_html()
+    return fig_html(fig, config=_config("aa_group_distribution"))
