@@ -446,8 +446,12 @@ def make_column_overview(**overrides):
 
 class TestColumnEntry:
     def test_empty_column_short_circuits(self):
+        """Empty columns skip all stat blocks but still carry their flags."""
         col = make_column_overview()
         entry = _column_entry(col, None, None, SimpleNamespace(), is_empty=True)
+        flags = entry.pop("flags")
+        assert isinstance(flags, list)
+        assert any(f["flag"] == "Missing" for f in flags)
         assert entry == {"name": "col1", "dtype": "float64", "role": "empty", "empty": True}
 
     def test_basic_numeric_column(self):
