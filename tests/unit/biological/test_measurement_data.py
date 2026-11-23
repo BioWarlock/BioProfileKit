@@ -3,7 +3,6 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 import pandas as pd
-import pytest
 import sys
 import os
 

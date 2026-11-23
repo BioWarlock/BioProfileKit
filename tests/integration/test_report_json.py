@@ -1,5 +1,4 @@
 import json
-import math
 from types import SimpleNamespace
 
 import numpy as np

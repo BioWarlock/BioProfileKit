@@ -3,8 +3,7 @@ import pandas as pd
 import pytest
 import sys
 import os
-from pathlib import Path
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import patch, MagicMock
 from click.testing import CliRunner
 
 # ---------------------------------------------------------------------------

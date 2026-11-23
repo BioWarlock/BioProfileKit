@@ -1,8 +1,7 @@
 import pytest
 import sys
 import os
-from pathlib import Path
-from unittest.mock import patch, MagicMock, mock_open
+from unittest.mock import patch, MagicMock
 from jinja2 import Environment, DictLoader
 
 # ---------------------------------------------------------------------------

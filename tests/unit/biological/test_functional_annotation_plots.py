@@ -1,5 +1,4 @@
 import pandas as pd
-import pytest
 import sys
 import os
 from unittest.mock import patch
@@ -19,7 +18,6 @@ from biological.functional_annotation import (
     _go_namespace_colors,
     go_term_barchart,
     go_namespace_donut,
-    clean_strings,
 )
 
 COG_PATCH = "biological.functional_annotation.get_clusters_of_orthologous_groups"

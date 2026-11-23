@@ -1,6 +1,5 @@
 from types import SimpleNamespace
 
-import pytest
 import sys
 import os
 
