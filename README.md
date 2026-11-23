@@ -7,7 +7,7 @@
 
 BioProfileKit is a domain-specific bioinformatics profiling tool for tabular biological data. It generates self-contained, interactive HTML reports covering exploratory data analysis, biological sequence profiling, and metadata validation — designed to be accessible to scientists without extensive data science skills.
 
-Example report: [BioProfileKit Example](https://hansen-maria.github.io/BioProfileKit/)
+Example report: [BioProfileKit Example](https://biowarlock.github.io/BioProfileKit/)
 
 ### Features
 
