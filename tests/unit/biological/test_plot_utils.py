@@ -11,8 +11,23 @@ from biological.plot_utils import (
     ambiguous_distribution,
     at_gc_skewness,
     aa_group_distribution,
-    config,
 )
+import biological.plot_utils as bpu
+
+
+@pytest.fixture
+def captured_config(monkeypatch):
+    """Record the config that the plot functions pass to fig_html."""
+    captured = {}
+    real_fig_html = bpu.fig_html
+
+    def spy(*args, **kwargs):
+        captured["config"] = kwargs.get("config")
+        return real_fig_html(*args, **kwargs)
+
+    # Patch the binding inside biological.plot_utils (imported via "from ... import").
+    monkeypatch.setattr(bpu, "fig_html", spy)
+    return captured
 
 
 def make_overview():
@@ -36,9 +51,9 @@ class TestLengthDistribution:
         assert isinstance(result, str)
         assert len(result) > 0
 
-    def test_sets_config_filename(self):
+    def test_sets_config_filename(self, captured_config):
         length_distribution(make_overview())
-        assert config["toImageButtonOptions"]["filename"] == "length_distribution"
+        assert captured_config["config"]["toImageButtonOptions"]["filename"] == "length_distribution"
 
     def test_custom_unit_does_not_raise(self):
         result = length_distribution(make_overview(), unit="residues")
@@ -66,9 +81,9 @@ class TestGcDistribution:
         result = gc_distribution(make_overview())
         assert isinstance(result, str)
 
-    def test_sets_config_filename(self):
+    def test_sets_config_filename(self, captured_config):
         gc_distribution(make_overview())
-        assert config["toImageButtonOptions"]["filename"] == "gc_distribution"
+        assert captured_config["config"]["toImageButtonOptions"]["filename"] == "gc_distribution"
 
     def test_single_row_does_not_raise(self):
         df = pd.DataFrame({"gc_content": [50.0]})
@@ -84,6 +99,10 @@ class TestAmbiguousDistribution:
     def test_returns_html_string(self):
         result = ambiguous_distribution(make_overview())
         assert isinstance(result, str)
+
+    def test_sets_config_filename(self, captured_config):
+        ambiguous_distribution(make_overview())
+        assert captured_config["config"]["toImageButtonOptions"]["filename"] == "ambiguous_distribution"
 
     def test_default_column_and_label(self):
         result = ambiguous_distribution(make_overview())
@@ -110,9 +129,9 @@ class TestAtGcSkewness:
         result = at_gc_skewness(make_overview())
         assert isinstance(result, str)
 
-    def test_sets_config_filename(self):
+    def test_sets_config_filename(self, captured_config):
         at_gc_skewness(make_overview())
-        assert config["toImageButtonOptions"]["filename"] == "at_gc_skewness"
+        assert captured_config["config"]["toImageButtonOptions"]["filename"] == "at_gc_skewness"
 
     def test_adds_hover_sequence_label_column(self):
         """The function mutates its input DataFrame in place, adding a
@@ -150,9 +169,9 @@ class TestAaGroupDistributionPlot:
         result = aa_group_distribution({"Unpolar": 0.5, "Polar": 0.3, "Aromatic": 0.2})
         assert isinstance(result, str)
 
-    def test_sets_config_filename(self):
+    def test_sets_config_filename(self, captured_config):
         aa_group_distribution({"Unpolar": 0.5})
-        assert config["toImageButtonOptions"]["filename"] == "aa_group_distribution"
+        assert captured_config["config"]["toImageButtonOptions"]["filename"] == "aa_group_distribution"
 
     def test_converts_fractions_to_percentages(self):
         """Values are documented as fractions (0-1) and multiplied by 100
