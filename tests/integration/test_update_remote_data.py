@@ -158,7 +158,7 @@ class TestForceRefresh:
         with patch.multiple("cli.update_remote_data", **mocks), patch(
             "cli.update_remote_data.print_step", return_value=MagicMock()
         ):
-            result = runner.invoke(update, ["--tax"])
+            _result = runner.invoke(update, ["--tax"])
 
         mocks["get_tax_ids"].assert_called_once_with(force_refresh=False)
 
