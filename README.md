@@ -70,6 +70,10 @@ BioProfileKit/
 
 BioProfileKit is also available as a hosted web service at [bioprofilekit.computational.bio](https://bioprofilekit.computational.bio/), for users who prefer not to install the CLI locally or who need to profile larger datasets without waiting on local report rendering. It wraps the same CLI core behind a Vue 3/TypeScript frontend and a FastAPI backend, runs analyses as jobs on de.NBI cloud infrastructure (Kubernetes), and authenticates via Keycloak/de.NBI AAI.
 
+### Feedback / de.NBI User Survey
+
+BioProfileKit is a service of [de.NBI](https://www.denbi.de), the German Network for Bioinformatics Infrastructure. Your feedback helps us improve BioProfileKit and secures continued funding for the de.NBI service portfolio. Please take a few minutes to fill in the **[de.NBI user survey](https://www.surveymonkey.de/r/denbi-service?sc=bigi&tool=bioprofilekit)**.
+
 
 ## Installation
 
