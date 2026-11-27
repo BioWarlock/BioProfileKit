@@ -25,6 +25,7 @@ def _check_sample_size(general) -> QualityCheck:
         message=f"{ratio:.1f} rows per feature "
                 f"({general.rows} rows / {general.cols} columns)",
         detail_link="#overview",
+        items=[{"column": None, "value": ratio, "status": status}] if status != "pass" else [],
     )
 
 
@@ -43,6 +44,7 @@ def _check_duplicate_rows(general) -> QualityCheck:
         message=(f"{dup} duplicate rows ({rate * 100:.1f}%); "
                  f"{unique_rows} unique of {general.rows}" if dup else "No duplicate rows"),
         detail_link="#overview",
+        items=[{"column": None, "value": dup, "rate": rate, "status": status}] if status != "pass" else [],
     )
 
 
@@ -53,6 +55,7 @@ def _check_duplicate_columns(general) -> QualityCheck:
         name="Duplicate Columns", status=status,
         message=(f"{dup} duplicate column(s)" if dup else "No duplicate columns"),
         detail_link="#overview",
+        items=[{"column": None, "value": dup, "status": status}] if dup else [],
     )
 
 
@@ -63,4 +66,5 @@ def _check_empty_rows(general) -> QualityCheck:
         name="Empty Rows", status=status,
         message=(f"{empty} completely empty row(s)" if empty else "No empty rows"),
         detail_link="#overview",
+        items=[{"column": None, "value": empty, "status": status}] if empty else [],
     )

@@ -7,6 +7,10 @@ import numpy as np
 class Outliers:
     lower_bound: np.float64
     upper_bound: np.float64
+    basic_lower_bound: np.float64
+    basic_upper_bound: np.float64
+    basic_lower_iqr: int
+    basic_upper_iqr: int
     n_lower_iqr: int
     n_upper_iqr: int
     medcouple: np.float64

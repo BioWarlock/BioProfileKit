@@ -1,12 +1,15 @@
 import json
-import math
 from datetime import datetime, timezone
 
+import math
 import numpy as np
+
+from .report_flags import column_flags, dataset_flags
 
 SCHEMA_VERSION = "1.0"
 TOOL_VERSION = "0.1.0"
-CORR_THRESHOLD = 0.9 #ToDo check consistencies
+CORR_THRESHOLD = 0.9  # ToDo check consistencies
+
 
 def _num(v):
     if v is None:
@@ -28,7 +31,7 @@ def _present(v):
         return False
     if isinstance(v, np.ndarray):
         return v.size > 0
-    if hasattr(v, "empty"):          # pandas Series / DataFrame
+    if hasattr(v, "empty"):  # pandas Series / DataFrame
         return not v.empty
     if isinstance(v, (list, tuple, set, dict, str)):
         return len(v) > 0
@@ -40,7 +43,7 @@ def _listify(v):
         return None
     if isinstance(v, np.ndarray):
         return [_num(x) for x in v.tolist()]
-    if hasattr(v, "tolist"):         # pandas Series
+    if hasattr(v, "tolist"):  # pandas Series
         return [_num(x) for x in v.tolist()]
     if isinstance(v, (list, tuple, set)):
         return [_num(x) for x in v]
@@ -67,6 +70,7 @@ def _outliers(o):
         "n_lower_zscore": _num(o.n_lower_zscore),
         "n_upper_zscore": _num(o.n_upper_zscore),
     }
+
 
 def _numeric_block(n):
     if n is None:
@@ -127,7 +131,7 @@ def _protein_block(p):
         "cysteine_count": _summary(p.cysteine_count),
         "disorder_propensity": _summary(p.disorder_propensity),
         "aa_group_distribution": {k: _num(v) for k, v in p.aa_group_distribution.items()}
-            if p.aa_group_distribution else None,
+        if p.aa_group_distribution else None,
     }
 
 
@@ -195,6 +199,9 @@ def _column_entry(col_ov, num, cat, multivariate, is_empty):
     if role is not None:
         entry["role"] = role
 
+    entry["flags"] = [{k: _num(v) if not isinstance(v, list) else v for k, v in f.items()}
+                      for f in column_flags(col_ov, num, cat)]
+
     if is_empty:
         entry["empty"] = True
         return entry
@@ -254,6 +261,7 @@ def _column_entry(col_ov, num, cat, multivariate, is_empty):
 
     return entry
 
+
 def _quality_block(quality):
     if quality is None:
         return None
@@ -265,7 +273,9 @@ def _quality_block(quality):
             {
                 "name": cat.name, "status": cat.status,
                 "checks": [
-                    {"name": c.name, "status": c.status, "message": c.message}
+                    {"name": c.name, "status": c.status, "message": c.message,
+                     "items": [{k: _num(v) for k, v in item.items()}
+                               for item in (getattr(c, "items", None) or [])]}
                     for c in cat.checks
                 ],
             }
@@ -312,8 +322,11 @@ def build_result(general, column_overviews, numeric_overviews,
             },
         },
         "target": getattr(multivariate, "target_name", None),
+        "dataset_flags": [{k: _num(v) for k, v in f.items()} for f in dataset_flags(general)],
+        "quality": _quality_block(quality),
         "columns": columns,
     }
+
 
 def _json_default(o):
     """Last-resort converter for anything that slipped through un-cleaned, so
@@ -330,6 +343,7 @@ def _json_default(o):
     if hasattr(o, "item"):
         return o.item()
     return str(o)
+
 
 def write_result_json(path, general, column_overviews, numeric_overviews,
                       categorical_overviews, multivariate, quality, empty_cols,

@@ -1,8 +1,10 @@
 import shutil
+from datetime import datetime
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
 from importlib_resources import files
+from plotly.offline import get_plotlyjs
 
 TEMPLATE_DIR = files("templates").joinpath()
 STATIC_DIR = files("static").joinpath()
@@ -24,17 +26,24 @@ def _resolve_detail_links(quality):
             anchor = check.detail_link.lstrip("#")
             check.detail_link = PAGE_MAP.get(anchor)
 
-def write_report(output_path: Path, general, plots, duplicates_table,
+def write_report(output_path: Path, general, plots, dup_groups,
                  column_overviews, numeric_overviews, categorical_overviews,
                  top_n, quality=None):
     output_path.mkdir(parents=True, exist_ok=True)
     shutil.copytree(str(STATIC_DIR), str(output_path / "static"), dirs_exist_ok=True)
+    js_dir = output_path / "static" / "js"
+    js_dir.mkdir(parents=True, exist_ok=True)
+    (js_dir / "plotly.min.js").write_text(get_plotlyjs(), encoding="utf-8")
+
+    # Available in every template (footer copyright) without having to pass
+    # it through each individual _render_to_file() call below.
+    env.globals["current_year"] = datetime.now().year
 
     _resolve_detail_links(quality)
 
     _render_to_file(output_path / "index.html", 'LandingPage.jinja')
     _render_to_file(output_path / "numeric_data.html", 'numeric_overview.jinja',
-                    general=general, dups=duplicates_table, quality=quality)
+                    general=general, dup_groups=dup_groups, quality=quality)
     _render_to_file(output_path / "columns.html", 'columns.jinja',
                     columns=column_overviews, overview=numeric_overviews,
                     categorical=categorical_overviews, top_n=top_n)

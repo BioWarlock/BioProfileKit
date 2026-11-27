@@ -1,5 +1,4 @@
-from dataclasses import dataclass
-
+from dataclasses import dataclass, field
 
 @dataclass
 class QualityCheck:
@@ -7,6 +6,7 @@ class QualityCheck:
     status: str  # pass | warn | fail
     message: str
     detail_link: str | None
+    items: list = field(default_factory=list)  # List[dict]: affected columns / pairs
 
 
 @dataclass

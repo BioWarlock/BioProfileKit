@@ -14,7 +14,9 @@
 
     <link rel="stylesheet" href="https://cdn.datatables.net/2.0.7/css/dataTables.bootstrap5.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/3.0.0/css/responsive.bootstrap5.min.css">
-    <script src="https://cdn.plot.ly/plotly-3.5.0.min.js" charset="utf-8"></script>
+    <script src="static/js/plotly.min.js" charset="utf-8"></script>
+    <script src="static/js/bpk_plot.js"></script>
+    <!--<script src="https://cdn.plot.ly/plotly-4.1.1.min.js" charset="utf-8"></script>-->
     <!-- Performance: pre-establish CDN connections while HTML is parsed -->
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link rel="preconnect" href="https://cdn.datatables.net" crossorigin>
@@ -156,7 +158,8 @@
                                     <!-- Numeric -->
                                     <button class="btn btn-sm cbf-danger"    data-quality="infinity"      title="Contains Inf/-Inf — will crash most ML pipelines">∞ Infinity</button>
                                     <button class="btn btn-sm cbf-warning"   data-quality="sparse"        title="≥ 50% zero values — sparse feature">Sparse</button>
-                                    <button class="btn btn-sm cbf-warning"   data-quality="outliers"      title="≥ 5% outliers detected (adjusted IQR)">Outliers</button>
+                                    <button class="btn btn-sm cbf-warning"   data-quality="outliers"      title="≥ 5% outliers detected (IQR-based; adjusted for skewed distributions)">Outliers</button>
+                                    <button class="btn btn-sm cbf-secondary" data-quality="skewed"        title="|skewness| > 0.5 — asymmetric distribution">Skewed</button>
                                     <!-- Categorical -->
                                     <button class="btn btn-sm cbf-warning"   data-quality="imbalanced"    title="Class imbalance ratio > 3">Imbalanced</button>
                                     <button class="btn btn-sm cbf-danger"    data-quality="nzv"           title="Near-zero variance — top category ≥ 95%">NZV</button>
@@ -164,15 +167,22 @@
                                     <button class="btn btn-sm cbf-warning"   data-quality="mixedvalues"   title="Column contains mixed numeric and non-numeric values">Mixed Values</button>
                                     <!-- Sequence -->
                                     <button class="btn btn-sm cbf-danger"    data-quality="invalidseqs"   title="Contains invalid / unparseable sequences">Invalid Seq.</button>
-                                    <button class="btn btn-sm cbf-warning"   data-quality="ambiguousbases" title="Mean ambiguous base ratio (N) > 0 — possible low sequencing quality">Ambiguous Bases</button>
+                                    <button class="btn btn-sm cbf-warning"   data-quality="ambiguousbases" title="Mean ambiguous base ratio (N/R/Y) > 0 — possible low sequencing quality">Ambiguous Bases</button>
                                     <button class="btn btn-sm cbf-warning"   data-quality="rcduplicates"  title="Reverse-complement duplicate sequences detected">RC Duplicates</button>
                                     <button class="btn btn-sm cbf-warning"   data-quality="lowcomplexity" title="Low sequence complexity (Shannon entropy < 50%) — possible repeats or poly-A tails">Low Complexity</button>
+                                    <button class="btn btn-sm cbf-secondary" data-quality="diffseqlength" title="Sequences in this column have differing lengths">Diff Sequence Length</button>
+                                    <button class="btn btn-sm cbf-warning"   data-quality="diffunits"     title="More than one unit detected in this column">Diff Units</button>
                                     <!-- Biological metadata -->
                                     <button class="btn btn-sm cbf-danger"    data-quality="taxonomyinvalid"      title="Taxonomy identifiers failed validation">Taxonomy Invalid</button>
                                     <button class="btn btn-sm cbf-success"   data-quality="taxonomyvalid"        title="Taxonomy validated successfully">Taxonomy Valid</button>
                                     <button class="btn btn-sm cbf-warning"   data-quality="taxonomynotchecked"   title="Taxonomy candidate column detected but not validated — run with --tax">Taxonomy Not Checked</button>
                                     <button class="btn btn-sm cbf-secondary" data-quality="taxonomy"             title="All columns with taxonomy (valid, invalid or unchecked)">Taxonomy (All)</button>
-                                    <button class="btn btn-sm cbf-danger"    data-quality="annotationinvalid"    title="Functional annotation failed controlled vocabulary check">Annotation Invalid</button>
+                                    <button class="btn btn-sm cbf-danger"    data-quality="annotationinvalid"    title="Functional annotation (COG/GO) failed controlled vocabulary check">Annotation Invalid</button>
+                                    <button class="btn btn-sm cbf-success"   data-quality="annotationvalid"      title="Functional annotation (COG/GO) validated successfully">Annotation Valid</button>
+                                    <button class="btn btn-sm cbf-secondary" data-quality="annotation"           title="All columns with functional annotation (valid or invalid)">Annotation (All)</button>
+                                    <button class="btn btn-sm cbf-danger"    data-quality="uniprotinvalid"       title="UniProt/SwissProt identifiers failed validation">UniProt Invalid</button>
+                                    <button class="btn btn-sm cbf-success"   data-quality="uniprotvalid"         title="UniProt/SwissProt validated successfully">UniProt Valid</button>
+                                    <button class="btn btn-sm cbf-secondary" data-quality="uniprot"              title="All columns with UniProt/SwissProt metadata (valid or invalid)">UniProt (All)</button>
                                     <!-- Data anomalies -->
                                     <button class="btn btn-sm cbf-warning"   data-quality="dataanomalies" title="Suspect or anomalous values detected in this column">Data Anomalies</button>
                                 </div>
@@ -209,12 +219,43 @@
             <div id="columns-container">
                 {% for col in columns %}
                     {# fns = filter namespace — separate from badge ns #}
-                    {% set fns = namespace(has_inf='no',is_sparse='no',has_outliers='no',imbalanced='no',nzv='no',rare='no',ambiguous_bases='no',rc_duplicates='no',low_complexity='no',mixed_values='no',data_anomalies='no',taxonomy_invalid='no',taxonomy_valid='no',taxonomy_not_checked='no',annotation_invalid='no') %}
+                    {% set fns = namespace(has_inf='no',is_sparse='no',has_outliers='no',imbalanced='no',nzv='no',rare='no',ambiguous_bases='no',rc_duplicates='no',low_complexity='no',mixed_values='no',data_anomalies='no',taxonomy_invalid='no',taxonomy_valid='no',taxonomy_not_checked='no',annotation_invalid='no',annotation_valid='no',uniprot_invalid='no',uniprot_valid='no',skewed='no',diff_seq_length='no',diff_units='no') %}
+                    {# anno = the single AnnotationFlags object — app.py stores it wrapped in a
+                       one-item list (col_ov.annotation = [annotation_flags(...)]), so unwrap it
+                       once here rather than repeating the [0] indexing everywhere below. #}
+                    {% set anno = col.annotation[0] if col.annotation else none %}
+                    {% set anno_status = namespace(invalid=false, valid=false, invalid_count=0, kind=none) %}
+                    {% if anno and anno.is_annotation %}
+                        {% if anno.valid_annotation is string %}
+                            {% set anno_status.valid = true %}
+                        {% else %}
+                            {% set anno_status.invalid = true %}
+                            {% set anno_status.invalid_count = anno.valid_annotation | length %}
+                        {% endif %}
+                        {% if anno.cog_bar or anno.cog_group %}
+                            {% set anno_status.kind = 'cog' %}
+                        {% elif anno.go_bar or anno.go_name_count %}
+                            {% set anno_status.kind = 'go' %}
+                        {% endif %}
+                    {% endif %}
+                    {# anno_label / anno_label_lc = display name for the annotation type,
+                       computed once as plain if/elif/else (not a chained ternary — some
+                       template parsers choke on "'a' if x else 'b' if y else 'c'"). #}
+                    {% set anno_label = 'Functional Annotation' %}
+                    {% set anno_label_lc = 'functional annotation' %}
+                    {% if anno_status.kind == 'cog' %}
+                        {% set anno_label = 'COG' %}
+                        {% set anno_label_lc = 'COG' %}
+                    {% elif anno_status.kind == 'go' %}
+                        {% set anno_label = 'GO' %}
+                        {% set anno_label_lc = 'GO' %}
+                    {% endif %}
                     {% for ov in overview %}{% if ov.name == col.name %}
                         {% set _n = col.number if col.number and col.number > 0 else 1 %}
                         {% if ov.infinity is defined and ov.infinity > 0 %}{% set fns.has_inf = 'yes' %}{% endif %}
                         {% if ov.zero_count is defined and (ov.zero_count / _n) >= 0.5 %}{% set fns.is_sparse = 'yes' %}{% endif %}
-                        {% if ov.outliers and ((ov.outliers.n_lower_iqr + ov.outliers.n_upper_iqr) / _n) >= 0.05 %}{% set fns.has_outliers = 'yes' %}{% endif %}
+                        {% if ov.outliers %}{% set _sk_adj = ov.skewness is not none and (ov.skewness | abs) > 0.5 %}{% set _out_n = (ov.outliers.n_lower_iqr + ov.outliers.n_upper_iqr) if _sk_adj else (ov.outliers.basic_lower_iqr + ov.outliers.basic_upper_iqr) %}{% if (_out_n / _n) >= 0.05 %}{% set fns.has_outliers = 'yes' %}{% endif %}{% endif %}
+                        {% if ov.skewness is not none and (ov.skewness | abs) > 0.5 %}{% set fns.skewed = 'yes' %}{% endif %}
                     {% endif %}{% endfor %}
                     {% for cat in categorical %}{% if cat.name == col.name %}
                         {% if cat.cib_ratio is defined and cat.cib_ratio > 3 %}{% set fns.imbalanced = 'yes' %}{% endif %}
@@ -225,17 +266,45 @@
                         {% if col.dna_rna_data.ambiguous_base_ratio is defined and col.dna_rna_data.ambiguous_base_ratio.mean > 0 %}{% set fns.ambiguous_bases = 'yes' %}{% endif %}
                         {% if col.dna_rna_data.reverse_complement_ratio is defined and col.dna_rna_data.reverse_complement_ratio > 0 %}{% set fns.rc_duplicates = 'yes' %}{% endif %}
                         {% if col.dna_rna_data.low_complexity is defined and col.dna_rna_data.low_complexity.mean < 50 %}{% set fns.low_complexity = 'yes' %}{% endif %}
+                        {% if col.dna_rna_data.length_stats is defined and col.dna_rna_data.length_stats.min != col.dna_rna_data.length_stats.max %}{% set fns.diff_seq_length = 'yes' %}{% endif %}
                     {% endif %}
                     {% if col.sequence != 'None' and col.protein_data %}
                         {% if col.protein_data.low_complexity is defined and col.protein_data.low_complexity.mean < 50 %}{% set fns.low_complexity = 'yes' %}{% endif %}
                         {% if col.protein_data.stop_codon_ratio is defined and col.protein_data.stop_codon_ratio > 0 %}{% set fns.data_anomalies = 'yes' %}{% endif %}
+                        {% if col.protein_data.length_stats is defined and col.protein_data.length_stats.min != col.protein_data.length_stats.max %}{% set fns.diff_seq_length = 'yes' %}{% endif %}
                     {% endif %}
                     {% if col.measurement_data and col.measurement_data.with_measurement %}{% set fns.mixed_values = 'yes' %}{% endif %}
+                    {% if col.measurement_data and col.measurement_data.unit_counts and col.measurement_data.unit_counts | length > 1 %}{% set fns.diff_units = 'yes' %}{% endif %}
                     {% if col.suspect_values is not none and not (col.invalid_seqs and col.invalid_seqs|length > 0) %}{% set fns.data_anomalies = 'yes' %}{% endif %}
-                    {% if col.taxonomy and col.taxonomy.is_taxonomy and col.taxonomy.taxonomy is not string %}{% set fns.taxonomy_invalid = 'yes' %}{% endif %}
-                    {% if col.taxonomy and col.taxonomy.is_taxonomy and col.taxonomy.taxonomy is string %}{% set fns.taxonomy_valid = 'yes' %}{% endif %}
+                    {# tax_status = single source of truth for taxonomy valid/invalid,
+                       correctly distinguishing the taxid-based path (col.taxonomy.taxonomy
+                       is always None there — validity lives in col.taxonomy.taxid instead)
+                       from the name-based path (validity lives in col.taxonomy.taxonomy). #}
+                    {% set tax_status = namespace(invalid=false, valid=false, invalid_count=0) %}
+                    {% if col.taxonomy and col.taxonomy.is_taxonomy %}
+                        {% if col.taxonomy.taxid is not none %}
+                            {% if col.taxonomy.taxid is string %}
+                                {% set tax_status.valid = true %}
+                            {% else %}
+                                {% set tax_status.invalid = true %}
+                                {% set tax_status.invalid_count = col.taxonomy.taxid | length %}
+                            {% endif %}
+                        {% elif col.taxonomy.taxonomy is not none %}
+                            {% if col.taxonomy.taxonomy is string %}
+                                {% set tax_status.valid = true %}
+                            {% else %}
+                                {% set tax_status.invalid = true %}
+                                {% set tax_status.invalid_count = col.taxonomy.taxonomy | length %}
+                            {% endif %}
+                        {% endif %}
+                    {% endif %}
+                    {% if tax_status.invalid %}{% set fns.taxonomy_invalid = 'yes' %}{% endif %}
+                    {% if tax_status.valid %}{% set fns.taxonomy_valid = 'yes' %}{% endif %}
                     {% if col.taxonomy is defined and col.taxonomy is none and col.taxonomy_candidate %}{% set fns.taxonomy_not_checked = 'yes' %}{% endif %}
-                    {% if col.annotation and col.annotation.is_annotation and col.taxonomy.valid_annotation is not string %}{% set fns.annotation_invalid = 'yes' %}{% endif %}
+                    {% if anno_status.invalid %}{% set fns.annotation_invalid = 'yes' %}{% endif %}
+                    {% if anno_status.valid %}{% set fns.annotation_valid = 'yes' %}{% endif %}
+                    {% if col.uniprot and col.uniprot.is_uniprot and col.uniprot.invalid_values %}{% set fns.uniprot_invalid = 'yes' %}{% endif %}
+                    {% if col.uniprot and col.uniprot.is_uniprot and not col.uniprot.invalid_values %}{% set fns.uniprot_valid = 'yes' %}{% endif %}
                     <div class="card row mt-3 column-item" data-index="{{ loop.index0 }}"
                          data-name="{{ col.name | lower }}"
                          data-type="{{ col.type }}"
@@ -255,10 +324,16 @@
                          data-lowcomplexity="{{ fns.low_complexity }}"
                          data-mixedvalues="{{ fns.mixed_values }}"
                          data-dataanomalies="{{ fns.data_anomalies }}"
+                         data-skewed="{{ fns.skewed }}"
+                         data-diffseqlength="{{ fns.diff_seq_length }}"
+                         data-diffunits="{{ fns.diff_units }}"
                          data-taxonomyinvalid="{{ fns.taxonomy_invalid }}"
                          data-taxonomyvalid="{{ fns.taxonomy_valid }}"
                          data-taxonomynotchecked="{{ fns.taxonomy_not_checked }}"
                          data-annotationinvalid="{{ fns.annotation_invalid }}"
+                         data-annotationvalid="{{ fns.annotation_valid }}"
+                         data-uniprotinvalid="{{ fns.uniprot_invalid }}"
+                         data-uniprotvalid="{{ fns.uniprot_valid }}"
                          style="display: {% if loop.index0 < items_per_page %}block{% else %}none{% endif %};">
                         <div class="card-header d-inline-flex gap-1 mb-2">
                             <button class="btn btn-cb-outline-primary" type="button" data-bs-toggle="collapse"
@@ -268,15 +343,22 @@
                                 {{ col.name.replace('_', ' ').title() }}
                             </button>
                             <div class="m-2 d-flex">
-                                {% if col.taxonomy and col.taxonomy.is_taxonomy and col.taxonomy.taxonomy is not string %}
+                                {% if tax_status.invalid %}
                                     <span class="badge bg-danger me-2">Taxonomy Invalid</span>
-                                {% elif col.taxonomy and col.taxonomy.is_taxonomy and col.taxonomy.taxonomy is string %}
+                                {% elif tax_status.valid %}
                                     <span class="badge bg-success me-2">Taxonomy Valid</span>
                                 {% elif col.taxonomy is defined and col.taxonomy is none and col.taxonomy_candidate %}
                                     <span class="badge bg-warning text-dark me-2" title="Run with --tax to validate">Taxonomy Not Checked</span>
                                 {% endif %}
-                                {% if col.annotation and col.annotation.is_annotation and col.taxonomy.valid_annotation is not string %}
-                                    <span class="badge bg-danger me-2">Annotation invalid</span>
+                                {% if anno_status.invalid %}
+                                    <span class="badge bg-danger me-2" title="{{ anno_label_lc }} terms failed controlled vocabulary check">Annotation Invalid</span>
+                                {% elif anno_status.valid %}
+                                    <span class="badge bg-success me-2" title="{{ anno_label_lc }} terms validated successfully">Annotation Valid</span>
+                                {% endif %}
+                                {% if col.uniprot and col.uniprot.is_uniprot and col.uniprot.invalid_values %}
+                                    <span class="badge bg-danger me-2" title="UniProt/SwissProt match type: {{ col.uniprot.match_type.replace('_', ' ') }}">UniProt Invalid</span>
+                                {% elif col.uniprot and col.uniprot.is_uniprot %}
+                                    <span class="badge bg-success me-2" title="UniProt/SwissProt match type: {{ col.uniprot.match_type.replace('_', ' ') }}">UniProt Valid</span>
                                 {% endif %}
                                 {% if col.unique == 1 %}
                                     <span class="badge bg-danger me-2">Constant</span>
@@ -331,20 +413,49 @@
                                     </span>
                                 {% endif %}
 
-                                <!-- TODO: Add missing badges - Skewness, Duplicates, Diff Sequence Length, Biological Naming, Diff Units -->
+                                <!-- TODO: Add missing badges - Duplicates, Biological Naming -->
+                                {# ── Skewness ── #}
+                                {% for ov in overview %}{% if ov.name == col.name and ov.skewness is not none %}
+                                    {% set sk_abs = ov.skewness | abs %}
+                                    {% if sk_abs > 1 %}
+                                        <span class="badge bg-warning text-dark me-2" title="Skewness: {{ ov.skewness | round(2) }} (|skewness| > 1)">Highly skewed</span>
+                                    {% elif sk_abs > 0.5 %}
+                                        <span class="badge bg-secondary me-2" title="Skewness: {{ ov.skewness | round(2) }} (|skewness| > 0.5)">Moderate skew</span>
+                                    {% endif %}
+                                {% endif %}{% endfor %}
+                                {# ── Diff Sequence Length ── #}
+                                {% if col.sequence != 'None' and col.dna_rna_data and col.dna_rna_data.length_stats is defined and col.dna_rna_data.length_stats.min != col.dna_rna_data.length_stats.max %}
+                                    <span class="badge bg-secondary me-2"
+                                          title="Sequence lengths range from {{ col.dna_rna_data.length_stats.min }} to {{ col.dna_rna_data.length_stats.max }} (mean {{ col.dna_rna_data.length_stats.mean }})">
+                                        Diff Sequence Length
+                                    </span>
+                                {% elif col.sequence != 'None' and col.protein_data and col.protein_data.length_stats is defined and col.protein_data.length_stats.min != col.protein_data.length_stats.max %}
+                                    <span class="badge bg-secondary me-2"
+                                          title="Sequence lengths range from {{ col.protein_data.length_stats.min }} to {{ col.protein_data.length_stats.max }} (mean {{ col.protein_data.length_stats.mean }})">
+                                        Diff Sequence Length
+                                    </span>
+                                {% endif %}
+                                {# ── Diff Units ── #}
+                                {% if col.measurement_data and col.measurement_data.unit_counts and col.measurement_data.unit_counts | length > 1 %}
+                                    <span class="badge bg-warning text-dark me-2"
+                                          title="{{ col.measurement_data.unit_counts | length }} different units detected in this column">
+                                        Diff Units
+                                    </span>
+                                {% endif %}
+
                                 {# ── DNA/RNA quality badges ── #}
                                 {% if col.sequence != 'None' and col.dna_rna_data %}
-                                    {# Ambiguous Bases (N) #}
+                                    {# Ambiguous Bases (N/R/Y) #}
                                     {% if col.dna_rna_data.ambiguous_base_ratio is defined and col.dna_rna_data.ambiguous_base_ratio.mean > 0 %}
                                         {% set amb_mean = col.dna_rna_data.ambiguous_base_ratio.mean %}
                                         {% if amb_mean >= 5 %}
                                             <span class="badge bg-danger me-2"
-                                                  title="Mean {{ amb_mean }}% ambiguous bases (N) — may indicate poor sequencing quality">
+                                                  title="Mean {{ amb_mean }}% ambiguous bases (N/R/Y) — may indicate poor sequencing quality">
                                                 Ambiguous Bases ({{ amb_mean }}%)
                                             </span>
                                         {% else %}
                                             <span class="badge bg-warning text-dark me-2"
-                                                  title="Mean {{ amb_mean }}% ambiguous bases (N) detected">
+                                                  title="Mean {{ amb_mean }}% ambiguous bases (N/R/Y) detected">
                                                 Ambiguous Bases ({{ amb_mean }}%)
                                             </span>
                                         {% endif %}
@@ -432,18 +543,26 @@
                                                 </span>
                                             {% endif %}
                                         {% endif %}
-                                        {# Outliers (Adj. IQR) #}
+                                        {# Outliers — Adjusted IQR (medcouple-based, out.lower_bound/upper_bound
+                                           + n_lower_iqr/n_upper_iqr) only once the distribution is skewed
+                                           enough (|skewness| > 0.5, same measure/threshold as the Skewed
+                                           badges above); otherwise fall back to the literal standard-IQR
+                                           fields the model already provides (basic_lower_bound/
+                                           basic_upper_bound + basic_lower_iqr/basic_upper_iqr), rather than
+                                           the adjusted formula's near-identical approximation. #}
                                         {% if ov.outliers %}
-                                            {% set n_out = ov.outliers.n_lower_iqr + ov.outliers.n_upper_iqr %}
+                                            {% set is_adjusted = ov.skewness is not none and (ov.skewness | abs) > 0.5 %}
+                                            {% set n_out = (ov.outliers.n_lower_iqr + ov.outliers.n_upper_iqr) if is_adjusted else (ov.outliers.basic_lower_iqr + ov.outliers.basic_upper_iqr) %}
                                             {% set out_pct = (n_out / n_total * 100) | round(1) %}
+                                            {% set iqr_label = 'adjusted' if is_adjusted else 'standard' %}
                                             {% if out_pct >= 10 %}
                                                 <span class="badge bg-danger me-2"
-                                                      title="{{ n_out }} outlier(s) outside adjusted IQR bounds ({{ out_pct }}%)">
+                                                      title="{{ n_out }} outlier(s) outside {{ iqr_label }} IQR bounds ({{ out_pct }}%)">
                                                     Outliers ({{ out_pct }}%)
                                                 </span>
                                             {% elif out_pct >= 5 %}
                                                 <span class="badge bg-warning text-dark me-2"
-                                                      title="{{ n_out }} outlier(s) outside adjusted IQR bounds ({{ out_pct }}%)">
+                                                      title="{{ n_out }} outlier(s) outside {{ iqr_label }} IQR bounds ({{ out_pct }}%)">
                                                     Outliers ({{ out_pct }}%)
                                                 </span>
                                             {% endif %}
@@ -484,12 +603,12 @@
                                             <strong>Sequence type:</strong> {{ col.sequence }}<br>
                                         {% endif %}
                                         {% if col.taxonomy and col.taxonomy.is_taxonomy %}
-                                            {% if col.taxonomy.taxonomy is string %}
+                                            {% if tax_status.valid %}
                                                 <strong>Taxonomy:</strong>
                                                 <span class="text-success">Valid</span><br>
-                                            {% else %}
+                                            {% elif tax_status.invalid %}
                                                 <strong>Taxonomy:</strong>
-                                                <span class="text-danger">{{ col.taxonomy.taxonomy | length }} invalid entr{{ 'y' if col.taxonomy.taxonomy | length == 1 else 'ies' }}</span><br>
+                                                <span class="text-danger">{{ tax_status.invalid_count }} invalid entr{{ 'y' if tax_status.invalid_count == 1 else 'ies' }}</span><br>
                                             {% endif %}
                                             {% if col.taxonomy.is_mixed %}
                                                 <strong>Rank:</strong> <span class="text-warning">Mixed</span><br>
@@ -500,17 +619,38 @@
                                             {% if col.taxonomy.outdated_names %}
                                                 <strong>Outdated names:</strong> {{ col.taxonomy.outdated_names | length }}<br>
                                             {% endif %}
-                                        {% elif col.taxonomy is defined and col.taxonomy is none %}
+                                        {% elif col.taxonomy is defined and col.taxonomy is none and col.taxonomy_candidate %}
                                             <strong>Taxonomy:</strong>
                                             <span class="text-muted">Not checked
                                                 <small>(run with <code>--tax</code> to enable)</small>
                                             </span><br>
                                         {% endif %}
-                                        {% if col.annotation and col.annotation.is_annotation %}
-                                            {% if col.annotation.valid_annotation is string %}
-                                                <strong>Functional Annotation:</strong> {{ col.annotation.valid_annotation }}<br>
+                                        {% if anno and anno.is_annotation %}
+                                            {% if anno_status.valid %}
+                                                <strong>Functional Annotation:</strong>
+                                                <span class="text-success">Valid</span><br>
+                                            {% elif anno_status.invalid %}
+                                                <strong>Functional Annotation:</strong>
+                                                <span class="text-danger">{{ anno_status.invalid_count }} invalid entr{{ 'y' if anno_status.invalid_count == 1 else 'ies' }}</span><br>
+                                            {% endif %}
+                                            {% if anno_status.kind %}
+                                                <strong>Annotation type:</strong> {{ 'COG' if anno_status.kind == 'cog' else 'GO' }}<br>
+                                            {% endif %}
+                                        {% endif %}
+                                        {% if col.uniprot and col.uniprot.is_uniprot %}
+                                            {% if col.uniprot.invalid_values %}
+                                                <strong>UniProt/SwissProt:</strong>
+                                                <span class="text-danger">{{ col.uniprot.invalid_values | length }} invalid entr{{ 'y' if col.uniprot.invalid_values | length == 1 else 'ies' }}</span><br>
                                             {% else %}
-                                                <strong>Functional Annotation:</strong> Invalid<br>
+                                                <strong>UniProt/SwissProt:</strong>
+                                                <span class="text-success">Valid</span><br>
+                                            {% endif %}
+                                            <strong>Match type:</strong> {{ col.uniprot.match_type.replace('_', ' ') | title }}
+                                            {% if col.uniprot.validity_rate is not none %}
+                                                ({{ (col.uniprot.validity_rate * 100) | round(1) }}% matched)
+                                            {% endif %}<br>
+                                            {% if col.uniprot.outdated_names %}
+                                                <strong>Outdated protein names:</strong> {{ col.uniprot.outdated_names | length }}<br>
                                             {% endif %}
                                         {% endif %}
                                         {% if col.correlation %}
@@ -582,19 +722,41 @@
                                                         data-bs-toggle="tab" data-bs-target="#taxStats{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
                                                         type="button" role="tab">
                                                     Taxonomy
-                                                    {% if col.taxonomy.taxonomy is not string %}
+                                                    {% if tax_status.invalid %}
                                                         <span class="badge bg-danger ms-1" style="font-size:.7em;">Invalid</span>
                                                     {% else %}
                                                         <span class="badge bg-success ms-1" style="font-size:.7em;">Valid</span>
                                                     {% endif %}
                                                 </button>
                                             </li>
-                                        {% elif col.taxonomy is defined and col.taxonomy is none %}
+                                        {% endif %}
+
+                                        {% if col.uniprot and col.uniprot.is_uniprot %}
                                             <li class="nav-item" role="presentation">
-                                                <button class="nav-link disabled" type="button" role="tab"
-                                                        title="Taxonomy analysis not enabled — run with --tax">
-                                                    Taxonomy
-                                                    <span class="badge bg-secondary ms-1" style="font-size:.7em;">–</span>
+                                                <button class="nav-link" id="uniprot-stats-tab{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
+                                                        data-bs-toggle="tab" data-bs-target="#uniprotStats{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
+                                                        type="button" role="tab">
+                                                    UniProt
+                                                    {% if col.uniprot.invalid_values %}
+                                                        <span class="badge bg-danger ms-1" style="font-size:.7em;">Invalid</span>
+                                                    {% else %}
+                                                        <span class="badge bg-success ms-1" style="font-size:.7em;">Valid</span>
+                                                    {% endif %}
+                                                </button>
+                                            </li>
+                                        {% endif %}
+
+                                        {% if anno and anno.is_annotation %}
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="anno-stats-tab{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
+                                                        data-bs-toggle="tab" data-bs-target="#annoStats{{col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize }}"
+                                                        type="button" role="tab">
+                                                    {{ anno_label }}
+                                                    {% if anno_status.invalid %}
+                                                        <span class="badge bg-danger ms-1" style="font-size:.7em;">Invalid</span>
+                                                    {% else %}
+                                                        <span class="badge bg-success ms-1" style="font-size:.7em;">Valid</span>
+                                                    {% endif %}
                                                 </button>
                                             </li>
                                         {% endif %}
@@ -620,6 +782,18 @@
                                                                 <tr>
                                                                     <td>{{ key }}</td>
                                                                     <td>{{ cat.value_counts[key] }}</td>
+                                                                    <td>{{ value }}</td>
+                                                                </tr>
+                                                            {% endfor %}
+                                                        {% endif %}
+                                                    {% endfor %}
+
+                                                    {% for ov in overview %}
+                                                        {% if col.name == ov.name %}
+                                                            {% for key, value in ov.frequencies.items() %}
+                                                                <tr>
+                                                                    <td>{{ key }}</td>
+                                                                    <td>{{ ov.value_counts[key] }}</td>
                                                                     <td>{{ value }}</td>
                                                                 </tr>
                                                             {% endfor %}
@@ -689,7 +863,7 @@
                                                 <div class="mt-3">
 
                                                     {# ── Status banner ── #}
-                                                    {% if tax.taxonomy is string %}
+                                                    {% if tax_status.valid %}
                                                         <div class="alert alert-success d-flex align-items-center gap-2 py-2">
                                                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>
                                                             All taxonomy entries validated successfully.
@@ -697,7 +871,7 @@
                                                     {% else %}
                                                         <div class="alert alert-danger d-flex align-items-center gap-2 py-2">
                                                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
-                                                            <span>{{ tax.taxonomy | length }} invalid taxonomy entr{{ 'y' if tax.taxonomy | length == 1 else 'ies' }} detected.</span>
+                                                            <span>{{ tax_status.invalid_count }} invalid taxonomy entr{{ 'y' if tax_status.invalid_count == 1 else 'ies' }} detected.</span>
                                                         </div>
                                                     {% endif %}
 
@@ -710,13 +884,21 @@
 
                                                     {# ── Sub-tabs ── #}
                                                     <ul class="nav nav-tabs mt-2" id="taxSubTab{{ cid }}" role="tablist">
+                                                        {% if tax.sunburst_plot %}
+                                                            <li class="nav-item" role="presentation">
+                                                                <button class="nav-link active" data-bs-toggle="tab"
+                                                                        data-bs-target="#taxSunburst{{ cid }}" type="button" role="tab">
+                                                                    Taxonomic Composition
+                                                                </button>
+                                                            </li>
+                                                        {% endif %}
                                                         <li class="nav-item" role="presentation">
-                                                            <button class="nav-link active" data-bs-toggle="tab"
+                                                            <button class="nav-link {% if not tax.sunburst_plot %}active{% endif %}" data-bs-toggle="tab"
                                                                     data-bs-target="#taxRank{{ cid }}" type="button" role="tab">
                                                                 Rank Distribution
                                                             </button>
                                                         </li>
-                                                        {% if tax.taxonomy is not string %}
+                                                        {% if tax.taxonomy is not none and tax.taxonomy is not string %}
                                                             <li class="nav-item" role="presentation">
                                                                 <button class="nav-link" data-bs-toggle="tab"
                                                                         data-bs-target="#taxInvalid{{ cid }}" type="button" role="tab">
@@ -751,8 +933,19 @@
 
                                                     <div class="tab-content mt-2" id="taxSubContent{{ cid }}">
 
+                                                        {# ── Taxonomic Composition (Sunburst) ── #}
+                                                        {% if tax.sunburst_plot %}
+                                                            <div class="tab-pane fade show active" id="taxSunburst{{ cid }}" role="tabpanel">
+                                                                <div class="plot-container mt-2" style="max-height: fit-content; overflow-x: auto;display: flex; justify-content: center;">
+                                                                    <figure role="img" aria-label="Taxonomic composition sunburst for column {{ col.name }}" style="width:100%;">
+                                                                        {{ tax.sunburst_plot | safe }}
+                                                                    </figure>
+                                                                </div>
+                                                            </div>
+                                                        {% endif %}
+
                                                         {# ── Rank Distribution ── #}
-                                                        <div class="tab-pane fade show active" id="taxRank{{ cid }}" role="tabpanel">
+                                                        <div class="tab-pane fade {% if not tax.sunburst_plot %}show active{% endif %}" id="taxRank{{ cid }}" role="tabpanel">
                                                             {% if tax.rank_distribution %}
                                                                 <div class="table-responsive mt-2" style="max-height: 350px; overflow-y: auto;">
                                                                     <table class="table table-sm table-striped w-100">
@@ -791,7 +984,7 @@
                                                         </div>
 
                                                         {# ── Invalid Entries ── #}
-                                                        {% if tax.taxonomy is not string %}
+                                                        {% if tax.taxonomy is not none and tax.taxonomy is not string %}
                                                             <div class="tab-pane fade" id="taxInvalid{{ cid }}" role="tabpanel">
                                                                 <div class="alert alert-warning small py-2 mt-2">
                                                                     These entries could not be matched against the NCBI taxonomy database. Check for spelling errors, synonyms, or outdated names.
@@ -868,6 +1061,250 @@
                                                                         </table>
                                                                     </div>
                                                                 {% endif %}
+                                                            </div>
+                                                        {% endif %}
+
+                                                    </div>{# /tab-content #}
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                        <!-- UniProt/SwissProt Tab -->
+                                        {% if col.uniprot and col.uniprot.is_uniprot %}
+                                            {% set up = col.uniprot %}
+                                            {% set ucid = col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize %}
+                                            <div class="tab-pane fade" id="uniprotStats{{ ucid }}" role="tabpanel"
+                                                 aria-labelledby="uniprot-stats-tab{{ ucid }}">
+                                                <div class="mt-3">
+
+                                                    {# ── Status banner ── #}
+                                                    {% if not up.invalid_values %}
+                                                        <div class="alert alert-success d-flex align-items-center gap-2 py-2">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>
+                                                            All values matched against UniProt/SwissProt successfully.
+                                                        </div>
+                                                    {% else %}
+                                                        <div class="alert alert-danger d-flex align-items-center gap-2 py-2">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
+                                                            <span>{{ up.invalid_values | length }} value{{ '' if up.invalid_values | length == 1 else 's' }} could not be matched against UniProt/SwissProt.</span>
+                                                        </div>
+                                                    {% endif %}
+
+                                                    <div class="small text-muted mb-2">
+                                                        <strong>Match type:</strong> {{ up.match_type.replace('_', ' ') | title }}
+                                                        {% if up.validity_rate is not none %}
+                                                            &middot; <strong>Validity rate:</strong> {{ (up.validity_rate * 100) | round(1) }}%
+                                                        {% endif %}
+                                                    </div>
+
+                                                    {# ── Sub-tabs ── #}
+                                                    <ul class="nav nav-tabs mt-2" id="uniprotSubTab{{ ucid }}" role="tablist">
+                                                        {% if up.invalid_values %}
+                                                            <li class="nav-item" role="presentation">
+                                                                <button class="nav-link active" data-bs-toggle="tab"
+                                                                        data-bs-target="#uniprotInvalid{{ ucid }}" type="button" role="tab">
+                                                                    Invalid Values
+                                                                    <span class="badge bg-danger ms-1" style="font-size:.7em;">{{ up.invalid_values | length }}</span>
+                                                                </button>
+                                                            </li>
+                                                        {% endif %}
+                                                        {% if up.outdated_names %}
+                                                            <li class="nav-item" role="presentation">
+                                                                <button class="nav-link {% if not up.invalid_values %}active{% endif %}" data-bs-toggle="tab"
+                                                                        data-bs-target="#uniprotOutdated{{ ucid }}" type="button" role="tab">
+                                                                    Outdated Names
+                                                                    <span class="badge bg-warning text-dark ms-1" style="font-size:.7em;">{{ up.outdated_names | length }}</span>
+                                                                </button>
+                                                            </li>
+                                                        {% endif %}
+                                                    </ul>
+
+                                                    <div class="tab-content mt-2" id="uniprotSubContent{{ ucid }}">
+
+                                                        {# ── Invalid Values ── #}
+                                                        {% if up.invalid_values %}
+                                                            <div class="tab-pane fade show active" id="uniprotInvalid{{ ucid }}" role="tabpanel">
+                                                                <div class="table-responsive mt-1" style="max-height: 350px; overflow-y: auto;">
+                                                                    <table class="table table-sm table-striped w-100">
+                                                                        <thead class="sticky-top bg-light">
+                                                                        <tr><th>#</th><th>Value</th></tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                        {% for val in up.invalid_values %}
+                                                                            <tr>
+                                                                                <td class="text-muted">{{ loop.index }}</td>
+                                                                                <td>{{ val }}</td>
+                                                                            </tr>
+                                                                        {% endfor %}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                            </div>
+                                                        {% endif %}
+
+                                                        {# ── Outdated Names ── #}
+                                                        {% if up.outdated_names %}
+                                                            <div class="tab-pane fade {% if not up.invalid_values %}show active{% endif %}" id="uniprotOutdated{{ ucid }}" role="tabpanel">
+                                                                <div class="alert alert-warning small py-2 mt-2">
+                                                                    These protein names are recognised but have been replaced by a current primary name. Consider updating them for consistency.
+                                                                </div>
+                                                                <div class="table-responsive mt-1" style="max-height: 350px; overflow-y: auto;">
+                                                                    <table class="table table-sm table-striped w-100">
+                                                                        <thead class="sticky-top bg-light">
+                                                                        <tr>
+                                                                            <th>Used Name</th>
+                                                                            <th>Current Primary Name</th>
+                                                                        </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                        {% for used, current in up.outdated_names.items() %}
+                                                                            <tr>
+                                                                                <td class="text-warning-emphasis">{{ used }}</td>
+                                                                                <td class="fst-italic">{{ current }}</td>
+                                                                            </tr>
+                                                                        {% endfor %}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                            </div>
+                                                        {% endif %}
+
+                                                    </div>{# /tab-content #}
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                        <!-- Functional Annotation Tab (COG / GO) -->
+                                        {% if anno and anno.is_annotation %}
+                                            {% set acid = col.name | replace(' ', '') | replace('.', '_') | replace('#', '') | capitalize %}
+                                            {% set anno_invalid_list = anno.cog_invalid if anno.cog_invalid else anno.go_invalid %}
+                                            <div class="tab-pane fade" id="annoStats{{ acid }}" role="tabpanel"
+                                                 aria-labelledby="anno-stats-tab{{ acid }}">
+                                                <div class="mt-3">
+
+                                                    {# ── Status banner ── #}
+                                                    {% if anno_status.valid %}
+                                                        <div class="alert alert-success d-flex align-items-center gap-2 py-2">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>
+                                                            All {{ anno_label_lc }} entries validated successfully.
+                                                        </div>
+                                                    {% else %}
+                                                        <div class="alert alert-danger d-flex align-items-center gap-2 py-2">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
+                                                            <span>{{ anno_status.invalid_count }} invalid {{ anno_label_lc }} entr{{ 'y' if anno_status.invalid_count == 1 else 'ies' }} detected.</span>
+                                                        </div>
+                                                    {% endif %}
+
+                                                    {# ── Sub-tabs ── #}
+                                                    <ul class="nav nav-tabs mt-2" id="annoSubTab{{ acid }}" role="tablist">
+                                                        {% if anno.cog_bar %}
+                                                            <li class="nav-item" role="presentation">
+                                                                <button class="nav-link active" data-bs-toggle="tab"
+                                                                        data-bs-target="#annoCogBar{{ acid }}" type="button" role="tab">
+                                                                    Category Distribution
+                                                                </button>
+                                                            </li>
+                                                        {% endif %}
+                                                        {% if anno.cog_group %}
+                                                            <li class="nav-item" role="presentation">
+                                                                <button class="nav-link {% if not anno.cog_bar %}active{% endif %}" data-bs-toggle="tab"
+                                                                        data-bs-target="#annoCogGroup{{ acid }}" type="button" role="tab">
+                                                                    Group Distribution
+                                                                </button>
+                                                            </li>
+                                                        {% endif %}
+                                                        {% if anno.go_bar %}
+                                                            <li class="nav-item" role="presentation">
+                                                                <button class="nav-link active" data-bs-toggle="tab"
+                                                                        data-bs-target="#annoGoBar{{ acid }}" type="button" role="tab">
+                                                                    Top GO Terms
+                                                                </button>
+                                                            </li>
+                                                        {% endif %}
+                                                        {% if anno.go_name_count %}
+                                                            <li class="nav-item" role="presentation">
+                                                                <button class="nav-link {% if not anno.go_bar %}active{% endif %}" data-bs-toggle="tab"
+                                                                        data-bs-target="#annoGoNamespace{{ acid }}" type="button" role="tab">
+                                                                    Namespace Distribution
+                                                                </button>
+                                                            </li>
+                                                        {% endif %}
+                                                        {% if anno_invalid_list %}
+                                                            <li class="nav-item" role="presentation">
+                                                                <button class="nav-link {% if not (anno.cog_bar or anno.go_bar) %}active{% endif %}" data-bs-toggle="tab"
+                                                                        data-bs-target="#annoInvalid{{ acid }}" type="button" role="tab">
+                                                                    Invalid Entries
+                                                                    <span class="badge bg-danger ms-1" style="font-size:.7em;">{{ anno_invalid_list | length }}</span>
+                                                                </button>
+                                                            </li>
+                                                        {% endif %}
+                                                    </ul>
+
+                                                    <div class="tab-content mt-2" id="annoSubContent{{ acid }}">
+
+                                                        {# ── COG Category Distribution (bar) ── #}
+                                                        {% if anno.cog_bar %}
+                                                            <div class="tab-pane fade show active" id="annoCogBar{{ acid }}" role="tabpanel">
+                                                                <div class="plot-container mt-2" style="max-height: fit-content; overflow-x: auto;">
+                                                                    <figure role="img" aria-label="COG functional category distribution for column {{ col.name }}" style="width:100%;">
+                                                                        {{ anno.cog_bar | safe }}
+                                                                    </figure>
+                                                                </div>
+                                                            </div>
+                                                        {% endif %}
+
+                                                        {# ── COG Group Distribution (donut) ── #}
+                                                        {% if anno.cog_group %}
+                                                            <div class="tab-pane fade {% if not anno.cog_bar %}show active{% endif %}" id="annoCogGroup{{ acid }}" role="tabpanel">
+                                                                <div class="plot-container mt-2" style="max-height: fit-content; overflow-x: auto; display:flex; justify-content:center;">
+                                                                    <figure role="img" aria-label="COG group distribution for column {{ col.name }}" style="width:100%; max-width:600px;">
+                                                                        {{ anno.cog_group | safe }}
+                                                                    </figure>
+                                                                </div>
+                                                            </div>
+                                                        {% endif %}
+
+                                                        {# ── Top GO Terms (bar) ── #}
+                                                        {% if anno.go_bar %}
+                                                            <div class="tab-pane fade show active" id="annoGoBar{{ acid }}" role="tabpanel">
+                                                                <div class="plot-container mt-2" style="max-height: fit-content; overflow-x: auto;">
+                                                                    <figure role="img" aria-label="Top GO terms for column {{ col.name }}" style="width:100%;">
+                                                                        {{ anno.go_bar | safe }}
+                                                                    </figure>
+                                                                </div>
+                                                            </div>
+                                                        {% endif %}
+
+                                                        {# ── GO Namespace Distribution (donut) ── #}
+                                                        {% if anno.go_name_count %}
+                                                            <div class="tab-pane fade {% if not anno.go_bar %}show active{% endif %}" id="annoGoNamespace{{ acid }}" role="tabpanel">
+                                                                <div class="plot-container mt-2" style="max-height: fit-content; overflow-x: auto; display:flex; justify-content:center;">
+                                                                    <figure role="img" aria-label="GO namespace distribution for column {{ col.name }}" style="width:100%; max-width:600px;">
+                                                                        {{ anno.go_name_count | safe }}
+                                                                    </figure>
+                                                                </div>
+                                                            </div>
+                                                        {% endif %}
+
+                                                        {# ── Invalid Entries ── #}
+                                                        {% if anno_invalid_list %}
+                                                            <div class="tab-pane fade {% if not (anno.cog_bar or anno.go_bar) %}show active{% endif %}" id="annoInvalid{{ acid }}" role="tabpanel">
+                                                                <div class="alert alert-warning small py-2 mt-2">
+                                                                    These entries could not be matched against the {{ anno_label_lc }} reference vocabulary. Check for spelling errors or outdated identifiers.
+                                                                </div>
+                                                                <div class="table-responsive mt-1" style="max-height: 350px; overflow-y: auto;">
+                                                                    <table class="table table-sm table-striped w-100">
+                                                                        <thead class="sticky-top bg-light">
+                                                                        <tr><th>#</th><th>Entry</th></tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                        {% for entry in anno_invalid_list %}
+                                                                            <tr>
+                                                                                <td class="text-muted">{{ loop.index }}</td>
+                                                                                <td>{{ entry }}</td>
+                                                                            </tr>
+                                                                        {% endfor %}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
                                                             </div>
                                                         {% endif %}
 
@@ -984,18 +1421,35 @@
                                                             {# Outliers — only if detect_outliers returned a result #}
                                                             {% if ov.outliers %}
                                                                 {% set out = ov.outliers %}
-                                                                {% set n_iqr = out.n_lower_iqr + out.n_upper_iqr %}
+                                                                {# Adjusted IQR (medcouple-based) only once the distribution is
+                                                                   skewed enough per the moment-based Skewness measure
+                                                                   (|skewness| > 0.5 — same measure/threshold as the Skewed
+                                                                   badges elsewhere); otherwise use the model's own literal
+                                                                   standard-IQR fields (basic_lower_bound / basic_upper_bound /
+                                                                   basic_lower_iqr / basic_upper_iqr) instead of out.lower_bound /
+                                                                   out.upper_bound / n_lower_iqr / n_upper_iqr, which are always
+                                                                   the adjusted formula's output. #}
+                                                                {% set is_adjusted = ov.skewness is not none and (ov.skewness | abs) > 0.5 %}
+                                                                {% set n_lower = out.n_lower_iqr if is_adjusted else out.basic_lower_iqr %}
+                                                                {% set n_upper = out.n_upper_iqr if is_adjusted else out.basic_upper_iqr %}
+                                                                {% set lo_bound = out.lower_bound if is_adjusted else out.basic_lower_bound %}
+                                                                {% set hi_bound = out.upper_bound if is_adjusted else out.basic_upper_bound %}
+                                                                {% set n_iqr = n_lower + n_upper %}
                                                                 {% set n_mz  = out.n_lower_mzscore + out.n_upper_mzscore %}
                                                                 {% set n_z   = out.n_lower_zscore  + out.n_upper_zscore %}
                                                                 {% set iqr_pct = (n_iqr / n_total * 100) | round(1) %}
                                                                 {% set mz_pct  = (n_mz  / n_total * 100) | round(1) %}
                                                                 {% set z_pct   = (n_z   / n_total * 100) | round(1) %}
 
-                                                                {# Adjusted IQR (Hubert & Vandervieren, 2008) #}
                                                                 <tr {% if iqr_pct >= 5 %}class="table-warning"{% endif %}>
                                                                     <td>
-                                                                        Outliers — Adjusted IQR
-                                                                        <small class="text-muted d-block">Hubert &amp; Vandervieren (2008); bounds adjusted via Medcouple</small>
+                                                                        {% if is_adjusted %}
+                                                                            Outliers — Adjusted IQR
+                                                                            <small class="text-muted d-block">Hubert &amp; Vandervieren (2008); bounds adjusted via Medcouple, applied because |Skewness| &gt; 0.5</small>
+                                                                        {% else %}
+                                                                            Outliers — Standard IQR
+                                                                            <small class="text-muted d-block">Tukey (1977); |Skewness| &le; 0.5, distribution not skewed enough to adjust</small>
+                                                                        {% endif %}
                                                                     </td>
                                                                     <td>
                                                                         {{ n_iqr }} <span class="text-muted">({{ iqr_pct }}%)</span>
@@ -1003,8 +1457,8 @@
                                                                         {% elif iqr_pct >= 5 %}<span class="badge bg-warning text-dark ms-2">Moderate</span>
                                                                         {% endif %}
                                                                         <small class="text-muted d-block">
-                                                                            ↓ {{ out.n_lower_iqr }} below {{ out.lower_bound }}
-                                                                            &ensp;↑ {{ out.n_upper_iqr }} above {{ out.upper_bound }}
+                                                                            ↓ {{ n_lower }} below {{ lo_bound }}
+                                                                            &ensp;↑ {{ n_upper }} above {{ hi_bound }}
                                                                             &ensp;MC: {{ out.medcouple }}
                                                                         </small>
                                                                     </td>
@@ -1321,13 +1775,13 @@
                                                         <div class="table-responsive mt-3" style="max-height: 400px; overflow-y: auto;">
                                                             <table class="table table-sm table-striped w-100" style="min-width: 500px;">
                                                                 <thead class="sticky-top bg-light">
-                                                                <tr><th>#</th><th>Value</th></tr>
+                                                                <tr><th>Index</th><th>Value</th></tr>
                                                                 </thead>
                                                                 <tbody>
-                                                                {% for seq in col.invalid_seqs %}
+                                                                {% for row_idx, seq in col.invalid_seqs %}
                                                                     <tr>
-                                                                        <td>{{ loop.index }}</td>
-                                                                        <td>
+                                                                        <td><span class="badge bg-light text-dark border" title="Original row index">{{ row_idx }}</span></td>
+                                                                        <td style="font-family: var(--bs-font-monospace, monospace); word-break: break-all;">
                                                                             {% if seq|length > 50 %}
                                                                                 {{ seq[:25] }}<span class="text-muted">...</span>{{ seq[-25:] }}
                                                                             {% else %}
@@ -1371,13 +1825,15 @@
                                                             </tr>
                                                             {% endif %}
                                                             {% if d.length_outliers is defined and d.length_outliers %}
+                                                            {% set lo = d.length_outliers %}
+                                                            {% set lo_adjusted = d.length_skewness is defined and d.length_skewness is not none and (d.length_skewness | abs) > 0.5 %}
                                                             <tr>
                                                                 <td colspan="4">
                                                                     <small class="text-muted">
-                                                                        <strong>Length Outliers (Adj. IQR):</strong>
-                                                                        {{ d.length_outliers.n_lower_iqr }} below {{ d.length_outliers.lower_bound }} bp &nbsp;|&nbsp;
-                                                                        {{ d.length_outliers.n_upper_iqr }} above {{ d.length_outliers.upper_bound }} bp &nbsp;|&nbsp;
-                                                                        Medcouple: {{ d.length_outliers.medcouple }}
+                                                                        <strong>Length Outliers ({{ 'Adj.' if lo_adjusted else 'Standard' }} IQR):</strong>
+                                                                        {{ lo.n_lower_iqr if lo_adjusted else lo.basic_lower_iqr }} below {{ lo.lower_bound if lo_adjusted else lo.basic_lower_bound }} bp &nbsp;|&nbsp;
+                                                                        {{ lo.n_upper_iqr if lo_adjusted else lo.basic_upper_iqr }} above {{ lo.upper_bound if lo_adjusted else lo.basic_upper_bound }} bp &nbsp;|&nbsp;
+                                                                        Medcouple: {{ lo.medcouple }}
                                                                     </small>
                                                                 </td>
                                                             </tr>
@@ -1399,13 +1855,13 @@
                                                             {# ── Ambiguous Bases ── #}
                                                             <tr class="table-secondary">
                                                                 <td colspan="4">
-                                                                    <strong>Ambiguous Bases (N)</strong>
+                                                                    <strong>Ambiguous Bases (N/R/Y)</strong>
                                                                     <br><small class="text-muted">poor sequencing quality indicator</small>
                                                                 </td>
                                                             </tr>
                                                             {% if d.ambiguous_base_ratio is defined %}
                                                             <tr {% if d.ambiguous_base_ratio.mean >= 5 %}class="table-danger"{% elif d.ambiguous_base_ratio.mean > 0 %}class="table-warning"{% endif %}>
-                                                                <td>N-Rate (%)</td>
+                                                                <td>N/R/Y-Rate (%)</td>
                                                                 <td>{{ d.ambiguous_base_ratio.min }}%</td>
                                                                 <td>
                                                                     {{ d.ambiguous_base_ratio.mean }}%
@@ -1638,15 +2094,15 @@
                                                         {# Ambiguous Base Distribution #}
                                                         {% if d.ambiguous_distribution %}
                                                             <hr>
-                                                            <h6>Ambiguous Base (N) Distribution</h6>
-                                                            <p class="text-muted small">N-count per sequence in chronological order. Spikes may indicate specific flowcell tiles or regions with poor sequencing quality.</p>
+                                                            <h6>Ambiguous Base (N/R/Y) Distribution</h6>
+                                                            <p class="text-muted small">N/R/Y-count per sequence in chronological order. Spikes may indicate specific flowcell tiles or regions with poor sequencing quality.</p>
                                                             <div class="plot-container mb-4" style="max-height: fit-content; overflow: scroll;">
-                                                                <figure role="img" aria-label="Distribution of ambiguous base (N) counts per sequence in column {{ col.name }}">
+                                                                <figure role="img" aria-label="Distribution of ambiguous base (N/R/Y) counts per sequence in column {{ col.name }}">
                                                                     {{ d.ambiguous_distribution | safe }}
                                                                 </figure>
                                                             </div>
                                                         {% elif d.ambiguous_base_ratio is defined and d.ambiguous_base_ratio.mean == 0 %}
-                                                            <div class="alert alert-success mt-3">No ambiguous bases (N) detected — distribution plot not generated.</div>
+                                                            <div class="alert alert-success mt-3">No ambiguous bases (N/R/Y) detected — distribution plot not generated.</div>
                                                         {% endif %}
                                                     </div>
                                                 </div>
@@ -1852,15 +2308,15 @@
                                                             <table class="table table-sm table-striped w-100" style="min-width: 500px;">
                                                                 <thead class="sticky-top bg-light">
                                                                 <tr>
-                                                                    <th>#</th>
+                                                                    <th>Index</th>
                                                                     <th>Value</th>
                                                                 </tr>
                                                                 </thead>
                                                                 <tbody>
-                                                                {% for seq in col.invalid_seqs %}
+                                                                {% for row_idx, seq in col.invalid_seqs %}
                                                                     <tr>
-                                                                        <td>{{ loop.index }}</td>
-                                                                        <td>
+                                                                        <td><span class="badge bg-light text-dark border" title="Original row index">{{ row_idx }}</span></td>
+                                                                        <td style="font-family: var(--bs-font-monospace, monospace); word-break: break-all;">
                                                                             {% if seq|length > 50 %}
                                                                                 {{ seq[:25] }}<span class="text-muted">...</span>{{ seq[-25:] }}
                                                                             {% else %}
@@ -1901,13 +2357,15 @@
                                                             </tr>
                                                             {% endif %}
                                                             {% if pd.length_outliers is defined and pd.length_outliers %}
+                                                            {% set lo = pd.length_outliers %}
+                                                            {% set lo_adjusted = pd.length_skewness is defined and pd.length_skewness is not none and (pd.length_skewness | abs) > 0.5 %}
                                                             <tr>
                                                                 <td colspan="4">
                                                                     <small class="text-muted">
-                                                                        <strong>Length Outliers (Adj. IQR):</strong>
-                                                                        {{ pd.length_outliers.n_lower_iqr }} below {{ pd.length_outliers.lower_bound }} AA &nbsp;|&nbsp;
-                                                                        {{ pd.length_outliers.n_upper_iqr }} above {{ pd.length_outliers.upper_bound }} AA &nbsp;|&nbsp;
-                                                                        Medcouple: {{ pd.length_outliers.medcouple }}
+                                                                        <strong>Length Outliers ({{ 'Adj.' if lo_adjusted else 'Standard' }} IQR):</strong>
+                                                                        {{ lo.n_lower_iqr if lo_adjusted else lo.basic_lower_iqr }} below {{ lo.lower_bound if lo_adjusted else lo.basic_lower_bound }} AA &nbsp;|&nbsp;
+                                                                        {{ lo.n_upper_iqr if lo_adjusted else lo.basic_upper_iqr }} above {{ lo.upper_bound if lo_adjusted else lo.basic_upper_bound }} AA &nbsp;|&nbsp;
+                                                                        Medcouple: {{ lo.medcouple }}
                                                                     </small>
                                                                 </td>
                                                             </tr>
@@ -1916,7 +2374,7 @@
                                                             {# ── Ambiguous Residues ── #}
                                                             <tr class="table-secondary">
                                                                 <td colspan="4">
-                                                                    <strong>Ambiguous Residues (X / J / U)</strong>
+                                                                    <strong>Ambiguous Residues (X / J / U / V / O / B / Z)</strong>
                                                                     <br><small class="text-muted">non-standard or unresolved amino acids</small>
                                                                 </td>
                                                             </tr>
@@ -2236,7 +2694,7 @@
                                                         {# ── Ambiguous Residue Distribution ── #}
                                                         {% if pd.ambiguous_distribution %}
                                                             <hr>
-                                                            <h6>Ambiguous Residue (X/J/U) Distribution</h6>
+                                                            <h6>Ambiguous Residue (X/J/U/V/O/B/Z) Distribution</h6>
                                                             <p class="text-muted small">Count of ambiguous residues per sequence. Elevated counts may indicate incomplete sequencing or database annotation issues.</p>
                                                             <div class="plot-container mb-4" style="max-height: fit-content; overflow: scroll;">
                                                                 <figure role="img" aria-label="Ambiguous residue distribution per sequence for column {{ col.name }}">
@@ -2244,7 +2702,7 @@
                                                                 </figure>
                                                             </div>
                                                         {% elif pd.ambiguous_residue_ratio is defined and pd.ambiguous_residue_ratio.mean == 0 %}
-                                                            <div class="alert alert-success mt-3">No ambiguous residues (X/J/U) detected — distribution plot not generated.</div>
+                                                            <div class="alert alert-success mt-3">No ambiguous residues (X/J/U/V/O/B/Z) detected — distribution plot not generated.</div>
                                                         {% endif %}
 
                                                     </div>
@@ -2334,7 +2792,7 @@
             </a>
         </div>
         <div>
-            <p class="m-0 text-center text-white">Copyright &copy; JLU 2025</p>
+            <p class="m-0 text-center text-white">Copyright &copy; JLU {{ current_year }}</p>
         </div>
     </footer>
 </div>
@@ -2349,6 +2807,22 @@
 <script src="https://cdn.datatables.net/2.3.1/js/dataTables.bootstrap5.min.js" defer></script>
 <script src="https://cdn.datatables.net/responsive/3.0.4/js/dataTables.responsive.min.js" defer></script>
 <script src="https://cdn.datatables.net/responsive/3.0.4/js/responsive.bootstrap5.min.js" defer></script>
+
+<script>
+/* ── Plotly resize on tab activation ──
+   Plotly computes width = 0 when a tab-pane is hidden (display:none).
+   Bootstrap fires 'shown.bs.tab' after the pane becomes visible —
+   at that point we can read the real container width and relayout.
+   Note: Plotly uses class 'plotly-graph-div', not 'js-plotly-plot'. */
+document.addEventListener('shown.bs.tab', function (e) {
+  const pane = document.querySelector(e.target.getAttribute('data-bs-target'));
+  if (!pane) return
+    pane.querySelectorAll('.plotly-graph-div').forEach(function (plot) {
+        if (plot._fullLayout) Plotly.relayout(plot, { autosize: true });
+    });
+});
+</script>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const itemsPerPage = {{ items_per_page }};
@@ -2561,15 +3035,17 @@
 
         // All data-quality keys that constitute an "alert" for the Any Alert shortcut
         const ALERT_FLAGS = [
-            'missing','constant','correlation','infinity','sparse','outliers',
+            'missing','constant','correlation','infinity','sparse','outliers','skewed',
             'imbalanced','nzv','rare','mixedvalues','invalidseqs',
-            'ambiguousbases','rcduplicates','lowcomplexity',
-            'taxonomyinvalid','annotationinvalid','dataanomalies'
+            'ambiguousbases','rcduplicates','lowcomplexity','diffseqlength','diffunits',
+            'taxonomyinvalid','annotationinvalid','uniprotinvalid','dataanomalies'
         ];
 
         // Composite filters: one button matches if ANY of the listed flags is 'yes'
         const COMPOSITE_QUALITY = {
             'taxonomy': ['taxonomyinvalid', 'taxonomyvalid', 'taxonomynotchecked'],
+            'uniprot': ['uniprotinvalid', 'uniprotvalid'],
+            'annotation': ['annotationinvalid', 'annotationvalid'],
         };
 
         function matchesQuality(card, q) {

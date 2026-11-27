@@ -1,9 +1,9 @@
 [build-system]
 requires = [
-    "setuptools==82.0.0",
+    "setuptools==84.0.0",
     "wheel>=0.44.0",
-    "cython>=3.2.5",
-    "numpy>=2.4.6"
+    "cython>=3.3.0",
+    "numpy>=2.5.3"
 ]
 build-backend = "setuptools.build_meta"
 
@@ -16,7 +16,7 @@ authors = [
     {name = "Sonja Diedrich", email = "sonja.diedrich@computational.bio.uni-giessen.de"},
     {name = "Maria Hansen", email = "maria.hansen@computational.bio.uni-giessen.de"}
 ]
-license = {file = "LICENSE"}
+license-files = ["LICENSE"]
 requires-python = ">=3.13"
 keywords = ["bioinformatics", "data-analysis", "proteomics", "EDA"]
 classifiers = [
@@ -28,23 +28,23 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 dependencies = [
-    "cython==3.2.5",
-    "click>=8.3.3",
+    "cython==3.3.1",
+    "click>=8.5.1",
     "Jinja2==3.1.6",
-    "numpy==2.4.6",
-    "pandas==3.0.3",
-    "plotly==6.8.0",
-    "scipy==1.17.1",
+    "numpy==2.5.5",
+    "pandas==3.1.1",
+    "plotly==7.1.0",
+    "scipy==1.18.1",
     "termcolor==3.3.0",
-    "pyarrow==24.0.0",
+    "pyarrow==26.0.1",
     "peptides==0.5.0",
     "iteration_utilities==0.13.0",
     "requests==2.34.2",
-    "goatools==1.6.5",
+    "goatools==1.6.9",
     "importlib_resources==7.1.0",
-    "biopython==1.87",
+    "biopython==1.88",
     "weblogo==3.9.0",
-    "scikit-learn==1.9.0"
+    "scikit-learn==1.9.1"
 ]
 [project.urls]
 Homepage="https://github.com/BioWarlock/BioProfileKit/"
@@ -53,8 +53,8 @@ Repository="https://github.com/BioWarlock/BioProfileKit/"
 [project.optional-dependencies]
 cli = ["click"]
 dev = [
-    "pytest>=9.1.0",
-    "pytest-cov>=6.0.0",
+    "pytest>=9.2.0",
+    "pytest-cov>=7.1.0",
 ]
 
 [tool.setuptools]
@@ -94,6 +94,7 @@ skip_empty = true
 
 [project.scripts]
 bioprofilekit = "cli.app:cli"
+bioprofiledata = "cli.update_remote_data:update"
 
 [pytest]
 strict = true

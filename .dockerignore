@@ -80,7 +80,7 @@ src/cython_wrapper/*.so
 *.egg-info
 tests/
 .old_venv/
-.bioprofilekit
+.bioprofilekit/
 iedb_test_report.html
 iedb_sub_renders.zip
 profile.out

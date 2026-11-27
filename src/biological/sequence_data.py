@@ -15,7 +15,7 @@ import plotly.express as px
 import ssl
 
 from analysis.outlier_detection import detect_outliers
-from analysis.plot_utils import apply_standard_axes
+from analysis.plot_utils import apply_standard_axes, _config, fig_html
 from biological.plot_utils import length_distribution, gc_distribution, ambiguous_distribution, at_gc_skewness, \
     aa_group_distribution
 from models.sequence import DNARNAColumns, PROTEINColumns, SequenceMetricSummary
@@ -66,7 +66,8 @@ def biological_data_top_entries(seqs: pd.Series, top_k: int = 20) -> Tuple[
 
 def dna_rna_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5, invalid: list=None) -> DNARNAColumns:
     if invalid:
-        seqs = seqs[~seqs.isin(invalid)]
+        invalid_values = [value for _, value in invalid]
+        seqs = seqs[~seqs.isin(invalid_values)]
     seqs.dropna(inplace=True)
     #Over Top N
     uniques, counts, min_len, max_len, lengths = biological_data_top_entries(seqs, top_n)
@@ -88,9 +89,8 @@ def dna_rna_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5, 
     all_overview["GC_count"] = all_overview['sequence'].str.count('[GC]')
     all_overview["gc_content"] = np.round(np.where(all_overview["lengths"] > 0, all_overview["GC_count"] / all_overview["lengths"] * 100, 0.0), 2)
 
-    all_overview["N"] = all_overview['sequence'].str.count('N')
-    all_overview["ambiguous_base_ratio"] = np.round(np.where(all_overview["lengths"] > 0, all_overview["N"] / all_overview["lengths"] * 100, 0.0), 2)
-
+    all_overview["ambiguous_count"] = all_overview['sequence'].str.count('[NRY]')
+    all_overview["ambiguous_base_ratio"] = np.round(np.where(all_overview["lengths"] > 0, all_overview["ambiguous_count"] / all_overview["lengths"] * 100, 0.0),2,)
     all_overview["codon_complete"] = all_overview["lengths"] % 3
     all_overview["codon_pct"] = np.where(all_overview["lengths"] > 0, (all_overview["lengths"] - all_overview["codon_complete"]) / all_overview["lengths"] * 100,0.0)
     codon_completeness = SequenceMetricSummary(
@@ -143,7 +143,7 @@ def dna_rna_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5, 
     at_gc_plot = at_gc_skewness(all_overview)
     gc_dist_plot = gc_distribution(all_overview)
 
-    affected_sequences = (all_overview["N"] > 0).sum()
+    affected_sequences = (all_overview["ambiguous_count"] > 0).sum()
     ambiguous_dist_plot = None
     if affected_sequences > 0:
         ambiguous_dist_plot = ambiguous_distribution(all_overview)
@@ -271,7 +271,8 @@ def protein_descriptors(peptide: str) -> Dict[str, str | float | dict[str, float
 def protein_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5, invalid: list=None) -> PROTEINColumns:
     # Top-N
     if invalid:
-        seqs = seqs[~seqs.isin(invalid)]
+        invalid_values = [value for _, value in invalid]
+        seqs = seqs[~seqs.isin(invalid_values)]
     uniques, counts, min_len, max_len, lengths = biological_data_top_entries(seqs, top_n)
     aa_composition = [dict(Counter(seq)) for seq in uniques]
     descriptors = [protein_descriptors(seq) for seq in uniques]
@@ -282,11 +283,13 @@ def protein_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5, 
     all_overview['sequence'] = seqs.str.upper()
     all_overview['lengths'] = all_overview['sequence'].str.len()
 
-    all_overview['ambiguous'] = all_overview['sequence'].str.count('[XJU]')
+    all_overview['ambiguous'] = all_overview['sequence'].str.count('[XJUOBZ]')
     all_overview['ambiguous_ratio'] = np.round(np.where(all_overview['lengths'] > 0, all_overview['ambiguous'] / all_overview['lengths'] * 100, 0.0), 2)
 
     all_overview['stop_codon'] = all_overview['sequence'].str.count(r'\*')
-    all_overview['entropy'] = all_overview['sequence'].apply(_normalized_shanon_entropy)
+    valid_mask = all_overview['sequence'].apply(lambda x: isinstance(x, str))
+    all_overview.loc[valid_mask, 'entropy'] = all_overview.loc[valid_mask, 'sequence'].apply(_normalized_shanon_entropy)
+    #all_overview['entropy'] = all_overview['sequence'].apply(_normalized_shanon_entropy)
 
     ambiguous_residue_ratio = SequenceMetricSummary(
         min=round(float(all_overview['ambiguous_ratio'].min()), 2),
@@ -310,7 +313,7 @@ def protein_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5, 
         mean=round(float(all_overview['entropy'].mean()), 2),
     )
 
-    all_overview['gravy'] = all_overview['sequence'].apply(_gravy)
+    all_overview.loc[valid_mask, 'gravy'] = all_overview.loc[valid_mask, 'sequence'].apply(_gravy)
     all_overview['cysteine'] = all_overview['sequence'].str.count('C')
     all_overview['disorder'] = all_overview['sequence'].str.count(f"[{''.join(DISORDER_AA)}]")
     all_overview['disorder_ratio'] = np.round(
@@ -345,7 +348,7 @@ def protein_columns(seqs: pd.Series, k: int = 3, top_n: int = 20, top: int = 5, 
     affected = (all_overview['ambiguous'] > 0).sum()
     ambiguous_dist_plot = None
     if affected > 0:
-        ambiguous_dist_plot = ambiguous_distribution(all_overview, col='ambiguous', label='X/J/U')
+        ambiguous_dist_plot = ambiguous_distribution(all_overview, col='ambiguous', label='X/J/U/V/O/B/Z')
 
     plot = None
     if min_len == max_len:
@@ -440,7 +443,7 @@ def make_logo(seqs, color, seq_type):
             svg_content = svg_match.group(1)
             svg_content = svg_content.replace(
                 '<svg ',
-                '<svg style="width: 100%; height: 250px; max-width: 800px;" '
+                '<svg style="width: 100%; height: 350px; max-width: 900px;" '
             )
             return svg_content
 
@@ -460,4 +463,4 @@ def plot_overview(kmer, count):
     fig.update_layout(bargap=0.2, plot_bgcolor='white', xaxis_title='K-mers',
                       yaxis_title='Count')
     apply_standard_axes(fig, tick_angle=-45)
-    return fig.to_html(full_html=False, include_plotlyjs=False)
+    return fig_html(fig, config=_config("kmer_distribution"))

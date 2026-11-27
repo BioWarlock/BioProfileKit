@@ -10,8 +10,13 @@ def _safe_round(val, decimals=2):
     return round(val, decimals) if np.isfinite(val) else np.nan
 
 
-def numeric_columns(df: pd.DataFrame, col) -> NumericColumns:
+def numeric_columns(df: pd.DataFrame, col, top_n: int = 20) -> NumericColumns:
+    print(col)
     series = df[col].dropna()
+    series = pd.to_numeric(series, errors='coerce').dropna()
+    infinity_count = int(series.isin([np.inf, -np.inf]).sum())
+    series = series[np.isfinite(series)]
+
 
     if series.empty:
         coefficient_of_variation = np.nan
@@ -36,8 +41,8 @@ def numeric_columns(df: pd.DataFrame, col) -> NumericColumns:
         quantiles = np.array(series.quantile([0.25, 0.5, 0.75]).to_list(), dtype=float)
         mode_series = series.mode()
         mode_value = float(mode_series.iloc[0]) if not mode_series.empty else np.nan
-        value_counts = series.value_counts().head(20).to_dict()
-        frequencies = series.value_counts(normalize=True).head(20).to_dict()
+        value_counts = series.value_counts().head(top_n).to_dict()
+        frequencies = series.value_counts(normalize=True).head(top_n).to_dict()
         mad_value = float(stats.median_abs_deviation(series, nan_policy='omit'))
         min_value = float(series.min())
         max_value = float(series.max())
@@ -61,7 +66,7 @@ def numeric_columns(df: pd.DataFrame, col) -> NumericColumns:
         coefficient_of_variation=round(coefficient_of_variation, 2) if np.isfinite(coefficient_of_variation) else np.nan,
         mad=mad_value if np.isfinite(mad_value) else np.nan,
         quantiles=quantiles,
-        infinity= series.isin([np.inf, -np.inf]).sum(),
+        infinity= infinity_count,
         negative_count=np.sum((series < 0).values.ravel()),
         zero_count= np.sum(series== 0),
         memory=df[col].memory_usage(deep=True),

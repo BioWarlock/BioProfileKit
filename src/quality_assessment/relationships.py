@@ -18,9 +18,11 @@ def _check_leakage(multivariate) -> QualityCheck:
     suspects.sort(key=lambda x: x[1], reverse=True)
     status = "fail" if suspects[0][1] >= LEAKAGE_FAIL else "warn"
     listed = ", ".join(f"{f} ({v:.2f})" for f, v in suspects)
+    items = [{"column": f, "value": v, "method": ftc[f].get("method"),
+              "status": "fail" if v >= LEAKAGE_FAIL else "warn"} for f, v in suspects]
     return QualityCheck(name="Target Leakage", status=status,
                         message=f"Suspiciously high feature-target association: {listed}",
-                        detail_link="#multivariate")
+                        detail_link="#multivariate", items=items)
 
 
 def _check_multicollinearity(multivariate) -> QualityCheck:
@@ -33,5 +35,8 @@ def _check_multicollinearity(multivariate) -> QualityCheck:
         return QualityCheck(name="Multicollinearity", status="pass",
                             message="No feature pair above 0.90 association", detail_link="#multivariate")
     listed = ", ".join(f"{p['var1']}↔{p['var2']} ({p['value']:.2f})" for p in high)
+    items = [{"column": p["var1"], "partner": p["var2"], "value": p["value"],
+              "method": p.get("method"), "status": "warn"} for p in high]
     return QualityCheck(name="Multicollinearity", status="warn",
-                        message=f"Highly associated feature pairs: {listed}", detail_link="#multivariate")
+                        message=f"Highly associated feature pairs: {listed}", detail_link="#multivariate",
+                        items=items)
